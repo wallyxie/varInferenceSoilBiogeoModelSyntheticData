@@ -89,8 +89,8 @@ function AWB!(du, u, p, t)
     du[4] = dE = r_E * M - r_L * E
 end
 
-AWB_prob = ODEProblem(AWB!, C₀, tspan, p, save_at = 10) #sample result every 10 hours
-AWB_sol = solve(AWB_prob)
+AWB_prob = ODEProblem(AWB!, C₀, tspan, p, save_at = 10)
+AWB_sol = solve(AWB_prob, dt = 0.05, saveat = 0:10:100000) #sample result every 10 hours, forcing dt = 0.05 hours)
 
 #Test if function sticks to steady state with no temperature forcing
 
@@ -103,7 +103,7 @@ function AWB_ss!(du, u, p, t)
     du[4] = dE = r_E * M - r_L * E
 end
 
-AWB_ss_prob = ODEProblem(AWB_ss!, C₀, tspan, p, save_at = 10) #sample result every 10 hours
+AWB_ss_prob = ODEProblem(AWB_ss!, C₀, tspan, p)
 AWB_ss_sol = solve(AWB_ss_prob)
 
 function AWB_ss2!(du, u, p, t)
@@ -115,5 +115,5 @@ function AWB_ss2!(du, u, p, t)
     du[4] = dE = r_E * M - r_L * E
 end
 
-AWB_ss2_prob = ODEProblem(AWB_ss2!, C₀, tspan, p, save_at = 10) #sample result every 10 hours
+AWB_ss2_prob = ODEProblem(AWB_ss2!, C₀, tspan, p)
 AWB_ss2_sol = solve(AWB_ss2_prob)
