@@ -1,8 +1,8 @@
 import numpy as np
 
-##############################################
-##Stochastic differential equation functions##
-##############################################
+############################################################
+##SOIL BIOGEOCHEMICAL MODEL TEMPERATURE RESPONSE FUNCTIONS##
+############################################################
 
 def temp_gen(t, temp_ref):
     temp = temp_ref + t / (20 * 24 * 365) + 10 * np.sin((2 * np.pi / 24) * t) + 10 * np.sin((2 * np.pi / (24 * 365)) * t)
