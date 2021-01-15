@@ -64,4 +64,4 @@ def diffusion_scon(c_vector, scon_params_dict, temp_ref, t):
     diffusion_matrix_sqrt[2,2] = a33
     #Perform Cholesky decomposition. Beta diffusion matrix is already diagonal in naive ODE-to-SDE conversion, but need to guarantee positive definite matrix in case of negative diagonal element.
     diffusion_matrix_chol_sqrt = tc.cholesky(tc.mm(diffusion_matrix, diffusion_matrix.t)) #Guarantees positive Cholesky factorization.
-    return diffusion_matrix_chol
+    return diffusion_matrix_chol_sqrt
