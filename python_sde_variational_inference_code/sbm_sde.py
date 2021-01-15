@@ -11,9 +11,10 @@ def litter_scon(t):
     '''
     Returns SCON system exogenous litter input vector. Time t is on hourly scale.
     '''
+    litter_vector = tc.zeros([3, 1]) #Arrange litter vector into column format.
     I_S = 0.001 + 0.0005 * np.sin((2 * np.pi / (24 * 365)) * t) #Exogenous SOC input function
     I_D =  0.0001 + 0.00005 * np.sin((2 * np.pi / (24 * 365)) * t) #Exogenous DOC input function
-    litter_vector = tc.reshape(tc.FloatTensor([I_S, I_D, 0]), [3, 1]) #Arrange into column vector format
+    litter_vector[0], litter_vector[1] = I_S, I_D #No litter input into MBC pool.
     return litter_vector
 
 def drift_scon(c_vector, scon_params_dict, temp_ref, current_temp):
