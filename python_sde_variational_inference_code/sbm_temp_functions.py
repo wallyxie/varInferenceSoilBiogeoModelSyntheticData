@@ -1,4 +1,3 @@
-import torch as tc
 import numpy as np
 
 ##############################################
@@ -25,20 +24,3 @@ def linear_temp_dep(parameter, temp, Q, temp_ref):
     '''
     modified_parameter = parameter - Q * (temp - temp_ref)
     return modified_parameter
-
-# def litter_input_vector(I_S, I_D, SDE_system):
-#     '''
-#     Returns vector representing carbon (C) input from decomposing plant litter into SCON or SAWB soil systems.
-#     I_S is the litter input into the system soil organic C (SOC) pool.
-#     I_D is the litter input into the system dissolved organic C (DOC) pool.
-#     Only SCON or SAWB system supported at this point.
-#     '''
-#     SDE_system = upper(SDE_system)
-#     if SDE_system == 'SCON':
-#         state_var = 3
-#         return li = tc.reshape(tc.FloatTensor([I_S, I_D, 0]), [state_var, 1])
-#     elif SDE_system == 'SAWB':
-#         state_var = 4
-#         return li = tc.reshape(tc.FloatTensor[I_S, I_D, 0, 0], [state_var, 1])
-#     else:
-#         raise Exception('No eligible model provided. "SCON" and "SAWB" only for now.')
