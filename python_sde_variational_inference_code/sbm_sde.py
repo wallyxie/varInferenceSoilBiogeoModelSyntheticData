@@ -2,7 +2,7 @@ import torch as tc
 tc.set_printoptions(precision=10) #Print additional significant figures for tensor elements.
 import numpy as np
 
-form sbm_temp_functions import *
+from sbm_temp_functions import *
 
 ####################################################
 ##STOCHASTIC DIFFERENTIAL EQUATION MODEL FUNCTIONS##
