@@ -1,5 +1,5 @@
 import torch as tc
-tc.set_printoptions(precision=10) #Print additional significant figures for tensor elements.
+tc.set_printoptions(precision=10) #Print additional digits for tensor elements.
 import numpy as np
 
 from sbm_temp_functions import *
