@@ -5,7 +5,7 @@ import numpy as np
 ##DETERMINISTIC SOIL BIOGEOCHEMICAL MODEL INITIAL STEADY STATE ESTIMATES##
 ##########################################################################
 
-#analytical_steady_state_init_awb to be coded later
+#Analytical_steady_state_init_awb to be coded later.
 def analytical_steady_state_init_con(SOC_input, DOC_input, scon_params_dict):
     '''
     Returns a vector of C pool values to initialize an SCON system corresponding to set of parameter values using the analytical steady state equations of the deterministic CON system.
