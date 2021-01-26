@@ -10,3 +10,5 @@ import pandas as pd
 from sbm_temp_functions import *
 from sbm_steady_state_init_functions import *
 from sbm_sde import *
+
+device = torch.device("".join(["cuda:",f'{args.CUDA_ID}']) if torch.cuda.is_available() else "cpu")
