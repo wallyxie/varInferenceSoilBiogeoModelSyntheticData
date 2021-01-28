@@ -17,7 +17,7 @@ def litter_scon(t):
     litter_vector = torch.reshape(torch.FloatTensor([I_S, I_D, 0]), [3, 1]) #Create tensor object to store column vector of litter elements at time t. No litter input into MBC pool.
     return litter_vector
 
-def drift_scon(c_vector, scon_params_dict, temp_ref, t):
+def drift_scon(c_vector, t, scon_params_dict, temp_ref):
     '''
     Returns SCON system drift vector for approximate p(x).
     current_temp is output from temp_gen function. 
@@ -37,7 +37,7 @@ def drift_scon(c_vector, scon_params_dict, temp_ref, t):
     drift_vector = torch.reshape(torch.FloatTensor([SOC_drift, DOC_drift, MBC_drift]), [3, 1]) #Create tensor object to store drift column vector at time t in element order of S, D, and M. (Can also create zeros tensor object and then assign elements.)
     return drift_vector
 
-def diffusion_scon(c_vector, scon_params_dict, temp_ref, t):
+def diffusion_scon(c_vector, t, scon_params_dict, temp_ref):
     '''
     Returns basic SCON system diffusion matrix in which naive diagonalization is used for stochastic conversion rather than Golightly & Wilkinson reaction network conversion.
     current_temp is output from temp_gen function.
