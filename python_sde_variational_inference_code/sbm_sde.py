@@ -58,7 +58,7 @@ def diffusion_scon(c_vector, t, scon_params_dict, temp_ref):
   a11 = scon_params_dict['a_DS'] * k_D * DOC + scon_params_dict['a_M'] * scon_params_dict['a_MSC'] * k_M * MBC - k_S * SOC
   a22 = scon_params_dict['a_SD'] * k_S * SOC + scon_params_dict['a_M'] * (1 - scon_params_dict['a_MSC']) * k_M * MBC - (scon_params_dict['u_M'] + k_D) * DOC
   a33 = scon_params_dict['u_M'] * DOC - k_M * MBC
-  diffusion_matrix_sqrt[:, :, 0,0] = torch.sqrt(LowerBound.apply(a11, 1e-6)).squeeze()
-  diffusion_matrix_sqrt[:, :, 1,1] = torch.sqrt(LowerBound.apply(a22, 1e-6)).squeeze()
-  diffusion_matrix_sqrt[:, :, 2,2] = torch.sqrt(LowerBound.apply(a33, 1e-6)).squeeze()
+  diffusion_matrix_sqrt[:, :, 0, 0] = torch.sqrt(LowerBound.apply(a11, 1e-6)).squeeze()
+  diffusion_matrix_sqrt[:, :, 1, 1] = torch.sqrt(LowerBound.apply(a22, 1e-6)).squeeze()
+  diffusion_matrix_sqrt[:, :, 2, 2] = torch.sqrt(LowerBound.apply(a33, 1e-6)).squeeze()
   return diffusion_matrix_sqrt
