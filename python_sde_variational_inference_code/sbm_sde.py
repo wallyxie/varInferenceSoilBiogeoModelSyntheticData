@@ -25,7 +25,7 @@ def drift_scon(c_vector, t, scon_params_dict, temp_ref, batch_size = 3):
     c_vector[0] is expected to be SOC, c_vector[1] is expected to be DOC, and c_vector[2] is expected to be MBC.
     Expected scon_params_dict = {scon_params_dict = {'u_M': u_M, 'a_SD': a_SD, 'a_DS': a_DS, 'a_M': a_M, 'a_MSC': a_MSC, 'k_S_ref': k_S_ref, 'k_D_ref': k_D_ref, 'k_M_ref': k_M_ref, 'Ea_S': Ea_S, 'Ea_D': Ea_D, 'Ea_M': Ea_M}
     '''
-    SOC, DOC, MBC = [c_vector[:, i:i+1, :] for i in range(batch_size)]
+    SOC, DOC, MBC = [c_vector[:, i : i + 1, :] for i in range(batch_size)]
     C_vector = SOC, DOC, MBC #Get current system pool density values from C_vector tensor.
     current_temp = temp_gen(t, temp_ref) #Obtain temperature from wave function at current time t.
     #Decay parameters are forced by temperature changes.
