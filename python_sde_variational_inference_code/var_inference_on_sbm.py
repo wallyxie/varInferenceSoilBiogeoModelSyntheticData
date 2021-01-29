@@ -17,7 +17,7 @@ dt = .1
 T = 1000 #Run simulation for 1,000 hours.
 N = int(T / dt)
 T_span = np.linspace(0, T, N)
-T_span_tensor = torch.Tensor(T_span)[(None,) * 2] #T_range needs to be converted to tensor object.
+T_span_tensor = torch.Tensor(T_span)[(None,) * 2] #T_span needs to be converted to tensor object.
 
 BATCH_SIZE = 1
 device = torch.device("".join(["cuda:",f'{args.CUDA_ID}']) if torch.cuda.is_available() else "cpu")
