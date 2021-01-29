@@ -27,7 +27,7 @@ def drift_scon(c_vector, t, scon_params_dict, temp_ref):
     '''
     SOC, DOC, MBC = [c_vector[:, i:i+1, :] for i in range(3)]
     C_vector = SOC, DOC, MBC #Get current system pool density values from C_vector tensor.
-    current_temp = temp_gen(t, temp_ref)#Obtain temperature from wave function at current time t.
+    current_temp = temp_gen(t, temp_ref) #Obtain temperature from wave function at current time t.
     #Decay parameters are forced by temperature changes.
     k_S = arrhenius_temp_dep(scon_params_dict['k_S_ref'], current_temp, scon_params_dict['Ea_S'], temp_ref)
     k_D = arrhenius_temp_dep(scon_params_dict['k_D_ref'], current_temp, scon_params_dict['Ea_D'], temp_ref)
