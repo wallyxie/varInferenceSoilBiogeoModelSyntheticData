@@ -19,7 +19,7 @@ def litter_drift_and_diffusion_scon(C_vector, T_span_tensor, path_count):
     litter_vector = torch.cat([I_S, I_D, I_0], 1)
     litter_vector_perm = litter_vector.permute(0, 2, 1)
     #print('\nlitter_vector size', litter_vector.size())
-    litter_diffusion_matrix_sqrt = torch.zeros([C_vector.size(path_count), C_vector.size(2), system_batch_size, system_batch_size], device = C_vector.device) #Create 3 x 3 zeros tensor to assign diffusion matrix elements.
+    litter_diffusion_matrix_sqrt = torch.zeros([C_vector.size(0), C_vector.size(2), system_batch_size, system_batch_size], device = C_vector.device) #Create 3 x 3 zeros tensor to assign diffusion matrix elements.
     litter_diffusion_matrix_sqrt[:, :, 0, 0] = torch.sqrt(LowerBound.apply(I_S, 1e-8)).squeeze() #Assigned to element 1, 1 of matrix.
     litter_diffusion_matrix_sqrt[:, :, 1, 1] = torch.sqrt(LowerBound.apply(I_D, 1e-8)).squeeze() #Assigned to element 2, 2 of matrix.
     return litter_vector_perm, litter_diffusion_matrix_sqrt  
@@ -46,7 +46,7 @@ def drift_and_diffusion_scon(C_vector, T_span_tensor, scon_params_dict, temp_ref
     #print('\n drift_vector = ', drift_vector)
     #print('\n drift_vector.permute', drift_vector_perm)
     #Diffusion matrix is calculated (recall litter input is not a part of the drift vector or diffusion matrix).
-    diffusion_matrix_sqrt = torch.zeros([C_vector.size(path_count), C_vector.size(2), system_batch_size, system_batch_size], device = C_vector.device) #Create 3 x 3 zeros tensor to assign diffusion matrix elements.
+    diffusion_matrix_sqrt = torch.zeros([C_vector.size(0), C_vector.size(2), system_batch_size, system_batch_size], device = C_vector.device) #Create 3 x 3 zeros tensor to assign diffusion matrix elements.
     diffusion_matrix_sqrt[:, :, 0, 0] = torch.sqrt(LowerBound.apply(dSOC, 1e-8)).squeeze() #Assigned to element 1, 1 of matrix.
     diffusion_matrix_sqrt[:, :, 1, 1] = torch.sqrt(LowerBound.apply(dDOC, 1e-8)).squeeze() #Assigned to element 2, 2 of matrix.
     diffusion_matrix_sqrt[:, :, 2, 2] = torch.sqrt(LowerBound.apply(dMBC, 1e-8)).squeeze() #Assigned to element 3, 3 of matrix.
