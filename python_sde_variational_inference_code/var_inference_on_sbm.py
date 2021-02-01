@@ -30,12 +30,11 @@ obs_times = torch.Tensor(np.array(obs_df['hour'])) #Extract data observation tim
 obs_means = torch.Tensor(np.array(obs_df.drop(columns = 'hour'))) #Convert C data to tensor.
 
 def calc_negative_elbo_scon(log_prob, x, x0, T_span, litter_drift_and_diffusion_scon, drift_and_diffusion_scon):
-    #Euler-Maruyama modified from basic form because of exogenous input with separate noise.
-    #euler_maruyama = d.normal.Normal(loc=x[:, :, :-1] + alpha(x[:, :, :-1])*dt, scale = beta_sqrt(x[:, :, :-1])*math.sqrt(dt))
     #T_range = torch.Tensor(T_range)[(None,) * 2] #T_range needs to be converted to tensor object.
-    x[0] = x0 #Set initial conditions
+    x[0, :, 0] = x0 #Set initial conditions
     litter_drift, litter_diffusion = litter_drift_and_diffusion_scon(x[:, :, :-1], T_span)
     system_drift, system_diffusion = drift_and_diffusion_scon(x[:, :, :-1], T_span, scon_params_dict, temp_ref)
+    #Euler-Maruyama modified from basic form because of exogenous input with separate noise.
     #euler_maruyama = d.multivariate_normal.MultivariateNormal(loc = x[:, :, :-1].permute(0, 2, 1) + system_drift * dt, scale_tril = system_diffusion * math.sqrt(dt)) + d.multivariate_normal.MultivariateNormal(loc = x[:, :, :-1].permute(0, 2, 1) + litter_drift * dt, scale_tril = litter_diffusion * math.sqrt(dt)) 
     euler_maruyama = d.multivariate_normal.MultivariateNormal(loc = x[:, :, :-1].permute(0, 2, 1) + system_drift * dt, scale_tril = system_diffusion * math.sqrt(dt)) #Need to add time-dependent exogenous input.
     return (log_prob - torch.sum(euler_maruyama.log_prob(x[:, :, 1:].permute(0, 2, 1)).sum(-1), -1, keepdim=True)).mean()
