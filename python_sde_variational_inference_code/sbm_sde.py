@@ -8,24 +8,23 @@ from sbm_temp_functions import *
 ##STOCHASTIC DIFFERENTIAL EQUATION MODEL FUNCTIONS##
 ####################################################
 
-def litter_drift_and_diffusion_scon(C_vector, T_span):
+def litter_drift_and_diffusion_scon(C_vector, T_span_tensor, path_count):
     '''
     Returns SCON system exogenous litter input drift. Time t is on hourly scale.
     '''
     system_batch_size = 3 #SCON and CON will always have three state variables.
-    SOC, DOC, MBC = [C_vector[:, i:i + 1, :] for i in range(system_batch_size)] #Get current system pool density values from C_vector tensor.
-    I_S = 0.001 + 0.0005 * torch.sin((2 * math.pi / (24 * 365)) * T_span) #Exogenous SOC input function
-    I_D =  0.0001 + 0.00005 * torch.sin((2 * math.pi / (24 * 365)) * T_span) #Exogenous DOC input function
+    I_S = 0.001 + 0.0005 * torch.sin((2 * math.pi / (24 * 365)) * T_span_tensor) #Exogenous SOC input function
+    I_D =  0.0001 + 0.00005 * torch.sin((2 * math.pi / (24 * 365)) * T_span_tensor) #Exogenous DOC input function
     I_0 = torch.zeros_like(I_S, device = I_S.device)
     litter_vector = torch.cat([I_S, I_D, I_0], 1)
     litter_vector_perm = litter_vector.permute(0, 2, 1)
     #print('\nlitter_vector size', litter_vector.size())
-    litter_diffusion_matrix_sqrt = torch.zeros([C_vector.size(0), C_vector.size(2), system_batch_size, system_batch_size], device = C_vector.device) #Create 3 x 3 zeros tensor to assign diffusion matrix elements.
+    litter_diffusion_matrix_sqrt = torch.zeros([C_vector.size(path_count), C_vector.size(2), system_batch_size, system_batch_size], device = C_vector.device) #Create 3 x 3 zeros tensor to assign diffusion matrix elements.
     litter_diffusion_matrix_sqrt[:, :, 0, 0] = torch.sqrt(LowerBound.apply(I_S, 1e-8)).squeeze() #Assigned to element 1, 1 of matrix.
     litter_diffusion_matrix_sqrt[:, :, 1, 1] = torch.sqrt(LowerBound.apply(I_D, 1e-8)).squeeze() #Assigned to element 2, 2 of matrix.
     return litter_vector_perm, litter_diffusion_matrix_sqrt  
 
-def drift_and_diffusion_scon(C_vector, T_span, scon_params_dict, temp_ref):
+def drift_and_diffusion_scon(C_vector, T_span_tensor, scon_params_dict, temp_ref, path_count):
     '''
     Returns SCON system drift vector and diffusion matrix.
     current_temp is output from temp_gen function. 
@@ -33,7 +32,7 @@ def drift_and_diffusion_scon(C_vector, T_span, scon_params_dict, temp_ref):
     '''
     system_batch_size = 3 #SCON and CON will always have three state variables.
     SOC, DOC, MBC = [C_vector[:, i:i + 1, :] for i in range(system_batch_size)]
-    current_temp = temp_gen(T_span, temp_ref) #Obtain temperature from wave function at current time t.
+    current_temp = temp_gen(T_span_tensor, temp_ref) #Obtain temperature from wave function at current time t.
     #Decay parameters are forced by temperature changes.
     k_S = arrhenius_temp_dep(scon_params_dict['k_S_ref'], current_temp, scon_params_dict['Ea_S'], temp_ref)
     k_D = arrhenius_temp_dep(scon_params_dict['k_D_ref'], current_temp, scon_params_dict['Ea_D'], temp_ref)
@@ -47,7 +46,7 @@ def drift_and_diffusion_scon(C_vector, T_span, scon_params_dict, temp_ref):
     #print('\n drift_vector = ', drift_vector)
     #print('\n drift_vector.permute', drift_vector_perm)
     #Diffusion matrix is calculated (recall litter input is not a part of the drift vector or diffusion matrix).
-    diffusion_matrix_sqrt = torch.zeros([C_vector.size(0), C_vector.size(2), system_batch_size, system_batch_size], device = C_vector.device) #Create 3 x 3 zeros tensor to assign diffusion matrix elements.
+    diffusion_matrix_sqrt = torch.zeros([C_vector.size(path_count), C_vector.size(2), system_batch_size, system_batch_size], device = C_vector.device) #Create 3 x 3 zeros tensor to assign diffusion matrix elements.
     diffusion_matrix_sqrt[:, :, 0, 0] = torch.sqrt(LowerBound.apply(dSOC, 1e-8)).squeeze() #Assigned to element 1, 1 of matrix.
     diffusion_matrix_sqrt[:, :, 1, 1] = torch.sqrt(LowerBound.apply(dDOC, 1e-8)).squeeze() #Assigned to element 2, 2 of matrix.
     diffusion_matrix_sqrt[:, :, 2, 2] = torch.sqrt(LowerBound.apply(dMBC, 1e-8)).squeeze() #Assigned to element 3, 3 of matrix.
