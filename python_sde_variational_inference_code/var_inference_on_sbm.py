@@ -29,9 +29,9 @@ obs_df = pd.read_csv('CON_synthetic_sol_df.csv')
 obs_times = torch.Tensor(np.array(obs_df['hour'])) #Extract data observation times.
 obs_means = torch.Tensor(np.array(obs_df.drop(columns = 'hour'))) #Convert C data to tensor.
 
-def calc_negative_elbo_scon(log_prob, x, x0, T_span, litter_drift_and_diffusion_scon, drift_and_diffusion_scon):
+def calc_negative_elbo_scon(log_prob, x, x0, T_span, litter_drift_and_diffusion_scon, drift_and_diffusion_scon, scon_params_dict):
     #T_range = torch.Tensor(T_range)[(None,) * 2] #T_range needs to be converted to tensor object.
-    x[0, :, 0] = x0 #Set initial conditions
+    x[:, :, 0] = x0 #Set initial conditions
     litter_drift, litter_diffusion = litter_drift_and_diffusion_scon(x[:, :, :-1], T_span)
     system_drift, system_diffusion = drift_and_diffusion_scon(x[:, :, :-1], T_span, scon_params_dict, temp_ref)
     #Euler-Maruyama modified from basic form because of exogenous input with separate noise.
