@@ -20,7 +20,7 @@ import pandas as pd
 ##SYNTHETIC OBSERVATION READ-IN FUNCTIONS##
 ###########################################
 
-def csv_to_obs_df_and_error(df_csv_string, STATE_DIM, obs_error_scale, T):
+def csv_to_obs_df_and_error(df_csv_string, STATE_DIM, T, obs_error_scale):
     '''
     Takes CSV of labeled biogeochemical data observations and returns three items: 
     1) Numpy array of observation measurement times.
@@ -31,8 +31,8 @@ def csv_to_obs_df_and_error(df_csv_string, STATE_DIM, obs_error_scale, T):
     obs_df = obs_df_full[obs_df_full['hour'] <= T]    
     obs_times = np.array(obs_df_full['hour'])    
     obs_means = torch.Tensor(np.array(obs_df.drop(columns = 'hour')))    
-    obs_df_T = obs_means.T
-    obs_error_sd = torch.mean(obs_means_con_T, 1) * obs_error_scale
+    obs_means_T = obs_means.T
+    obs_error_sd = torch.mean(obs_means_T, 1) * obs_error_scale
     obs_error_sd_re = obs_error_sd.reshape([1, STATE_DIM]) #Need to reshape observation error tensor for input into ObsModel class.
     return obs_times, obs_df_T, obs_error_sd_re
 
