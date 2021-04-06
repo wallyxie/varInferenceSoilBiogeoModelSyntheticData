@@ -34,7 +34,7 @@ def csv_to_obs_df_and_error(df_csv_string, STATE_DIM, T, obs_error_scale):
     obs_means_T = obs_means.T
     obs_error_sd = torch.mean(obs_means_T, 1) * obs_error_scale
     obs_error_sd_re = obs_error_sd.reshape([1, STATE_DIM]) #Need to reshape observation error tensor for input into ObsModel class.
-    return obs_times, obs_df_T, obs_error_sd_re
+    return obs_times, obs_means_T, obs_error_sd_re
 
 ##################################################
 ##NORMALIZING FLOW RELATED CLASSES AND FUNCTIONS##
