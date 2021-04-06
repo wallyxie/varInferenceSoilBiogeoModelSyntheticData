@@ -27,9 +27,9 @@ def csv_to_obs_df_and_error(df_csv_string, STATE_DIM, obs_error_scale, T):
     2) Observations tensor including observations up to desired experiment hour threshold. 
     3) Observation error standard deviation at desired proportion of mean observation values. 
     '''
-    obs_times = np.array(obs_df_con['hour'])    
+    obs_df = obs_df_full[obs_df_full['hour'] <= T]    
+    obs_times = np.array(obs_df['hour'])    
     obs_df_full = pd.read_csv('df_csv_string', T)
-    obs_df = obs_df_full[obs_df_full['hour'] <= T]
     obs_means = torch.Tensor(np.array(obs_df.drop(columns = 'hour')))    
     obs_df_T = obs_means.T
     obs_error_sd = torch.mean(obs_means_con_T, 1) * obs_error_scale
