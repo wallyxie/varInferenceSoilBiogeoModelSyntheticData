@@ -41,6 +41,7 @@ def csv_to_obs_df_and_error(df_csv_string, STATE_DIM, obs_error_scale, T):
 ##################################################
 
 class LowerBound(Function):
+    
     @staticmethod
     def forward(ctx, inputs, bound):
         b = torch.ones(inputs.size()) * bound
@@ -59,6 +60,7 @@ class LowerBound(Function):
         return pass_through.type(grad_output.dtype) * grad_output, None
 
 class MaskedConv1d(nn.Conv1d):
+    
     def __init__(self, mask_type, *args, **kwargs):
         super(MaskedConv1d, self).__init__(*args, **kwargs)
         assert mask_type in {'A', 'B'}
@@ -72,7 +74,7 @@ class MaskedConv1d(nn.Conv1d):
         return super(MaskedConv1d, self).forward(x)
 
 class ResNetBlock(nn.Module):
-
+    
     def __init__(self, inp_cha, out_cha, stride = 1, first = True, batch_norm = True):
         super().__init__()
         self.conv1 = MaskedConv1d('A' if first else 'B', inp_cha,  out_cha, 3, stride, 1, bias = False)
@@ -130,7 +132,7 @@ class ResNetBlockUnMasked(nn.Module):
         return x
 
 class CouplingLayer(nn.Module):
-
+    
     def __init__(self, cond_inputs, stride, h_cha = 96):
         super().__init__()
         self.first_block = ResNetBlock(1, h_cha, first = True)
@@ -155,7 +157,7 @@ class CouplingLayer(nn.Module):
         return x, -torch.log(sigma)
 
 class PermutationLayer(nn.Module):
-
+    
     def __init__(self):
         super().__init__()
         self.index_1 = torch.randperm(STATE_DIM)
@@ -168,6 +170,7 @@ class PermutationLayer(nn.Module):
         return x
 
 class SoftplusLayer(nn.Module):
+    
     def __init__(self):
         super().__init__()
         self.softplus = nn.Softplus()
@@ -177,6 +180,7 @@ class SoftplusLayer(nn.Module):
         return y, -torch.log(-torch.expm1(-y))
 
 class BatchNormLayer(nn.Module):
+    
     def __init__(self, num_inputs, momentum = 0.0, eps = 1e-5):
         super(BatchNormLayer, self).__init__()
 
