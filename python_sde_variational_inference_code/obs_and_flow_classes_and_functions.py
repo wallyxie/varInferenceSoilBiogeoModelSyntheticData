@@ -20,7 +20,7 @@ import pandas as pd
 ##SYNTHETIC OBSERVATION READ-IN FUNCTIONS##
 ###########################################
 
-def csv_to_obs_df_and_error(df_csv_string, STATE_DIM, T, obs_error_scale):
+def csv_to_obs_df(df_csv_string, STATE_DIM, T, obs_error_scale):
     '''
     Takes CSV of labeled biogeochemical data observations and returns three items: 
     1) Numpy array of observation measurement times.
