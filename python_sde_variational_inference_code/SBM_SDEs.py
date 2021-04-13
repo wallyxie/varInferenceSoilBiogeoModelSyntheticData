@@ -95,8 +95,8 @@ def drift_diffusion_scon_c(C_path, T_span_tensor, I_S_tensor, I_D_tensor, scon_c
     current_temp is output from temp_gen function. 
     Expected scon_c_params_dict = {'u_M': u_M, 'a_SD': a_SD, 'a_DS': a_DS, 'a_M': a_M, 'a_MSC': a_MSC, 'k_S_ref': k_S_ref, 'k_D_ref': k_D_ref, 'k_M_ref': k_M_ref, 'Ea_S': Ea_S, 'Ea_D': Ea_D, 'Ea_M': Ea_M, 'c_SOC': c_SOC, 'c_DOC': c_DOC, 'c_MBC': c_MBC, 'c_CO2': c_CO2}
     '''
-    state_dim = 4 #SCON will correspond to four sets of observations with inclusion of CO2 alongside state observations.
-    SOC, DOC, MBC, CO2 =  torch.chunk(C_path, state_dim, -1) #Partition SOC, DOC, MBC, and CO2 values. Split based on final C_path dim, which specifies state variables and is also indexed as dim #2 in tensor. 
+    obs_dim = 4 #SCON will correspond to four sets of observations with inclusion of CO2 alongside state observations.
+    SOC, DOC, MBC, CO2 =  torch.chunk(C_path, obs_dim, -1) #Partition SOC, DOC, MBC, and CO2 values. Split based on final C_path dim, which specifies state variables and is also indexed as dim #2 in tensor. 
     current_temp = temp_gen(T_span_tensor, temp_ref) #Obtain temperature function vector across span of times.
     drift = torch.empty_like(C_path, device = C_path.device) #Initiate tensor with same dims as C_path to assign drift.
     #Decay parameters are forced by temperature changes.
@@ -115,7 +115,7 @@ def drift_diffusion_scon_c(C_path, T_span_tensor, I_S_tensor, I_D_tensor, scon_c
     drift[:, :, 3 : 4] = CO2 #CO2 is not a part of the drift. This is a hack for the explicit algebraic variable situation.
     #Diffusion matrix is assigned.
     diffusion_sqrt_single = torch.diag(torch.sqrt(LowerBound.apply(torch.as_tensor([scon_c_params_dict['c_SOC'], scon_c_params_dict['c_DOC'], scon_c_params_dict['c_MBC'], scon_c_params_dict['c_CO2']]), 1e-9))) #Create single diffusion matrix by diagonalizing constant noise scale parameters.
-    diffusion_sqrt = diffusion_sqrt_single.expand(drift.size(0), drift.size(1), state_dim, state_dim) #Expand diffusion matrices across all paths and across discretized time steps. Diffusion exists for explicit algebraic variable CO2.
+    diffusion_sqrt = diffusion_sqrt_single.expand(drift.size(0), drift.size(1), obs_dim, obs_dim) #Expand diffusion matrices across all paths and across discretized time steps. Diffusion exists for explicit algebraic variable CO2.
     return drift, diffusion_sqrt
 
 #SCON-ss
@@ -125,11 +125,11 @@ def drift_diffusion_scon_ss(C_path, T_span_tensor, I_S_tensor, I_D_tensor, scon_
     current_temp is output from temp_gen function. 
     Expected scon_ss_params_dict = {'u_M': u_M, 'a_SD': a_SD, 'a_DS': a_DS, 'a_M': a_M, 'a_MSC': a_MSC, 'k_S_ref': k_S_ref, 'k_D_ref': k_D_ref, 'k_M_ref': k_M_ref, 'Ea_S': Ea_S, 'Ea_D': Ea_D, 'Ea_M': Ea_M, 's_SOC': s_SOC, 's_DOC': s_DOC, 's_MBC': s_MBC, 's_CO2': s_CO2}
     '''
-    state_dim = 4 #SCON will correspond to four sets of observations with inclusion of CO2 alongside state observations.
-    SOC, DOC, MBC, CO2 =  torch.chunk(C_path, state_dim, -1) #Partition SOC, DOC, MBC, and CO2 values. Split based on final C_path dim, which specifies state variables and is also indexed as dim #2 in tensor. 
+    obs_dim = 4 #SCON will correspond to four sets of observations with inclusion of CO2 alongside state observations.
+    SOC, DOC, MBC, CO2 =  torch.chunk(C_path, obs_dim, -1) #Partition SOC, DOC, MBC, and CO2 values. Split based on final C_path dim, which specifies state variables and is also indexed as dim #2 in tensor. 
     current_temp = temp_gen(T_span_tensor, temp_ref) #Obtain temperature function vector across span of times.
     drift = torch.empty_like(C_path, device = C_path.device) #Initiate tensor with same dims as C_path to assign drift.
-    diffusion_sqrt = torch.zeros([drift.size(0), drift.size(1), state_dim, state_dim], device = drift.device) #Create tensor to assign diffusion matrix elements. Diffusion exists for explicit algebraic variable CO2.
+    diffusion_sqrt = torch.zeros([drift.size(0), drift.size(1), obs_dim, obs_dim], device = drift.device) #Create tensor to assign diffusion matrix elements. Diffusion exists for explicit algebraic variable CO2.
     #diffusion_sqrt_diag = torch.empty_like(C_path, device=C_path.device) #Create tensor to assign diffusion matrix elements.
     #Decay parameters are forced by temperature changes.
     k_S = arrhenius_temp_dep(scon_ss_params_dict['k_S_ref'], current_temp, scon_ss_params_dict['Ea_S'], temp_ref) #Apply vectorized temperature-dependent transformation to k_S_ref.
@@ -164,8 +164,8 @@ def drift_diffusion_sawb_c(C_path, T_span_tensor, I_S_tensor, I_D_tensor, sawb_c
     current_temp is output from temp_gen function. 
     Expected sawb_c_params_dict = {'u_Q_ref': u_Q_ref, 'Q': Q, 'a_MSA': a_MSA, 'K_D': K_D, 'K_U': K_U, 'V_D_ref': V_D_ref, 'V_U_ref': V_U_ref, 'Ea_V_D': Ea_V_D, 'Ea_V_U': Ea_V_U, 'r_M': r_M, 'r_E': r_E, 'r_L': r_L, 'c_SOC': c_SOC, 'c_DOC': c_DOC, 'c_MBC': c_MBC, 'c_EEC': c_EEC, 'c_CO2': c_CO2}
     '''
-    state_dim = 5 #SAWB will correspond to five sets of observations with inclusion of CO2 alongside state observations.
-    SOC, DOC, MBC, EEC, CO2 =  torch.chunk(C_path, state_dim, -1) #Partition SOC, DOC, MBC, EEC, and CO2 values. Split based on final C_path dim, which specifies state variables and is also indexed as dim #2 in tensor. 
+    obs_dim = 5 #SAWB will correspond to five sets of observations with inclusion of CO2 alongside state observations.
+    SOC, DOC, MBC, EEC, CO2 =  torch.chunk(C_path, obs_dim, -1) #Partition SOC, DOC, MBC, EEC, and CO2 values. Split based on final C_path dim, which specifies state variables and is also indexed as dim #2 in tensor. 
     current_temp = temp_gen(T_span_tensor, temp_ref) #Obtain temperature function vector across span of times.
     drift = torch.empty_like(C_path, device=C_path.device) #Initiate tensor with same dims as C_path to assign drift.
     #Decay parameters are forced by temperature changes.
@@ -186,7 +186,7 @@ def drift_diffusion_sawb_c(C_path, T_span_tensor, I_S_tensor, I_D_tensor, sawb_c
     drift[:, :, 4 : 5] = CO2 #CO2 is not a part of the drift. This is a hack for the explicit algebraic variable situation.
     #Diffusion matrix is assigned.
     diffusion_sqrt_single = torch.diag(torch.sqrt(LowerBound.apply(torch.as_tensor([sawb_c_params_dict['c_SOC'], sawb_c_params_dict['c_DOC'], sawb_c_params_dict['c_MBC'], sawb_c_params_dict['c_EEC'], sawb_c_params_dict['c_CO2']]), 1e-9))) #Create single diffusion matrix by diagonalizing constant noise scale parameters.
-    diffusion_sqrt = diffusion_sqrt_single.expand(drift.size(0), drift.size(1), state_dim, state_dim) #Expand diffusion matrices across all paths and across discretized time steps. Diffusion exists for explicit algebraic variable CO2.
+    diffusion_sqrt = diffusion_sqrt_single.expand(drift.size(0), drift.size(1), obs_dim, obs_dim) #Expand diffusion matrices across all paths and across discretized time steps. Diffusion exists for explicit algebraic variable CO2.
     return drift, diffusion_sqrt
 
 #SAWB-ss
@@ -196,11 +196,11 @@ def drift_diffusion_sawb_ss(C_path, T_span_tensor, I_S_tensor, I_D_tensor, sawb_
     current_temp is output from temp_gen function. 
     Expected sawb_ss_params_dict = {'u_Q_ref': u_Q_ref, 'Q': Q, 'a_MSA': a_MSA, 'K_D': K_D, 'K_U': K_U, 'V_D_ref': V_D_ref, 'V_U_ref': V_U_ref, 'Ea_V_D': Ea_V_D, 'Ea_V_U': Ea_V_U, 'r_M': r_M, 'r_E': r_E, 'r_L': r_L, 's_SOC': s_SOC, 's_DOC': s_DOC, 's_MBC': s_MBC, 's_EEC': s_EEC}
     '''
-    state_dim = 5 #SAWB will correspond to five sets of observations with inclusion of CO2 alongside state observations.
-    SOC, DOC, MBC, EEC, CO2 =  torch.chunk(C_path, state_dim, -1) #Partition SOC, DOC, MBC, EEC, and CO2 values. Split based on final C_path dim, which specifies state variables and is also indexed as dim #2 in tensor. 
+    obs_dim = 5 #SAWB will correspond to five sets of observations with inclusion of CO2 alongside state observations.
+    SOC, DOC, MBC, EEC, CO2 =  torch.chunk(C_path, obs_dim, -1) #Partition SOC, DOC, MBC, EEC, and CO2 values. Split based on final C_path dim, which specifies state variables and is also indexed as dim #2 in tensor. 
     current_temp = temp_gen(T_span_tensor, temp_ref) #Obtain temperature function vector across span of times.
     drift = torch.empty_like(C_path, device=C_path.device) #Initiate tensor with same dims as C_path to assign drift.
-    diffusion_sqrt = torch.zeros([drift.size(0), drift.size(1), state_dim, state_dim], device = drift.device) #Create tensor to assign diffusion matrix elements. Diffusion exists for explicit algebraic variable CO2.
+    diffusion_sqrt = torch.zeros([drift.size(0), drift.size(1), obs_dim, obs_dim], device = drift.device) #Create tensor to assign diffusion matrix elements. Diffusion exists for explicit algebraic variable CO2.
     #diffusion_sqrt_diag = torch.empty_like(C_path, device=C_path.device) #Create tensor to assign diffusion matrix elements.
     #Decay parameters are forced by temperature changes.
     u_Q = linear_temp_dep(sawb_ss_params_dict['u_Q_ref'], current_temp, sawb_ss_params_dict['Q'], temp_ref) #Apply linear temperature-dependence to u_Q.
@@ -239,8 +239,8 @@ def drift_diffusion_sawb_eca_c(C_path, T_span_tensor, I_S_tensor, I_D_tensor, sa
     current_temp is output from temp_gen function. 
     Expected sawb_eca_c_params_dict = {'u_Q_ref': u_Q_ref, 'Q': Q, 'a_MSA': a_MSA, 'K_DE': K_DE, 'K_UE': K_UE, 'V_DE_ref': V_DE_ref, 'V_UE_ref': V_UE_ref, 'Ea_V_DE': Ea_V_DE, 'Ea_V_UE': Ea_V_UE, 'r_M': r_M, 'r_E': r_E, 'r_L': r_L, 'c_SOC': c_SOC, 'c_DOC': c_DOC, 'c_MBC': c_MBC, 'c_EEC': c_EEC, 'c_CO2': c_CO2}
     '''
-    state_dim = 5 #SAWB and SAWB-ECA will correspond to five sets of observations with inclusion of CO2 alongside state observations.
-    SOC, DOC, MBC, EEC, CO2 =  torch.chunk(C_path, state_dim, -1) #Partition SOC, DOC, MBC, EEC, and CO2 values. Split based on final C_path dim, which specifies state variables and is also indexed as dim #2 in tensor. 
+    obs_dim = 5 #SAWB and SAWB-ECA will correspond to five sets of observations with inclusion of CO2 alongside state observations.
+    SOC, DOC, MBC, EEC, CO2 =  torch.chunk(C_path, obs_dim, -1) #Partition SOC, DOC, MBC, EEC, and CO2 values. Split based on final C_path dim, which specifies state variables and is also indexed as dim #2 in tensor. 
     current_temp = temp_gen(T_span_tensor, temp_ref) #Obtain temperature function vector across span of times.
     drift = torch.empty_like(C_path, device=C_path.device) #Initiate tensor with same dims as C_path to assign drift.
     #Decay parameters are forced by temperature changes.
@@ -261,7 +261,7 @@ def drift_diffusion_sawb_eca_c(C_path, T_span_tensor, I_S_tensor, I_D_tensor, sa
     drift[:, :, 4 : 5] = CO2 #CO2 is not a part of the drift. This is a hack for the explicit algebraic variable situation.
     #Diffusion matrix is assigned.
     diffusion_sqrt_single = torch.diag(torch.sqrt(LowerBound.apply(torch.as_tensor([sawb_eca_c_params_dict['c_SOC'], sawb_eca_c_params_dict['c_DOC'], sawb_eca_c_params_dict['c_MBC'], sawb_eca_c_params_dict['c_EEC'], sawb_eca_c_params_dict['c_CO2']]), 1e-9))) #Create single diffusion matrix by diagonalizing constant noise scale parameters.
-    diffusion_sqrt = diffusion_sqrt_single.expand(drift.size(0), drift.size(1), state_dim, state_dim) #Expand diffusion matrices across all paths and across discretized time steps. Diffusion exists for explicit algebraic variable CO2.
+    diffusion_sqrt = diffusion_sqrt_single.expand(drift.size(0), drift.size(1), obs_dim, obs_dim) #Expand diffusion matrices across all paths and across discretized time steps. Diffusion exists for explicit algebraic variable CO2.
     return drift, diffusion_sqrt
 
 #SAWB-ECA-ss
@@ -271,11 +271,11 @@ def drift_diffusion_sawb_eca_ss(C_path, T_span_tensor, I_S_tensor, I_D_tensor, s
     current_temp is output from temp_gen function. 
     Expected sawb_eca_ss_params_dict = {'u_Q_ref': u_Q_ref, 'Q': Q, 'a_MSA': a_MSA, 'K_DE': K_DE, 'K_UE': K_UE, 'V_DE_ref': V_DE_ref, 'V_UE_ref': V_UE_ref, 'Ea_V_DE': Ea_V_DE, 'Ea_V_UE': Ea_V_UE, 'r_M': r_M, 'r_E': r_E, 'r_L': r_L, 's_SOC': s_SOC, 's_DOC': s_DOC, 's_MBC': s_MBC, 's_EEC': s_EEC, 's_CO2': s_CO2}
     '''
-    state_dim = 5 #SAWB and SAWB-ECA will correspond to five sets of observations with inclusion of CO2 alongside state observations.
-    SOC, DOC, MBC, EEC, CO2 =  torch.chunk(C_path, state_dim, -1) #Partition SOC, DOC, MBC, EEC, and CO2 values. Split based on final C_path dim, which specifies state variables and is also indexed as dim #2 in tensor. 
+    obs_dim = 5 #SAWB and SAWB-ECA will correspond to five sets of observations with inclusion of CO2 alongside state observations.
+    SOC, DOC, MBC, EEC, CO2 =  torch.chunk(C_path, obs_dim, -1) #Partition SOC, DOC, MBC, EEC, and CO2 values. Split based on final C_path dim, which specifies state variables and is also indexed as dim #2 in tensor. 
     current_temp = temp_gen(T_span_tensor, temp_ref) #Obtain temperature function vector across span of times.
     drift = torch.empty_like(C_path, device=C_path.device) #Initiate tensor with same dims as C_path to assign drift.
-    diffusion_sqrt = torch.zeros([drift.size(0), drift.size(1), state_dim, state_dim], device = drift.device) #Create tensor to assign diffusion matrix elements. Diffusion exists for explicit algebraic variable CO2.
+    diffusion_sqrt = torch.zeros([drift.size(0), drift.size(1), obs_dim, obs_dim], device = drift.device) #Create tensor to assign diffusion matrix elements. Diffusion exists for explicit algebraic variable CO2.
     #diffusion_sqrt_diag = torch.empty_like(C_path, device=C_path.device) #Create tensor to assign diffusion matrix elements.
     #Decay parameters are forced by temperature changes.
     u_Q = linear_temp_dep(sawb_eca_ss_params_dict['u_Q_ref'], current_temp, sawb_eca_ss_params_dict['Q'], temp_ref) #Apply linear temperature-dependence to u_Q.
