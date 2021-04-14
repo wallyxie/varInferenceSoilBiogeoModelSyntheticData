@@ -17,7 +17,7 @@ The respective analytical steady state estimation functions derived from the det
 ############################################################
 
 def temp_gen(t, temp_ref):
-    temp = temp_ref + t / (20 * 24 * 365) + 10 * torch.sin((2 * np.pi / 24) * t) + 10 * torch.sin((2 * math.pi / (24 * 365)) * t)
+    temp = temp_ref + t / (20 * 24 * 365) + 10 * torch.sin((2 * np.pi / 24) * t) + 10 * torch.sin((2 * np.pi / (24 * 365)) * t)
     return temp
 
 def arrhenius_temp_dep(parameter, temp, Ea, temp_ref):
