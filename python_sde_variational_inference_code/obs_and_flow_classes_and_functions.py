@@ -20,7 +20,7 @@ import pandas as pd
 ##SYNTHETIC OBSERVATION READ-IN FUNCTIONS##
 ###########################################
 
-def csv_to_obs_df(df_csv_string, STATE_DIM, T, obs_error_scale):
+def csv_to_obs_df(df_csv_string, state_dim, T, obs_error_scale):
     '''
     Takes CSV of labeled biogeochemical data observations and returns three items: 
     1) Numpy array of observation measurement times.
@@ -33,7 +33,7 @@ def csv_to_obs_df(df_csv_string, STATE_DIM, T, obs_error_scale):
     obs_means = torch.Tensor(np.array(obs_df.drop(columns = 'hour')))    
     obs_means_T = obs_means.T
     obs_error_sd = torch.mean(obs_means_T, 1) * obs_error_scale
-    obs_error_sd_re = obs_error_sd.reshape([1, STATE_DIM]) #Need to reshape observation error tensor for input into ObsModel class.
+    obs_error_sd_re = obs_error_sd.reshape([1, state_dim]) #Need to reshape observation error tensor for input into ObsModel class.
     return obs_times, obs_means_T, obs_error_sd_re
 
 ##################################################
@@ -158,13 +158,14 @@ class CouplingLayer(nn.Module):
 
 class PermutationLayer(nn.Module):
     
-    def __init__(self):
+    def __init__(self, state_dim):
         super().__init__()
-        self.index_1 = torch.randperm(STATE_DIM)
+        self.state_dim = state_dim
+        self.index_1 = torch.randperm(state_dim)
 
     def forward(self, x):
         B, S, L = x.shape
-        x_reshape = x.reshape(B, S, -1, STATE_DIM)
+        x_reshape = x.reshape(B, S, -1, self.state_dim)
         x_perm = x_reshape[:, :, :, self.index_1]
         x = x_perm.reshape(B, S, L)
         return x
@@ -217,24 +218,31 @@ class BatchNormLayer(nn.Module):
     
 class SDEFlow(nn.Module):
 
-    def __init__(self, cond_inputs = 1, num_layers = 5):
+    def __init__(self, device, obs_model, state_dim, T, dt, N, batch_size, cond_inputs = 1, num_layers = 5):
         super().__init__()
-        
-        self.coupling = nn.ModuleList([CouplingLayer(cond_inputs + STATE_DIM, 1) for _ in range(num_layers)])
-        self.permutation = [PermutationLayer() for _ in range(num_layers)]
-        self.batch_norm = nn.ModuleList([BatchNormLayer(STATE_DIM * N) for _ in range(num_layers-1)])
+        self.device = device
+        self.obs_model = obs_model        
+        self.state_dim = state_dim
+        self.T = T
+        self.dt = dt
+        self.N = N
+        self.batch_size = batch_size        
+
+        self.coupling = nn.ModuleList([CouplingLayer(cond_inputs + self.state_dim, 1) for _ in range(num_layers)])
+        self.permutation = [PermutationLayer(state_dim = self.state_dim) for _ in range(num_layers)]
+        self.batch_norm = nn.ModuleList([BatchNormLayer(self.state_dim * self.N) for _ in range(num_layers-1)])
         self.SP = SoftplusLayer()
         
         self.base_dist = d.normal.Normal(loc = 0., scale = 1.)
         self.num_layers = num_layers
         
-    def forward(self, batch_size, obs_model, *args, **kwargs):
+    def forward(self, *args, **kwargs):
 
-        eps = self.base_dist.sample([batch_size, 1, STATE_DIM * N]).to(device)
+        eps = self.base_dist.sample([self.batch_size, 1, self.state_dim * self.N]).to(self.device)
         log_prob = self.base_dist.log_prob(eps).sum(-1)
         
-        obs_tile = obs_model.mu[None, :, 1:, None].repeat(batch_size, STATE_DIM, 1, 50).reshape(batch_size, STATE_DIM, -1)
-        times = torch.arange(dt, T + dt, dt, device = eps.device)[(None,) * 2].repeat(batch_size, STATE_DIM, 1).transpose(-2, -1).reshape(batch_size, 1, -1)
+        obs_tile = self.obs_model.mu[None, :, 1:, None].repeat(self.batch_size, self.state_dim, 1, 50).reshape(self.batch_size, self.state_dim, -1)
+        times = torch.arange(self.dt, self.T + self.dt, self.dt, device = eps.device)[(None,) * 2].repeat(self.batch_size, self.state_dim, 1).transpose(-2, -1).reshape(self.batch_size, 1, -1)
         
         ildjs = []
         
@@ -251,7 +259,7 @@ class SDEFlow(nn.Module):
         for ildj in ildjs:
             log_prob += ildj.sum(-1)
     
-        return eps.reshape(batch_size, STATE_DIM, -1).permute(0, 2, 1) + 1e-9, log_prob
+        return eps.reshape(self.batch_size, self.state_dim, -1).permute(0, 2, 1) + 1e-9, log_prob
 
 ###################################################
 ##OBSERVATION MODEL RELATED CLASSES AND FUNCTIONS##
@@ -259,11 +267,13 @@ class SDEFlow(nn.Module):
 
 class ObsModel(nn.Module):
 
-    def __init__(self, times, mu, scale):
+    def __init__(self, device, times, dt, mu, scale):
         super().__init__()
 
-        self.idx = self._get_idx(times)
+        self.device = device
         self.times = times
+        self.dt = dt
+        self.idx = self.get_idx(times, dt)        
         self.mu = torch.Tensor(mu).to(device)
         self.scale = scale
         
@@ -271,7 +281,7 @@ class ObsModel(nn.Module):
         obs_ll = d.normal.Normal(self.mu.permute(1, 0), self.scale).log_prob(x[:, self.idx, :])
         return torch.sum(obs_ll, [-1, -2]).mean()
 
-    def _get_idx(self, times):
+    def get_idx(self, times, dt):
         return list((times / dt).astype(int))
     
     def plt_dat(self):
