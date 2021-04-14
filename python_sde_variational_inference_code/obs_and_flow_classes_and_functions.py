@@ -158,13 +158,14 @@ class CouplingLayer(nn.Module):
 
 class PermutationLayer(nn.Module):
     
-    def __init__(self, state_dim):
+    def __init__(self, STATE_DIM):
         super().__init__()
-        self.index_1 = torch.randperm(state_dim)
+        self.state_dim = STATE_DIM
+        self.index_1 = torch.randperm(STATE_DIM)
 
-    def forward(self, x, state_dim):
+    def forward(self, x):
         B, S, L = x.shape
-        x_reshape = x.reshape(B, S, -1, state_dim)
+        x_reshape = x.reshape(B, S, -1, self.state_dim)
         x_perm = x_reshape[:, :, :, self.index_1]
         x = x_perm.reshape(B, S, L)
         return x
@@ -217,27 +218,36 @@ class BatchNormLayer(nn.Module):
     
 class SDEFlow(nn.Module):
 
-    def __init__(self, device, batch_size, obs_model, state_dim, T, dt, N, cond_inputs = 1, num_layers = 5):
+    def __init__(self, DEVICE, BATCH_SIZE, OBS_MODEL, STATE_DIM, T, DT, N, cond_inputs = 1, num_layers = 5):
         super().__init__()
-        self.coupling = nn.ModuleList([CouplingLayer(cond_inputs + state_dim, 1) for _ in range(num_layers)])
-        self.permutation = [PermutationLayer(state_dim = state_dim) for _ in range(num_layers)]
-        self.batch_norm = nn.ModuleList([BatchNormLayer(state_dim * N) for _ in range(num_layers - 1)])
+        self.device = DEVICE
+        self.batch_size = BATCH_SIZE
+        self.obs_model = OBS_MODEL
+        self.state_dim = STATE_DIM
+        self.t = T
+        self.dt = DT
+        self.n = N
+
+        self.base_dist = d.normal.Normal(loc = 0., scale = 1.)
+        self.cond_inputs = cond_inputs        
+        self.num_layers = num_layers
+
+        self.coupling = nn.ModuleList([CouplingLayer(cond_inputs + STATE_DIM, 1) for _ in range(num_layers)])
+        self.permutation = [PermutationLayer(STATE_DIM) for _ in range(num_layers)]
+        self.batch_norm = nn.ModuleList([BatchNormLayer(STATE_DIM * N) for _ in range(num_layers - 1)])
         self.SP = SoftplusLayer()
         
-        self.base_dist = d.normal.Normal(loc = 0., scale = 1.)
-        self.num_layers = num_layers
-        
-    def forward(self, device, batch_size, obs_model, state_dim, T, dt, N, *args, **kwargs):
-        eps = self.base_dist.sample([batch_size, 1, state_dim * N]).to(device)
+    def forward(self, *args, **kwargs):
+        eps = self.base_dist.sample([self.batch_size, 1, self.state_dim * self.n]).to(self.device)
         log_prob = self.base_dist.log_prob(eps).sum(-1)
         
-        obs_tile = obs_model.mu[None, :, 1:, None].repeat(batch_size, state_dim, 1, 50).reshape(batch_size, state_dim, -1)
-        times = torch.arange(dt, T + dt, dt, device = eps.device)[(None,) * 2].repeat(batch_size, state_dim, 1).transpose(-2, -1).reshape(batch_size, 1, -1)
+        obs_tile = self.obs_model.mu[None, :, 1:, None].repeat(self.batch_size, self.state_dim, 1, 50).reshape(self.batch_size, self.state_dim, -1)
+        times = torch.arange(self.dt, self.t + self.dt, self.dt, device = eps.device)[(None,) * 2].repeat(self.batch_size, self.state_dim, 1).transpose(-2, -1).reshape(self.batch_size, 1, -1)
         
         ildjs = []
         
         for i in range(self.num_layers):
-            eps, cl_ildj = self.coupling[i](self.permutation[i](x = eps, state_dim = state_dim), (obs_tile, times))
+            eps, cl_ildj = self.coupling[i](self.permutation[i](eps), (obs_tile, times))
             if i < (self.num_layers - 1):
                 eps, bn_ildj = self.batch_norm[i](eps)
                 ildjs.append(bn_ildj)
@@ -249,7 +259,7 @@ class SDEFlow(nn.Module):
         for ildj in ildjs:
             log_prob += ildj.sum(-1)
     
-        return eps.reshape(batch_size, state_dim, -1).permute(0, 2, 1) + 1e-10, log_prob
+        return eps.reshape(self.batch_size, self.state_dim, -1).permute(0, 2, 1) + 1e-10, log_prob
 
 ###################################################
 ##OBSERVATION MODEL RELATED CLASSES AND FUNCTIONS##
@@ -257,22 +267,22 @@ class SDEFlow(nn.Module):
 
 class ObsModel(nn.Module):
 
-    def __init__(self, device, times, dt, mu, scale):
+    def __init__(self, DEVICE, TIMES, DT, MU, SCALE):
         super().__init__()
 
-        self.device = device
-        self.times = times
-        self.dt = dt
-        self.idx = self.get_idx(times, dt)        
-        self.mu = torch.Tensor(mu).to(device)
-        self.scale = scale
+        self.device = DEVICE
+        self.times = TIMES
+        self.dt = DT
+        self.idx = self.get_idx(TIMES, DT)        
+        self.mu = torch.Tensor(MU).to(DEVICE)
+        self.scale = SCALE
         
     def forward(self, x):
         obs_ll = d.normal.Normal(self.mu.permute(1, 0), self.scale).log_prob(x[:, self.idx, :])
         return torch.sum(obs_ll, [-1, -2]).mean()
 
-    def get_idx(self, times, dt):
-        return list((times / dt).astype(int))
+    def get_idx(self, TIMES, DT):
+        return list((TIMES / DT).astype(int))
     
     def plt_dat(self):
         return self.mu, self.times
