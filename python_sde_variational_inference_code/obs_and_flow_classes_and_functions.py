@@ -152,7 +152,7 @@ class CouplingLayer(nn.Module):
         feature_vec = torch.cat([first_block, cond_inputs], 1)
         output = self.second_block(feature_vec)
         mu, sigma = torch.chunk(output, 2, 1)
-        sigma = LowerBound.apply(sigma, 1e-6)
+        sigma = LowerBound.apply(sigma, 1e-10)
         x = mu + sigma * x
         return x, -torch.log(sigma)
 
@@ -243,7 +243,6 @@ class SDEFlow(nn.Module):
         
         obs_tile = self.obs_model.mu[None, :, 1:, None].repeat(self.batch_size, self.state_dim, 1, 50).reshape(self.batch_size, self.state_dim, -1)
         times = torch.arange(self.dt, self.t + self.dt, self.dt, device = eps.device)[(None,) * 2].repeat(self.batch_size, self.state_dim, 1).transpose(-2, -1).reshape(self.batch_size, 1, -1)
-        
         ildjs = []
         
         for i in range(self.num_layers):
