@@ -26,8 +26,8 @@ def arrhenius_temp_dep(parameter, temp, Ea, temp_ref):
     For a parameter with Arrhenius temperature dependence, returns the transformed parameter value.
     0.008314 is the gas constant. Temperatures are in K.
     '''
-    dECAyed_parameter = parameter * torch.exp(-Ea / 0.008314 * (1 / temp - 1 / temp_ref))
-    return dECAyed_parameter
+    decayed_parameter = parameter * torch.exp(-Ea / 0.008314 * (1 / temp - 1 / temp_ref))
+    return decayed_parameter
 
 def linear_temp_dep(parameter, temp, Q, temp_ref):
     '''
