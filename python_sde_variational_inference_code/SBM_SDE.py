@@ -103,7 +103,7 @@ def drift_diffusion_SCON_C(C_PATH, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, SCON_C
     SOC, DOC, MBC =  torch.chunk(C_PATH, state_dim, -1) #Partition SOC, DOC, and MBC values. Split based on final C_PATH dim, which specifies state variables and is also indexed as dim #2 in tensor. 
     current_temp = temp_gen(T_SPAN_TENSOR, temp_ref) #Obtain temperature function vector across span of times.
     drift = torch.empty_like(C_PATH, device = C_PATH.device) #Initiate tensor with same dims as C_PATH to assign drift.
-    #DECAy parameters are forced by temperature changes.
+    #Decay parameters are forced by temperature changes.
     k_S = arrhenius_temp_dep(SCON_C_params_dict['k_S_ref'], current_temp, SCON_C_params_dict['Ea_S'], temp_ref) #Apply vectorized temperature-dependent transformation to k_S_ref.
     k_D = arrhenius_temp_dep(SCON_C_params_dict['k_D_ref'], current_temp, SCON_C_params_dict['Ea_D'], temp_ref) #Apply vectorized temperature-dependent transformation to k_D_ref.
     k_M = arrhenius_temp_dep(SCON_C_params_dict['k_M_ref'], current_temp, SCON_C_params_dict['Ea_M'], temp_ref) #Apply vectorized temperature-dependent transformation to k_M_ref.
@@ -136,7 +136,7 @@ def drift_diffusion_SCON_SS(C_PATH, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, SCON_
     drift = torch.empty_like(C_PATH, device = C_PATH.device) #Initiate tensor with same dims as C_PATH to assign drift.
     diffusion_sqrt = torch.zeros([drift.size(0), drift.size(1), state_dim, state_dim], device = drift.device) #Create tensor to assign diffusion matrix elements. Diffusion exists for explicit algebraic variable CO2.
     #diffusion_sqrt_diag = torch.empty_like(C_PATH, device = C_PATH.device) #Create tensor to assign diffusion matrix elements.
-    #DECAy parameters are forced by temperature changes.
+    #Decay parameters are forced by temperature changes.
     k_S = arrhenius_temp_dep(SCON_SS_params_dict['k_S_ref'], current_temp, SCON_SS_params_dict['Ea_S'], temp_ref) #Apply vectorized temperature-dependent transformation to k_S_ref.
     k_D = arrhenius_temp_dep(SCON_SS_params_dict['k_D_ref'], current_temp, SCON_SS_params_dict['Ea_D'], temp_ref) #Apply vectorized temperature-dependent transformation to k_D_ref.
     k_M = arrhenius_temp_dep(SCON_SS_params_dict['k_M_ref'], current_temp, SCON_SS_params_dict['Ea_M'], temp_ref) #Apply vectorized temperature-dependent transformation to k_M_ref.
@@ -173,7 +173,7 @@ def drift_diffusion_SAWB_C(C_PATH, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, SAWB_C
     SOC, DOC, MBC, EEC =  torch.chunk(C_PATH, state_dim, -1) #Partition SOC, DOC, MBC, EEC values. Split based on final C_PATH dim, which specifies state variables and is also indexed as dim #2 in tensor. 
     current_temp = temp_gen(T_SPAN_TENSOR, temp_ref) #Obtain temperature function vector across span of times.
     drift = torch.empty_like(C_PATH, device = C_PATH.device) #Initiate tensor with same dims as C_PATH to assign drift.
-    #DECAy parameters are forced by temperature changes.
+    #Decay parameters are forced by temperature changes.
     u_Q = linear_temp_dep(SAWB_C_params_dict['u_Q_ref'], current_temp, SAWB_C_params_dict['Q'], temp_ref) #Apply linear temperature-dependence to u_Q.
     V_D = arrhenius_temp_dep(SAWB_C_params_dict['V_D_ref'], current_temp, SAWB_C_params_dict['Ea_V_D'], temp_ref) #Apply vectorized temperature-dependent transformation to V_D.
     V_U = arrhenius_temp_dep(SAWB_C_params_dict['V_U_ref'], current_temp, SAWB_C_params_dict['Ea_V_U'], temp_ref) #Apply vectorized temperature-dependent transformation to V_U.
@@ -208,7 +208,7 @@ def drift_diffusion_SAWB_SS(C_PATH, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, SAWB_
     drift = torch.empty_like(C_PATH, device = C_PATH.device) #Initiate tensor with same dims as C_PATH to assign drift.
     diffusion_sqrt = torch.zeros([drift.size(0), drift.size(1), state_dim, state_dim], device = drift.device) #Create tensor to assign diffusion matrix elements. Diffusion exists for explicit algebraic variable CO2.
     #diffusion_sqrt_diag = torch.empty_like(C_PATH, device = C_PATH.device) #Create tensor to assign diffusion matrix elements.
-    #DECAy parameters are forced by temperature changes.
+    #Decay parameters are forced by temperature changes.
     u_Q = linear_temp_dep(SAWB_SS_params_dict['u_Q_ref'], current_temp, SAWB_SS_params_dict['Q'], temp_ref) #Apply linear temperature-dependence to u_Q.
     V_D = arrhenius_temp_dep(SAWB_SS_params_dict['V_D_ref'], current_temp, SAWB_SS_params_dict['Ea_V_D'], temp_ref) #Apply vectorized temperature-dependent transformation to V_D.
     V_U = arrhenius_temp_dep(SAWB_SS_params_dict['V_U_ref'], current_temp, SAWB_SS_params_dict['Ea_V_U'], temp_ref) #Apply vectorized temperature-dependent transformation to V_U.
@@ -249,7 +249,7 @@ def drift_diffusion_SAWB_ECA_C(C_PATH, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, SA
     SOC, DOC, MBC, EEC =  torch.chunk(C_PATH, state_dim, -1) #Partition SOC, DOC, MBC, EEC values. Split based on final C_PATH dim, which specifies state variables and is also indexed as dim #2 in tensor.
     current_temp = temp_gen(T_SPAN_TENSOR, temp_ref) #Obtain temperature function vector across span of times.
     drift = torch.empty_like(C_PATH, device = C_PATH.device) #Initiate tensor with same dims as C_PATH to assign drift.
-    #DECAy parameters are forced by temperature changes.
+    #Decay parameters are forced by temperature changes.
     u_Q = linear_temp_dep(SAWB_ECA_C_params_dict['u_Q_ref'], current_temp, SAWB_ECA_C_params_dict['Q'], temp_ref) #Apply linear temperature-dependence to u_Q.
     V_DE = arrhenius_temp_dep(SAWB_ECA_C_params_dict['V_DE_ref'], current_temp, SAWB_ECA_C_params_dict['Ea_V_DE'], temp_ref) #Apply vectorized temperature-dependent transformation to V_DE.
     V_UE = arrhenius_temp_dep(SAWB_ECA_C_params_dict['V_UE_ref'], current_temp, SAWB_ECA_C_params_dict['Ea_V_UE'], temp_ref) #Apply vectorized temperature-dependent transformation to V_UE.
@@ -284,7 +284,7 @@ def drift_diffusion_SAWB_ECA_SS(C_PATH, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, S
     drift = torch.empty_like(C_PATH, device = C_PATH.device) #Initiate tensor with same dims as C_PATH to assign drift.
     diffusion_sqrt = torch.zeros([drift.size(0), drift.size(1), state_dim, state_dim], device = drift.device) #Create tensor to assign diffusion matrix elements. Diffusion exists for explicit algebraic variable CO2.
     #diffusion_sqrt_diag = torch.empty_like(C_PATH, device = C_PATH.device) #Create tensor to assign diffusion matrix elements.
-    #DECAy parameters are forced by temperature changes.
+    #Decay parameters are forced by temperature changes.
     u_Q = linear_temp_dep(SAWB_ECA_SS_params_dict['u_Q_ref'], current_temp, SAWB_ECA_SS_params_dict['Q'], temp_ref) #Apply linear temperature-dependence to u_Q.
     V_DE = arrhenius_temp_dep(SAWB_ECA_SS_params_dict['V_DE_ref'], current_temp, SAWB_ECA_SS_params_dict['Ea_V_DE'], temp_ref) #Apply vectorized temperature-dependent transformation to V_DE.
     V_UE = arrhenius_temp_dep(SAWB_ECA_SS_params_dict['V_UE_ref'], current_temp, SAWB_ECA_SS_params_dict['Ea_V_UE'], temp_ref) #Apply vectorized temperature-dependent transformation to V_UE.
