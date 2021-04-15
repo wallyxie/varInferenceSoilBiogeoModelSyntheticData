@@ -292,7 +292,7 @@ class ObsModelCO2(ObsModel):
         self.get_CO2 = GET_CO2
 
     def forward(self, x):
-        CO2_vector = self.get_CO2(x[:, self.idx, :])
+        CO2_vector = self.get_CO2(x[:, self.idx, :]) #Compute CO2 time series through appropriate model functions.
         x_plus_CO2 = torch.cat((x[:, self.idx, :], CO2_vector), dim=-1)
         obs_ll = d.normal.Normal(self.mu.permute(1, 0), self.scale).log_prob(x_plus_CO2)
         return torch.sum(obs_ll, [-1, -2]).mean()
