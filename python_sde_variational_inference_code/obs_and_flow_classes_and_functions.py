@@ -276,8 +276,6 @@ class ObsModel(nn.Module):
         self.scale = SCALE
         
     def forward(self, x):
-        #x_CO2 = self.get_CO2(x[:, self.idx, :])
-        #x_plus_CO2 = torch.cat((x[:, self.idx, :], x_CO2), dim=-1)
         obs_ll = d.normal.Normal(self.mu.permute(1, 0), self.scale).log_prob(x[:, self.idx, :])
         return torch.sum(obs_ll, [-1, -2]).mean()
 
@@ -288,13 +286,14 @@ class ObsModel(nn.Module):
         return self.mu, self.times
 
 class ObsModelCO2(ObsModel):
+
     def __init__(self, DEVICE, TIMES, DT, MU, SCALE, GET_CO2):
         super().__init__()
         self.get_CO2 = GET_CO2
 
     def forward(self, x):
-        x_CO2 = self.get_CO2(x[:, self.idx, :])
-        x_plus_CO2 = torch.cat((x[:, self.idx, :], x_CO2), dim=-1)
+        CO2_vector = self.get_CO2(x[:, self.idx, :])
+        x_plus_CO2 = torch.cat((x[:, self.idx, :], CO2_vector), dim=-1)
         obs_ll = d.normal.Normal(self.mu.permute(1, 0), self.scale).log_prob(x_plus_CO2)
         return torch.sum(obs_ll, [-1, -2]).mean()
 
