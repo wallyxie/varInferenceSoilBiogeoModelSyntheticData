@@ -152,7 +152,7 @@ class CouplingLayer(nn.Module):
         feature_vec = torch.cat([first_block, cond_inputs], 1)
         output = self.second_block(feature_vec)
         mu, sigma = torch.chunk(output, 2, 1)
-        sigma = LowerBound.apply(sigma, 1e-8)
+        sigma = LowerBound.apply(sigma, 1e-6)
         x = mu + sigma * x
         return x, -torch.log(sigma)
 
@@ -182,7 +182,7 @@ class SoftplusLayer(nn.Module):
 
 class BatchNormLayer(nn.Module):
     
-    def __init__(self, num_inputs, momentum = 0.0, eps = 1e-8):
+    def __init__(self, num_inputs, momentum = 0.0, eps = 1e-5):
         super(BatchNormLayer, self).__init__()
 
         self.log_gamma = nn.Parameter(torch.rand(num_inputs))
@@ -258,7 +258,7 @@ class SDEFlow(nn.Module):
         for ildj in ildjs:
             log_prob += ildj.sum(-1)
     
-        return eps.reshape(self.batch_size, self.state_dim, -1).permute(0, 2, 1) + 1e-8, log_prob
+        return eps.reshape(self.batch_size, self.state_dim, -1).permute(0, 2, 1) + 1e-9, log_prob
 
 ###################################################
 ##OBSERVATION MODEL RELATED CLASSES AND FUNCTIONS##
