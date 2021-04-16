@@ -20,7 +20,7 @@ import pandas as pd
 ##SYNTHETIC OBSERVATION READ-IN FUNCTIONS##
 ###########################################
 
-def csv_to_obs_df(df_csv_string, state_dim, T, obs_error_scale):
+def csv_to_obs_df(df_csv_string, dim, T, obs_error_scale):
     '''
     Takes CSV of labeled biogeochemical data observations and returns three items: 
     1) Numpy array of observation measurement times.
@@ -33,7 +33,7 @@ def csv_to_obs_df(df_csv_string, state_dim, T, obs_error_scale):
     obs_means = torch.Tensor(np.array(obs_df.drop(columns = 'hour')))    
     obs_means_T = obs_means.T
     obs_error_sd = torch.mean(obs_means_T, 1) * obs_error_scale
-    obs_error_sd_re = obs_error_sd.reshape([1, state_dim]) #Need to reshape observation error tensor for input into ObsModel class.
+    obs_error_sd_re = obs_error_sd.reshape([1, dim]) #Need to reshape observation error tensor for input into ObsModel class.
     return obs_times, obs_means_T, obs_error_sd_re
 
 ##################################################
@@ -285,21 +285,21 @@ class ObsModel(nn.Module):
     def plt_dat(self):
         return self.mu, self.times
 
-class ObsModelCO2(ObsModel):
-
-    '''
-    ObsModelCO2 is a derived class of ObsModel and needs to inherit ObsModel's classes. CO2 mu should already be a part of ObsModel.mu following read-in from data.
-    '''
-
-    def __init__(self, DEVICE, TIMES, DT, MU, SCALE, GET_CO2):
-        super().__init__(DEVICE, TIMES, DT, MU, SCALE)
-        self.get_CO2 = GET_CO2
-
-    def forward(self, x, T_SPAN_TENSOR, PARAMS_DICT, TEMP_GEN, TEMP_REF):
-        CO2 = self.get_CO2(x[:, self.idx, :], T_SPAN_TENSOR, PARAMS_DICT, TEMP_GEN, TEMP_REF)
-        x_with_CO2 = torch.cat((x[:, self.idx, :], CO2), dim = -1)
-        obs_ll = d.normal.Normal(self.mu.permute(1, 0), self.scale).log_prob(x_with_CO2)
-        return torch.sum(obs_ll, [-1, -2]).mean()
+# class ObsModelCO2(ObsModel):
+#
+#     '''
+#     ObsModelCO2 is a derived class of ObsModel and needs to inherit ObsModel's classes. CO2 mu should already be a part of ObsModel.mu following read-in from data.
+#     '''
+#
+#     def __init__(self, DEVICE, TIMES, DT, MU, SCALE, GET_CO2):
+#         super().__init__(DEVICE, TIMES, DT, MU, SCALE)
+#         self.get_CO2 = GET_CO2
+#
+#     def forward(self, x, T_SPAN_TENSOR, PARAMS_DICT, TEMP_GEN, TEMP_REF):
+#         CO2 = self.get_CO2(x[:, self.idx, :], T_SPAN_TENSOR, PARAMS_DICT, TEMP_GEN, TEMP_REF)
+#         x_with_CO2 = torch.cat((x[:, self.idx, :], CO2), dim = -1)
+#         obs_ll = d.normal.Normal(self.mu.permute(1, 0), self.scale).log_prob(x_with_CO2)
+#         return torch.sum(obs_ll, [-1, -2]).mean()
 
 ###################################################
 ##ELBO AND TRAINING RELATED CLASSES AND FUNCTIONS##
