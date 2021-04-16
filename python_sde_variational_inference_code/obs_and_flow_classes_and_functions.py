@@ -258,7 +258,7 @@ class SDEFlow(nn.Module):
         for ildj in ildjs:
             log_prob += ildj.sum(-1)
     
-        return eps.reshape(self.batch_size, self.state_dim, -1).permute(0, 2, 1) + 1e-9, log_prob
+        return eps.reshape(self.batch_size, self.state_dim, -1).permute(0, 2, 1) + 1e-6, log_prob
 
 ###################################################
 ##OBSERVATION MODEL RELATED CLASSES AND FUNCTIONS##
