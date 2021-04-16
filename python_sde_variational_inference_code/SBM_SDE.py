@@ -93,7 +93,7 @@ def analytical_steady_state_init_AWB_ECA(SOC_input, DOC_input, SAWB_ECA_params_d
 #################################################### 
 
 #SCON-C
-def drift_diffusion_SCON_C(C_PATH, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, SCON_C_params_dict, temp_ref):
+def drift_diffusion_SCON_C(C_PATH, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, SCON_C_params_dict, temp_gen, temp_ref):
     '''
     Returns SCON "constant diffusion parameterization" drift vectors and diffusion matrices.
     current_temp is output from temp_gen function. 
@@ -124,7 +124,7 @@ def drift_diffusion_SCON_C(C_PATH, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, SCON_C
     return drift, diffusion_sqrt
 
 #SCON-SS
-def drift_diffusion_SCON_SS(C_PATH, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, SCON_SS_params_dict, temp_ref):
+def drift_diffusion_SCON_SS(C_PATH, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, SCON_SS_params_dict, temp_gen, temp_ref):
     '''
     Returns SCON "state scaling diffusion parameterization" drift vectors and diffusion matrices.
     current_temp is output from temp_gen function. 
@@ -163,7 +163,7 @@ def drift_diffusion_SCON_SS(C_PATH, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, SCON_
     return drift, diffusion_sqrt
 
 #SAWB-c
-def drift_diffusion_SAWB_C(C_PATH, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, SAWB_C_params_dict, temp_ref):
+def drift_diffusion_SAWB_C(C_PATH, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, SAWB_C_params_dict, temp_gen, temp_ref):
     '''
     Returns SAWB "constant diffusion parameterization" drift vectors and diffusion matrices.
     current_temp is output from temp_gen function. 
@@ -196,7 +196,7 @@ def drift_diffusion_SAWB_C(C_PATH, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, SAWB_C
     return drift, diffusion_sqrt
 
 #SAWB-ss
-def drift_diffusion_SAWB_SS(C_PATH, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, SAWB_SS_params_dict, temp_ref):
+def drift_diffusion_SAWB_SS(C_PATH, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, SAWB_SS_params_dict, temp_gen, temp_ref):
     '''
     Returns SAWB "state scaling diffusion parameterization" drift vectors and diffusion matrices.
     current_temp is output from temp_gen function. 
@@ -239,7 +239,7 @@ def drift_diffusion_SAWB_SS(C_PATH, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, SAWB_
     return drift, diffusion_sqrt
 
 #SAWB-ECA-C
-def drift_diffusion_SAWB_ECA_C(C_PATH, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, SAWB_ECA_C_params_dict, temp_ref):
+def drift_diffusion_SAWB_ECA_C(C_PATH, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, SAWB_ECA_C_params_dict, temp_gen, temp_ref):
     '''
     Returns SAWB-ECA "constant diffusion parameterization" drift vectors and diffusion matrices.
     current_temp is output from temp_gen function. 
@@ -272,7 +272,7 @@ def drift_diffusion_SAWB_ECA_C(C_PATH, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, SA
     return drift, diffusion_sqrt
 
 #SAWB-ECA-SS
-def drift_diffusion_SAWB_ECA_SS(C_PATH, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, SAWB_ECA_SS_params_dict, temp_ref):
+def drift_diffusion_SAWB_ECA_SS(C_PATH, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, SAWB_ECA_SS_params_dict, temp_gen, temp_ref):
     '''
     Returns SAWB-ECA "state scaling diffusion parameterization" drift vectors and diffusion matrices.
     current_temp is output from temp_gen function. 
