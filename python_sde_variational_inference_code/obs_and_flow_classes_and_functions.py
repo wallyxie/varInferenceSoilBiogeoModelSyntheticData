@@ -287,8 +287,12 @@ class ObsModel(nn.Module):
 
 class ObsModelCO2(ObsModel):
 
+    '''
+    ObsModelCO2 is a derived class of ObsModel and needs to inherit ObsModel's classes.
+    '''
+
     def __init__(self, DEVICE, TIMES, DT, MU, SCALE, GET_CO2):
-        super().__init__()
+        super().__init__(DEVICE, TIMES, DT, MU, SCALE)
         self.get_CO2 = GET_CO2
 
     def forward(self, x, T_SPAN_TENSOR, SBM_PARAMS_DICT, TEMP_REF):
