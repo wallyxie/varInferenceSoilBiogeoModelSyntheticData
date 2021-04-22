@@ -147,6 +147,7 @@ class CouplingLayer(nn.Module):
     def forward(self, x, cond_inputs):
         if self.unpack:
             cond_inputs = torch.cat([*cond_inputs], 1)
+        #print(cond_inputs[0, :, 0], cond_inputs[0, :, 10])
         cond_inputs = self.feature_net(cond_inputs)
         first_block = self.first_block(x)
         feature_vec = torch.cat([first_block, cond_inputs], 1)
