@@ -26,7 +26,7 @@ def arrhenius_temp_dep(parameter, temp, Ea, temp_ref):
     For a parameter with Arrhenius temperature dependence, returns the transformed parameter value.
     0.008314 is the gas constant. Temperatures are in K.
     '''
-    decayed_parameter = parameter * torch.exp(-Ea / 0.008314 * (1 / temp - 1 / temp_ref))
+    decayed_parameter = parameter * torch.exp(-Ea / 0.008314 * (1 / temp - 1 / temp_ref)) 
     return decayed_parameter
 
 def linear_temp_dep(parameter, temp, Q, temp_ref):
@@ -51,7 +51,7 @@ def analytical_steady_state_init_CON(SOC_input, DOC_input, SCON_params_dict):
     D_0 = (DOC_input + SOC_input * SCON_params_dict['a_SD']) / (SCON_params_dict['u_M'] + SCON_params_dict['k_D_ref'] + SCON_params_dict['u_M'] * SCON_params_dict['a_M'] * (SCON_params_dict['a_MSC'] - 1 - SCON_params_dict['a_MSC'] * SCON_params_dict['a_SD']) - SCON_params_dict['a_DS'] * SCON_params_dict['k_D_ref'] * SCON_params_dict['a_SD'])
     S_0 = (SOC_input + D_0 * (SCON_params_dict['a_DS'] * SCON_params_dict['k_D_ref'] + SCON_params_dict['u_M'] * SCON_params_dict['a_M'] * SCON_params_dict['a_MSC'])) / SCON_params_dict['k_S_ref']
     M_0 = SCON_params_dict['u_M'] * D_0 / SCON_params_dict['k_M_ref']
-    C_0 = torch.cat([S_0, D_0, M_0], 1)
+    C_0 = torch.stack([S_0, D_0, M_0], 1)
     #C_0_vector = torch.as_tensor([S_0, D_0, M_0]) #Commented out, now that SCON_params_dict is dictionary of tensors.   
     #CO2_0 = SCON_params_dict['k_S_ref'] * S_0 * (1 - SCON_params_dict['a_SD']) + SCON_params_dict['k_D_ref'] * D_0 * (1 - SCON_params_dict['a_DS']) + SCON_params_dict['k_M_ref'] * M_0 * (1 - SCON_params_dict['a_M'])
     #C_0_vector = torch.as_tensor([S_0, D_0, M_0, CO2_0])
@@ -67,7 +67,7 @@ def analytical_steady_state_init_AWB(SOC_input, DOC_input, SAWB_params_dict):
     D_0 = -((SAWB_params_dict['K_U'] * (SAWB_params_dict['r_E'] + SAWB_params_dict['r_M'])) / (SAWB_params_dict['r_E'] + SAWB_params_dict['r_M'] - SAWB_params_dict['u_Q_ref'] * SAWB_params_dict['V_U_ref']))
     M_0 = -((SOC_input + DOC_input) * SAWB_params_dict['u_Q_ref']) / ((SAWB_params_dict['r_E'] + SAWB_params_dict['r_M']) * (SAWB_params_dict['u_Q_ref'] - 1))
     E_0 = SAWB_params_dict['r_E'] * M_0 / SAWB_params_dict['r_L']
-    C_0 = torch.cat([S_0, D_0, M_0, E_0], 1)
+    C_0 = torch.stack([S_0, D_0, M_0, E_0], 1)
     #C_0_vector = torch.as_tensor([S_0, D_0, M_0, E_0]) #Commented out, now that SCON_params_dict is dictionary of tensors.
     #E_0 = -((SAWB_params_dict['r_E'] * SAWB_params_dict['u_Q_ref'] * (SOC_input + DOC_input)) / (SAWB_params_dict['r_L'] * (SAWB_params_dict['r_E'] + SAWB_params_dict['r_M']) * (SAWB_params_dict['u_Q_ref'] - 1)))
     #CO2_0 = (1 - SAWB_params_dict['u_Q_ref']) * (SAWB_params_dict['V_U_ref'] * M_0 * D_0) / (SAWB_params_dict['K_U'] + D_0)
@@ -84,7 +84,7 @@ def analytical_steady_state_init_AWB_ECA(SOC_input, DOC_input, SAWB_ECA_params_d
     D_0 = -(SAWB_ECA_params_dict['K_UE'] * (SAWB_ECA_params_dict['r_E'] + SAWB_ECA_params_dict['r_M']) * (SAWB_ECA_params_dict['u_Q_ref'] - 1) - (SOC_input + DOC_input) * SAWB_ECA_params_dict['u_Q_ref']) / ((SAWB_ECA_params_dict['u_Q_ref'] - 1) * (SAWB_ECA_params_dict['r_E'] + SAWB_ECA_params_dict['r_M'] - SAWB_ECA_params_dict['u_Q_ref'] * SAWB_ECA_params_dict['V_UE_ref']))
     M_0 = -((SOC_input + DOC_input) * SAWB_ECA_params_dict['u_Q_ref']) / ((SAWB_ECA_params_dict['r_E'] + SAWB_ECA_params_dict['r_M']) * (SAWB_ECA_params_dict['u_Q_ref'] - 1))
     E_0 = SAWB_ECA_params_dict['r_E'] * M_0 / SAWB_ECA_params_dict['r_L']
-    C_0 = torch.cat([S_0, D_0, M_0, E_0], 1)    
+    C_0 = torch.stack([S_0, D_0, M_0, E_0], 1)    
     #C_0_vector = torch.as_tensor([S_0, D_0, M_0, E_0]) #Commented out, now that SCON_params_dict is dictionary of tensors.    
     #E_0 = -((SAWB_params_dict['r_E'] * SAWB_params_dict['u_Q_ref'] * (SOC_input + DOC_input)) / (SAWB_params_dict['r_L'] * (SAWB_params_dict['r_E'] + SAWB_params_dict['r_M']) * (SAWB_params_dict['u_Q_ref'] - 1)))
     #CO2_0 = (1 - SAWB_ECA_params_dict['u_Q_ref']) * SAWB_ECA_params_dict['V_UE_ref'] * M_0 * D_0 / (SAWB_ECA_params_dict['K_UE'] + M_0 + D_0)
@@ -108,22 +108,27 @@ def drift_diffusion_SCON_C(C_PATH, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, SCON_C
     drift = torch.empty_like(C_PATH, device = C_PATH.device) #Initiate tensor with same dims as C_PATH to assign drift.
     #Decay parameters are forced by temperature changes.
     k_S = arrhenius_temp_dep(SCON_C_params_dict['k_S_ref'], current_temp, SCON_C_params_dict['Ea_S'], temp_ref) #Apply vectorized temperature-dependent transformation to k_S_ref.
+    k_S = k_S.permute(2, 1, 0) #Get k_S into appropriate dimensions. 
     k_D = arrhenius_temp_dep(SCON_C_params_dict['k_D_ref'], current_temp, SCON_C_params_dict['Ea_D'], temp_ref) #Apply vectorized temperature-dependent transformation to k_D_ref.
+    k_D = k_D.permute(2, 1, 0) #Get k_D into appropriate dimensions.
     k_M = arrhenius_temp_dep(SCON_C_params_dict['k_M_ref'], current_temp, SCON_C_params_dict['Ea_M'], temp_ref) #Apply vectorized temperature-dependent transformation to k_M_ref.
+    k_M = k_M.permute(2, 1, 0) #Get k_M into appropriate dimensions.
+    #Repeat and permute parameter values to match dimension sizes
+    SCON_C_params_dict_rep = dict((k, v.repeat(1, T_SPAN_TENSOR.size(1), 1).permute(2, 1, 0)) for k, v in SCON_C_params_dict.items())    
     #Drift is calculated.
-    drift_SOC = I_S_TENSOR + SCON_C_params_dict['a_DS'] * k_D * DOC + SCON_C_params_dict['a_M'] * SCON_C_params_dict['a_MSC'] * k_M * MBC - k_S * SOC
-    drift_DOC = I_D_TENSOR + SCON_C_params_dict['a_SD'] * k_S * SOC + SCON_C_params_dict['a_M'] * (1 - SCON_C_params_dict['a_MSC']) * k_M * MBC - (SCON_C_params_dict['u_M'] + k_D) * DOC
-    drift_MBC = SCON_C_params_dict['u_M'] * DOC - k_M * MBC
-    #CO2 = (k_S * SOC * (1 - SCON_C_params_dict['a_SD'])) + (k_D * DOC * (1 - SCON_C_params_dict['a_DS'])) + (k_M * MBC * (1 - SCON_C_params_dict['a_M'])) 
+    drift_SOC = I_S_TENSOR + SCON_C_params_dict_rep['a_DS'] * k_D * DOC + SCON_C_params_dict_rep['a_M'] * SCON_C_params_dict_rep['a_MSC'] * k_M * MBC - k_S * SOC
+    drift_DOC = I_D_TENSOR + SCON_C_params_dict_rep['a_SD'] * k_S * SOC + SCON_C_params_dict_rep['a_M'] * (1 - SCON_C_params_dict_rep['a_MSC']) * k_M * MBC - (SCON_C_params_dict_rep['u_M'] + k_D) * DOC
+    drift_MBC = SCON_C_params_dict_rep['u_M'] * DOC - k_M * MBC
+    #CO2 = (k_S * SOC * (1 - SCON_C_params_dict_rep['a_SD'])) + (k_D * DOC * (1 - SCON_C_params_dict_rep['a_DS'])) + (k_M * MBC * (1 - SCON_C_params_dict_rep['a_M'])) 
     #Assign elements to drift vector.
     drift[:, :, 0 : 1] = drift_SOC
     drift[:, :, 1 : 2] = drift_DOC
     drift[:, :, 2 : 3] = drift_MBC
     #drift[:, :, 3 : 4] = CO2 #CO2 is not a part of the drift. This is a hack for the explicit algebraic variable situation.
     #Diffusion matrix is assigned.
-    diffusion_sqrt_single = torch.diag(torch.sqrt(LowerBound.apply(torch.as_tensor([SCON_C_params_dict['c_SOC'], SCON_C_params_dict['c_DOC'], SCON_C_params_dict['c_MBC']]), 1e-6))) #Create single diffusion matrix by diagonalizing constant noise scale parameters.    
+    diffusion_sqrt_single =torch.diag_embed(torch.sqrt(LowerBound.apply(torch.stack([SCON_C_params_dict['c_SOC'], SCON_C_params_dict['c_DOC'], SCON_C_params_dict['c_MBC']], 1), 1e-6))) #Create single diffusion matrix by diagonalizing constant noise scale parameters.    
     #diffusion_sqrt_single = torch.diag(torch.sqrt(LowerBound.apply(torch.as_tensor([SCON_C_params_dict['c_SOC'], SCON_C_params_dict['c_DOC'], SCON_C_params_dict['c_MBC'], SCON_C_params_dict['c_CO2']]), 1e-6))) #Create single diffusion matrix by diagonalizing constant noise scale parameters.
-    diffusion_sqrt = diffusion_sqrt_single.expand(drift.size(0), drift.size(1), state_dim, state_dim) #Expand diffusion matrices across all paths and across discretized time steps.
+    diffusion_sqrt = diffusion_sqrt_single.unsqueeze(1).expand(-1, T_SPAN_TENSOR.size(1), -1, -1) #Expand diffusion matrices across all paths and across discretized time steps.
     return drift, diffusion_sqrt
 
 #SCON-SS
@@ -137,17 +142,22 @@ def drift_diffusion_SCON_SS(C_PATH, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, SCON_
     SOC, DOC, MBC =  torch.chunk(C_PATH, state_dim, -1) #Partition SOC, DOC, MBC values. Split based on final C_PATH dim, which specifies state variables and is also indexed as dim #2 in tensor. 
     current_temp = temp_gen(T_SPAN_TENSOR, temp_ref) #Obtain temperature function vector across span of times.
     drift = torch.empty_like(C_PATH, device = C_PATH.device) #Initiate tensor with same dims as C_PATH to assign drift.
-    diffusion_sqrt = torch.zeros([drift.size(0), drift.size(1), state_dim, state_dim], device = drift.device) #Create tensor to assign diffusion matrix elements. Diffusion exists for explicit algebraic variable CO2.
+    diffusion_sqrt = torch.zeros([drift.size(0), drift.size(1), state_dim, state_dim], device = drift.device) #Create tensor to assign diffusion matrix elements.
     #diffusion_sqrt_diag = torch.empty_like(C_PATH, device = C_PATH.device) #Create tensor to assign diffusion matrix elements.
     #Decay parameters are forced by temperature changes.
     k_S = arrhenius_temp_dep(SCON_SS_params_dict['k_S_ref'], current_temp, SCON_SS_params_dict['Ea_S'], temp_ref) #Apply vectorized temperature-dependent transformation to k_S_ref.
+    k_S = k_S.permute(2, 1, 0) #Get k_S into appropriate dimensions. 
     k_D = arrhenius_temp_dep(SCON_SS_params_dict['k_D_ref'], current_temp, SCON_SS_params_dict['Ea_D'], temp_ref) #Apply vectorized temperature-dependent transformation to k_D_ref.
+    k_D = k_D.permute(2, 1, 0) #Get k_D into appropriate dimensions.
     k_M = arrhenius_temp_dep(SCON_SS_params_dict['k_M_ref'], current_temp, SCON_SS_params_dict['Ea_M'], temp_ref) #Apply vectorized temperature-dependent transformation to k_M_ref.
+    k_M = k_M.permute(2, 1, 0) #Get k_M into appropriate dimensions.
+    #Repeat and permute parameter values to match dimension sizes
+    SCON_SS_params_dict_rep = dict((k, v.repeat(1, T_SPAN_TENSOR.size(1), 1).permute(2, 1, 0)) for k, v in  SCON_SS_params_dict.items())    
     #Drift is calculated.
-    drift_SOC = I_S_TENSOR + SCON_SS_params_dict['a_DS'] * k_D * DOC + SCON_SS_params_dict['a_M'] * SCON_SS_params_dict['a_MSC'] * k_M * MBC - k_S * SOC
-    drift_DOC = I_D_TENSOR + SCON_SS_params_dict['a_SD'] * k_S * SOC + SCON_SS_params_dict['a_M'] * (1 - SCON_SS_params_dict['a_MSC']) * k_M * MBC - (SCON_SS_params_dict['u_M'] + k_D) * DOC
-    drift_MBC = SCON_SS_params_dict['u_M'] * DOC - k_M * MBC
-    #CO2 = (k_S * SOC * (1 - SCON_SS_params_dict['a_SD'])) + (k_D * DOC * (1 - SCON_SS_params_dict['a_DS'])) + (k_M * MBC * (1 - SCON_SS_params_dict['a_M'])) 
+    drift_SOC = I_S_TENSOR + SCON_SS_params_dict_rep['a_DS'] * k_D * DOC + SCON_SS_params_dict_rep['a_M'] * SCON_SS_params_dict_rep['a_MSC'] * k_M * MBC - k_S * SOC
+    drift_DOC = I_D_TENSOR + SCON_SS_params_dict_rep['a_SD'] * k_S * SOC + SCON_SS_params_dict_rep['a_M'] * (1 - SCON_SS_params_dict_rep['a_MSC']) * k_M * MBC - (SCON_SS_params_dict_rep['u_M'] + k_D) * DOC
+    drift_MBC = SCON_SS_params_dict_rep['u_M'] * DOC - k_M * MBC
+    #CO2 = (k_S * SOC * (1 - SCON_SS_params_dict_rep['a_SD'])) + (k_D * DOC * (1 - SCON_SS_params_dict_rep['a_DS'])) + (k_M * MBC * (1 - SCON_SS_params_dict_rep['a_M'])) 
     #Assign elements to drift vector.
     drift[:, :, 0 : 1] = drift_SOC
     drift[:, :, 1 : 2] = drift_DOC
@@ -195,7 +205,7 @@ def drift_diffusion_SAWB_C(C_PATH, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, SAWB_C
     #Diffusion matrix is assigned.
     diffusion_sqrt_single = torch.diag(torch.sqrt(LowerBound.apply(torch.as_tensor([SAWB_C_params_dict['c_SOC'], SAWB_C_params_dict['c_DOC'], SAWB_C_params_dict['c_MBC'], SAWB_C_params_dict['c_EEC']]), 1e-6))) #Create single diffusion matrix by diagonalizing constant noise scale parameters.    
     #diffusion_sqrt_single = torch.diag(torch.sqrt(LowerBound.apply(torch.as_tensor([SAWB_C_params_dict['c_SOC'], SAWB_C_params_dict['c_DOC'], SAWB_C_params_dict['c_MBC'], SAWB_C_params_dict['c_EEC'], SAWB_C_params_dict['c_CO2']]), 1e-6))) #Create single diffusion matrix by diagonalizing constant noise scale parameters.
-    diffusion_sqrt = diffusion_sqrt_single.expand(drift.size(0), drift.size(1), state_dim, state_dim) #Expand diffusion matrices across all paths and across discretized time steps. Diffusion exists for explicit algebraic variable CO2.
+    diffusion_sqrt = diffusion_sqrt_single.expand(drift.size(0), drift.size(1), state_dim, state_dim) #Expand diffusion matrices across all paths and across discretized time steps.
     return drift, diffusion_sqrt
 
 #SAWB-ss
@@ -209,7 +219,7 @@ def drift_diffusion_SAWB_SS(C_PATH, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, SAWB_
     SOC, DOC, MBC, EEC =  torch.chunk(C_PATH, state_dim, -1) #Partition SOC, DOC, MBC, EEC values. Split based on final C_PATH dim, which specifies state variables and is also indexed as dim #2 in tensor. 
     current_temp = temp_gen(T_SPAN_TENSOR, temp_ref) #Obtain temperature function vector across span of times.
     drift = torch.empty_like(C_PATH, device = C_PATH.device) #Initiate tensor with same dims as C_PATH to assign drift.
-    diffusion_sqrt = torch.zeros([drift.size(0), drift.size(1), state_dim, state_dim], device = drift.device) #Create tensor to assign diffusion matrix elements. Diffusion exists for explicit algebraic variable CO2.
+    diffusion_sqrt = torch.zeros([drift.size(0), drift.size(1), state_dim, state_dim], device = drift.device) #Create tensor to assign diffusion matrix elements.
     #diffusion_sqrt_diag = torch.empty_like(C_PATH, device = C_PATH.device) #Create tensor to assign diffusion matrix elements.
     #Decay parameters are forced by temperature changes.
     u_Q = linear_temp_dep(SAWB_SS_params_dict['u_Q_ref'], current_temp, SAWB_SS_params_dict['Q'], temp_ref) #Apply linear temperature-dependence to u_Q.
@@ -271,7 +281,7 @@ def drift_diffusion_SAWB_ECA_C(C_PATH, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, SA
     #Diffusion matrix is assigned.
     diffusion_sqrt_single = torch.diag(torch.sqrt(LowerBound.apply(torch.as_tensor([SAWB_ECA_C_params_dict['c_SOC'], SAWB_ECA_C_params_dict['c_DOC'], SAWB_ECA_C_params_dict['c_MBC'], SAWB_ECA_C_params_dict['c_EEC']]), 1e-6))) #Create single diffusion matrix by diagonalizing constant noise scale parameters.    
     #diffusion_sqrt_single = torch.diag(torch.sqrt(LowerBound.apply(torch.as_tensor([SAWB_ECA_C_params_dict['c_SOC'], SAWB_ECA_C_params_dict['c_DOC'], SAWB_ECA_C_params_dict['c_MBC'], SAWB_ECA_C_params_dict['c_EEC'], SAWB_ECA_C_params_dict['c_CO2']]), 1e-6))) #Create single diffusion matrix by diagonalizing constant noise scale parameters.
-    diffusion_sqrt = diffusion_sqrt_single.expand(drift.size(0), drift.size(1), state_dim, state_dim) #Expand diffusion matrices across all paths and across discretized time steps. Diffusion exists for explicit algebraic variable CO2.
+    diffusion_sqrt = diffusion_sqrt_single.expand(drift.size(0), drift.size(1), state_dim, state_dim) #Expand diffusion matrices across all paths and across discretized time steps.
     return drift, diffusion_sqrt
 
 #SAWB-ECA-SS
@@ -285,7 +295,7 @@ def drift_diffusion_SAWB_ECA_SS(C_PATH, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, S
     SOC, DOC, MBC, EEC =  torch.chunk(C_PATH, state_dim, -1) #Partition SOC, DOC, MBC, EEC values. Split based on final C_PATH dim, which specifies state variables and is also indexed as dim #2 in tensor. 
     current_temp = temp_gen(T_SPAN_TENSOR, temp_ref) #Obtain temperature function vector across span of times.
     drift = torch.empty_like(C_PATH, device = C_PATH.device) #Initiate tensor with same dims as C_PATH to assign drift.
-    diffusion_sqrt = torch.zeros([drift.size(0), drift.size(1), state_dim, state_dim], device = drift.device) #Create tensor to assign diffusion matrix elements. Diffusion exists for explicit algebraic variable CO2.
+    diffusion_sqrt = torch.zeros([drift.size(0), drift.size(1), state_dim, state_dim], device = drift.device) #Create tensor to assign diffusion matrix elements.
     #diffusion_sqrt_diag = torch.empty_like(C_PATH, device = C_PATH.device) #Create tensor to assign diffusion matrix elements.
     #Decay parameters are forced by temperature changes.
     u_Q = linear_temp_dep(SAWB_ECA_SS_params_dict['u_Q_ref'], current_temp, SAWB_ECA_SS_params_dict['Q'], temp_ref) #Apply linear temperature-dependence to u_Q.
