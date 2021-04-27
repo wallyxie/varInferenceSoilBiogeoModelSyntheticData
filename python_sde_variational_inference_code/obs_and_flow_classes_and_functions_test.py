@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-import torch.distributions as d
+import torch.distributions as D
 import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
@@ -229,7 +229,7 @@ class SDEFlow(nn.Module):
         self.dt = DT
         self.n = N
 
-        self.base_dist = d.normal.Normal(loc = 0., scale = 1.)
+        self.base_dist = D.normal.Normal(loc = 0., scale = 1.)
         self.cond_inputs = cond_inputs        
         self.num_layers = num_layers
 
@@ -277,7 +277,7 @@ class ObsModel(nn.Module):
         self.scale = SCALE
         
     def forward(self, x):
-        obs_ll = d.normal.Normal(self.mu.permute(1, 0), self.scale).log_prob(x[:, self.idx, :])
+        obs_ll = D.normal.Normal(self.mu.permute(1, 0), self.scale).log_prob(x[:, self.idx, :])
         return torch.sum(obs_ll, [-1, -2]).mean()
 
     def get_idx(self, TIMES, DT):
@@ -299,7 +299,7 @@ class ObsModelCO2(ObsModel):
     def forward(self, x, T_SPAN_TENSOR, PARAMS_DICT, TEMP_GEN, TEMP_REF):
         CO2 = self.get_CO2(x[:, self.idx, :], T_SPAN_TENSOR[:, self.idx, :], PARAMS_DICT, TEMP_GEN, TEMP_REF)
         x_with_CO2 = torch.cat((x[:, self.idx, :], CO2), dim = -1)
-        obs_ll = d.normal.Normal(self.mu.permute(1, 0), self.scale).log_prob(x_with_CO2)
+        obs_ll = D.normal.Normal(self.mu.permute(1, 0), self.scale).log_prob(x_with_CO2)
         return torch.sum(obs_ll, [-1, -2]).mean()
 
 ###################################################
@@ -310,9 +310,9 @@ class ObsModelCO2(ObsModel):
 #     drift, diffusion_sqrt = drift_diffusion(C_path[:, :-1, :], T_span_tensor[:, :-1, :], I_S_tensor[:, :-1, :], I_D_tensor[:, :-1, :], params_dict, temp_ref)
 #     #print('\n drift =', drift)
 #     #print('\n diffusion_sqrt =', diffusion_sqrt)
-#     #euler_maruyama_sample = d.multivariate_normal.MultivariateNormal(loc = C_path[:, :-1, :] + drift * dt, scale_tril = diffusion_sqrt * math.sqrt(dt)) This line no longer applies because of addition of CO2 as a 'state'.
+#     #euler_maruyama_sample = D.multivariate_normal.MultivariateNormal(loc = C_path[:, :-1, :] + drift * dt, scale_tril = diffusion_sqrt * math.sqrt(dt)) This line no longer applies because of addition of CO2 as a 'state'.
 #     drift_means_with_CO2 = torch.cat((C_path[:, :-1, :-1] + drift[:, :, :-1] * dt, drift[:, :, -1].unsqueeze(2)), 2) #Separate explicit algebraic variable CO2 mean from integration process.
-#     euler_maruyama_sample = d.multivariate_normal.MultivariateNormal(loc = drift_means_with_CO2, scale_tril = diffusion_sqrt * math.sqrt(dt))
+#     euler_maruyama_sample = D.multivariate_normal.MultivariateNormal(loc = drift_means_with_CO2, scale_tril = diffusion_sqrt * math.sqrt(dt))
 #     return -euler_maruyama_sample.log_prob(C_path[:, 1:, :]).sum(-1)
 #
 # def train(niter, pretrain_iter, BATCH_SIZE, T_span_tensor, I_S_tensor, I_D_tensor, drift_diffusion, params_dict, analytical_steady_state_init):
