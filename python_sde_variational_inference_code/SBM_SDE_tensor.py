@@ -192,7 +192,7 @@ def drift_diffusion_SAWB_C(C_PATH, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, SAWB_C
     V_D = arrhenius_temp_dep(SAWB_C_params_dict['V_D_ref'], current_temp, SAWB_C_params_dict['Ea_V_D'], temp_ref) #Apply vectorized temperature-dependent transformation to V_D.
     V_D.permute(2, 1, 0) #Get V_D into appropriate dimensions.
     V_U = arrhenius_temp_dep(SAWB_C_params_dict['V_U_ref'], current_temp, SAWB_C_params_dict['Ea_V_U'], temp_ref) #Apply vectorized temperature-dependent transformation to V_U.
-    V_U.permute(2, 1, 0) Get #V_U into appropriate dimensions.
+    V_U.permute(2, 1, 0) #Get V_U into appropriate dimensions.
     #Repeat and permute parameter values to match dimension sizes
     SAWB_C_params_dict_rep = dict((k, v.repeat(1, T_SPAN_TENSOR.size(1), 1).permute(2, 1, 0)) for k, v in SAWB_C_params_dict.items()) 
     #Drift is calculated.
@@ -232,7 +232,7 @@ def drift_diffusion_SAWB_SS(C_PATH, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, SAWB_
     V_D = arrhenius_temp_dep(SAWB_SS_params_dict['V_D_ref'], current_temp, SAWB_SS_params_dict['Ea_V_D'], temp_ref) #Apply vectorized temperature-dependent transformation to V_D.
     V_D.permute(2, 1, 0) #Get V_D into appropriate dimensions.
     V_U = arrhenius_temp_dep(SAWB_SS_params_dict['V_U_ref'], current_temp, SAWB_SS_params_dict['Ea_V_U'], temp_ref) #Apply vectorized temperature-dependent transformation to V_U.
-    V_U.permute(2, 1, 0) Get #V_U into appropriate dimensions.
+    V_U.permute(2, 1, 0) #Get V_U into appropriate dimensions.
     #Repeat and permute parameter values to match dimension sizes
     SAWB_SS_params_dict_rep_rep = dict((k, v.repeat(1, T_SPAN_TENSOR.size(1), 1).permute(2, 1, 0)) for k, v in SAWB_SS_params_dict_rep.items()) 
     #Drift is calculated.
