@@ -147,6 +147,7 @@ class CouplingLayer(nn.Module):
     def forward(self, x, cond_inputs):
         if self.unpack:
             cond_inputs = torch.cat([*cond_inputs], 1)
+        #print(cond_inputs[0, :, 0], cond_inputs[0, :, 10])
         cond_inputs = self.feature_net(cond_inputs)
         first_block = self.first_block(x)
         feature_vec = torch.cat([first_block, cond_inputs], 1)
@@ -241,7 +242,7 @@ class SDEFlow(nn.Module):
         eps = self.base_dist.sample([self.batch_size, 1, self.state_dim * self.n]).to(self.device)
         log_prob = self.base_dist.log_prob(eps).sum(-1)
         
-        obs_tile = self.obs_model.mu[None, :, 1:, None].repeat(self.batch_size, self.state_dim, 1, 50).reshape(self.batch_size, self.state_dim, -1)
+        obs_tile = self.obs_model.mu[None, :-1, 1:, None].repeat(self.batch_size, self.state_dim, 1, 50).reshape(self.batch_size, self.state_dim, -1)
         times = torch.arange(self.dt, self.t + self.dt, self.dt, device = eps.device)[(None,) * 2].repeat(self.batch_size, self.state_dim, 1).transpose(-2, -1).reshape(self.batch_size, 1, -1)
         ildjs = []
         
