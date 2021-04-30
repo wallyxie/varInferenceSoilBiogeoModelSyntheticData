@@ -1,4 +1,5 @@
 import torch
+from torch.autograd import Function
 from torch import nn
 import torch.distributions as d
 import torch.nn.functional as F
