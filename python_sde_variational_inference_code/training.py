@@ -108,7 +108,7 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE,
                 pretrain_optimizer.step()
             else:
                 ELBO_optimizer.zero_grad()                
-                log_lik = calc_log_lik(C_PATH, T_SPAN_TENSOR.to(DEVICE), dt,
+                log_lik = calc_log_lik(C_PATH, T_SPAN_TENSOR.to(DEVICE), DT,
                                        I_S_TENSOR.to(DEVICE), I_D_TENSOR.to(DEVICE),
                                        DRIFT_DIFFUSION, theta_dict, TEMP_GEN, TEMP_REF)
                 neg_ELBO = -log_p_theta.mean() + log_q_theta.mean() - log_p_y_0_giv_x_0_and_theta\
