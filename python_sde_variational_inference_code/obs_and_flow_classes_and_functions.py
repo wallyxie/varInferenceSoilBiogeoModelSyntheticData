@@ -238,10 +238,12 @@ class SDEFlow(nn.Module):
         self.SP = SoftplusLayer()
         
     def forward(self, *args, **kwargs):
+        steps_bw_obs = self.obs_model.idx[1] - self.obs_model.idx[0]
+
         eps = self.base_dist.sample([self.batch_size, 1, self.state_dim * self.n]).to(self.device)
         log_prob = self.base_dist.log_prob(eps).sum(-1)
         
-        obs_tile = self.obs_model.mu[None, :, 1:, None].repeat(self.batch_size, self.state_dim, 1, 50).reshape(self.batch_size, self.state_dim, -1) #Presently hard-coded for dt = 0.2.
+        obs_tile = self.obs_model.mu[None, :, 1:, None].repeat(self.batch_size, self.state_dim, 1, steps_bw_obs).reshape(self.batch_size, self.state_dim, -1) #Presently hard-coded for dt = 0.2.
         times = torch.arange(self.dt, self.t + self.dt, self.dt, device = eps.device)[(None,) * 2].repeat(self.batch_size, self.state_dim, 1).transpose(-2, -1).reshape(self.batch_size, 1, -1)
         ildjs = []
         
