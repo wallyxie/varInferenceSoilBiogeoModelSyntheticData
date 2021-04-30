@@ -1,4 +1,4 @@
-from obs_and_flow.py import *
+from obs_and_flow import *
 import torch
 from torch.autograd import Function
 from torch import nn
