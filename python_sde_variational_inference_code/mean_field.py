@@ -4,7 +4,7 @@ from obs_and_flow_classes_and_functions import LowerBound
 import torch.distributions as D
 
 '''
-This script defines the MeanField class for mean field VI inference of the soil biogeochemical model SDE system parameters.
+This module defines the MeanField class for mean field VI inference of the soil biogeochemical model SDE system parameters.
 It accepts priors stored in a dictionary with parameter value names as the key and statistical distribution parameter values.
 Posterior samples and log_q_theta are output.
 '''

@@ -5,16 +5,13 @@ import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
 import math
-from tqdm import tqdm
 import random
 from torch.autograd import Function
-# from torch.utils.tensorboard import SummaryWriter
-import argparse
-import os
-import sys
-from pathlib import Path
-import shutil
 import pandas as pd
+
+'''
+This module contains the constituent classes for the generative flow used to represent the neural differential equations corresponding to the soil biogeochemical model SDE systems, along with the observation model class and miscellanious data processing functions.
+'''
 
 ###########################################
 ##SYNTHETIC OBSERVATION READ-IN FUNCTIONS##
@@ -326,105 +323,3 @@ class ObsModelCO2(ObsModel):
         #print(self.mu.permute(1, 0), x_with_CO2)
         obs_ll = d.normal.Normal(self.mu.permute(1, 0), self.scale).log_prob(x_with_CO2)
         return torch.sum(obs_ll, [-1, -2]).mean()
-
-###################################################
-## PARAMETER MODEL RELATED CLASSES AND FUNCTIONS ##
-###################################################
-
-class MeanField(nn.Module):
-    def __init__(self, init_params):
-        super().__init__()
-
-        # use param dict to intialise the means for the mean-field approximations
-        means = []
-        keys = []
-        for key, value in init_params.items():
-            keys += [key]
-            means += [value]
-        self.means = nn.Parameter(torch.Tensor(means))
-        # save keys for forward output
-        self.keys = keys
-
-        # initial std == 1
-        self.std = nn.Parameter(torch.ones(self.means.shape) * 0.1)
-
-    def forward(self, n=30, return_sample_mean=True):
-        # define q(theta)
-        q_dist = d.normal.Normal(self.means, LowerBound.apply(self.std, 1e-6))
-        # sample theta ~ q(theta)
-        print(samples.shape)
-        samples = q_dist.rsample([n]) # (num_samples, num_params)
-        # evaluate log prob of theta samples
-        log_probs = torch.sum(q_dist.log_prob(samples), -1) # shape of n
-        # return samples in same diitionary format
-        dict_out = {} # define dicitonary with n samples for each parameter
-        for key, sample in zip(self.keys, torch.split(samples, 1, -1),):
-            if return_sample_mean:
-                dict_out[f"{key}"] = sample.mean() 
-            else:
-                dict_out[f"{key}"] = sample # each sample is of shape [n, 1]
-        # returns samples in dicitionary and tensor format
-        return dict_out, samples, log_probs
-
-###################################################
-##ELBO AND TRAINING RELATED CLASSES AND FUNCTIONS##
-###################################################
-
-# def neg_log_lik(C_path, T_span_tensor, dt, I_S_tensor, I_D_tensor, drift_diffusion, params_dict, temp_ref):
-#     drift, diffusion_sqrt = drift_diffusion(C_path[:, :-1, :], T_span_tensor[:, :-1, :], I_S_tensor[:, :-1, :], I_D_tensor[:, :-1, :], params_dict, temp_ref)
-#     #print('\n drift =', drift)
-#     #print('\n diffusion_sqrt =', diffusion_sqrt)
-#     #euler_maruyama_sample = d.multivariate_normal.MultivariateNormal(loc = C_path[:, :-1, :] + drift * dt, scale_tril = diffusion_sqrt * math.sqrt(dt)) This line no longer applies because of addition of CO2 as a 'state'.
-#     drift_means_with_CO2 = torch.cat((C_path[:, :-1, :-1] + drift[:, :, :-1] * dt, drift[:, :, -1].unsqueeze(2)), 2) #Separate explicit algebraic variable CO2 mean from integration process.
-#     euler_maruyama_sample = d.multivariate_normal.MultivariateNormal(loc = drift_means_with_CO2, scale_tril = diffusion_sqrt * math.sqrt(dt))
-#     return -euler_maruyama_sample.log_prob(C_path[:, 1:, :]).sum(-1)
-#
-# def train(niter, pretrain_iter, BATCH_SIZE, T_span_tensor, I_S_tensor, I_D_tensor, drift_diffusion, params_dict, analytical_steady_state_init):
-#     if pretrain_iter >= niter:
-#         raise Exception("pretrain_inter must be < niter.")
-#     best_loss_norm = 1e10
-#     best_loss_ELBO = 1e20
-#     norm_losses = [best_loss_norm] * 10
-#     ELBO_losses = [best_loss_ELBO] * 10
-#     C0 = analytical_steady_state_init(I_S_tensor[0, 0, 0].item(), I_D_tensor[0, 0, 0].item(), params_dict) #Calculate deterministic initial conditions.
-#     C0 = C0[(None,) * 2].repeat(BATCH_SIZE, 1, 1).to(device) #Assign initial conditions to C_path.
-#     with tqdm(total = niter, desc = f'Train Diffusion', position = -1) as t:
-#         for iter in range(niter):
-#             net.train()
-#             optimizer.zero_grad()
-#             C_path, log_prob = net(BATCH_SIZE, obs_model) #Obtain paths with solutions at times after t0.
-#             C_path = torch.cat([C0, C_path], 1) #Append deterministic CON initial conditions conditional on parameter values to C path. 
-#             if iter <= pretrain_iter:
-#                 l1_norm_element = C_path - torch.mean(obs_model.mu, -1)
-#                 l1_norm = torch.sum(torch.abs(l1_norm_element)).mean()
-#                 best_loss_norm = l1_norm if l1_norm < best_loss_norm else best_loss_norm
-#                 l1_norm.backward()
-#                 norm_losses.append(l1_norm.item())
-#                 #l2_norm_element = C_path - torch.mean(obs_model.mu, -1)
-#                 #l2_norm = torch.sqrt(torch.sum(torch.square(l2_norm_element))).mean()
-#                 #best_loss_norm = l2_norm if l2_norm < best_loss_norm else best_loss_norm
-#                 #l2_norm.backward()
-#                 #norm_losses.append(l2_norm.item())
-#                 if len(norm_losses) > 10:
-#                     norm_losses.pop(0)
-#                 if iter % 10 == 0:
-#                     print(f"Moving average norm loss at {iter} iterations is: {sum(norm_losses) / len(norm_losses)}. Best norm loss value is: {best_loss_norm}.")
-#                     print('\nC_path mean =', C_path.mean(-2))
-#                     print('\nC_path =', C_path)
-#             else:
-#                 log_lik = neg_log_lik(C_path, T_span_tensor.to(device), dt, I_S_tensor.to(device), I_D_tensor.to(device), drift_diffusion, params_dict, temp_ref)
-#                 ELBO = log_prob.mean() + log_lik.mean() - obs_model(C_path)
-#                 best_loss_ELBO = ELBO if ELBO < best_loss_ELBO else best_loss_ELBO
-#                 ELBO.backward()
-#                 ELBO_losses.append(ELBO.item())
-#                 if len(ELBO_losses) > 10:
-#                     ELBO_losses.pop(0)
-#                 if iter % 10 == 0:
-#                     print(f"Moving average ELBO loss at {iter} iterations is: {sum(ELBO_losses) / len(ELBO_losses)}. Best ELBO loss value is: {best_loss_ELBO}.")
-#                     print('\nC_path mean =', C_path.mean(-2))
-#                     print('\n C_path =', C_path)
-#             torch.nn.utils.clip_grad_norm_(net.parameters(), 3.0)
-#             optimizer.step()
-#             if iter % 100000 == 0 and iter > 0:
-#                 optimizer.param_groups[0]['lr'] *= 0.1
-#             t.update()
