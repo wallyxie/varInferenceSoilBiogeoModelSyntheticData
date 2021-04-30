@@ -37,7 +37,7 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE,
     
     # Initialize models
     obs_model = ObsModel(DEVICE, obs_times, DT, obs_means[:-1, :], obs_error[:, :-1]) #Hack for bypassing ObsModel and SDEFlow dimension mismatch issue.
-    net = SDEFlow(DEVICE, obs_model, STATE_DIM, T, DT, N,
+    net = SDEFLOW(DEVICE, obs_model, STATE_DIM, T, DT, N,
                   I_S_TENSOR, I_D_TENSOR, cond_inputs = 3).to(DEVICE) #Instantiate flow.
     prior_means_tensor = torch.Tensor(list(PARAM_PRIOR_MEANS_DICT.values())) #Convert prior mean dictionary values to tensor.
     
