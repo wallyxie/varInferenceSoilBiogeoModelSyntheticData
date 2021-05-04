@@ -1,14 +1,15 @@
 from matplotlib import pyplot as plt
 
-def plot_elbo(elbo_hist, xmin=None, ymax=None):
-    plt.plot(elbo_hist)
-    plt.xlim((xmin, None))
+def plot_elbo(elbo_hist, xmin=0, ymax=None):
+    iters = torch.arange(xmin + 1, len(elbo_hist) + 1)
+    plt.plot(iters, elbo_hist[xmin:])
     plt.ylim((None, ymax))
     plt.ylabel('ELBO')
     plt.xlabel('Iteration')
 
 def plot_post(net, x0, obs_model, state_idx=0, num_samples=20,
               ymin=None, ymax=None):
+    net.eval()
     x, _ = net(num_samples)
     x0 = x0[(None,) * 2].repeat(num_samples, 1, 1)
     x = torch.cat((x0, x), 1)
