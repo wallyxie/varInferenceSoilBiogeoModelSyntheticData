@@ -9,7 +9,7 @@ def plot_elbo(elbo_hist, xmin=0, ymax=None):
 
 def plot_post(net, x0, obs_model, state_idx=0, num_samples=20,
               ymin=None, ymax=None):
-    #net.eval()
+    net.eval()
     x, _ = net(num_samples)
     x0 = x0[(None,) * 2].repeat(num_samples, 1, 1)
     x = torch.cat((x0, x), 1)
