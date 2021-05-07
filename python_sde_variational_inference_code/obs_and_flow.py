@@ -130,7 +130,7 @@ class ResNetBlockUnMasked(nn.Module):
 class CouplingLayer(nn.Module):
     
     def __init__(self, cond_inputs, stride, h_cha = 96):
-        # cond_inputs = cond_inputs + STATE_DIM = 1 + STATE_DIM = 4 by default
+        # cond_inputs = cond_inputs + obs_dim = 1 + obs_dim = 4 by default (w/o CO2)
         super().__init__()
         self.feature_net = nn.Sequential(ResNetBlockUnMasked(cond_inputs, h_cha),
         #self.feature_net = nn.Sequential(ResNetBlockUnMasked(cond_inputs, h_cha),
@@ -141,20 +141,20 @@ class CouplingLayer(nn.Module):
         
         self.unpack = True if cond_inputs > 1 else False
 
-    def forward(self, x, cond_inputs):
+    def forward(self, x, cond_inputs): # x.shape == (batch_size, 1, n * state_dim)
         if self.unpack:
             cond_inputs = torch.cat([*cond_inputs], 1) # (batch_size, obs_dim + 1, n * state_dim)
         #print(cond_inputs[0, :, 0], cond_inputs[0, :, 60], cond_inputs[0, :, 65])
-        cond_inputs = self.feature_net(cond_inputs)
-        first_block = self.first_block(x)
+        cond_inputs = self.feature_net(cond_inputs) # (batch_size, obs_dim + 1, n * state_dim)
+        first_block = self.first_block(x) # (batch_size, h_cha, n * state_dim)
         #print(first_block.shape, cond_inputs.shape)
-        feature_vec = torch.cat([first_block, cond_inputs], 1)
-        output = self.second_block(feature_vec)
-        mu, sigma = torch.chunk(output, 2, 1)
+        feature_vec = torch.cat([first_block, cond_inputs], 1) # (batch_size, h_cha + obs_dim + 1, n * state_dim)
+        output = self.second_block(feature_vec) # (batch_size, 2, n * state_dim)
+        mu, sigma = torch.chunk(output, 2, 1) # (batch_size, 1, n * state_dim)
         #print('mu and sigma shapes:', mu.shape, sigma.shape)
         sigma = LowerBound.apply(sigma, 1e-6)
-        x = mu + sigma * x
-        return x, -torch.log(sigma)
+        x = mu + sigma * x # (batch_size, 1, n * state_dim)
+        return x, -torch.log(sigma) # each of shape (batch_size, 1, n * state_dim)
 
 class PermutationLayer(nn.Module):
     
@@ -177,6 +177,7 @@ class SoftplusLayer(nn.Module):
         self.softplus = nn.Softplus()
     
     def forward(self, x):
+        # in.shape == out.shape == (batch_size, 1, n * state_dim)
         y = self.softplus(x)
         return y, -torch.log(-torch.expm1(-y))
 
@@ -194,8 +195,9 @@ class BatchNormLayer(nn.Module):
         self.register_buffer('running_var', torch.ones(num_inputs))
 
     def forward(self, inputs):
-        inputs = inputs.squeeze(1)
+        inputs = inputs.squeeze(1) # (batch_size, n * state_dim)
         if self.training:
+            # Compute mean and var across batch
             self.batch_mean = inputs.mean(0)
             self.batch_var = (inputs - self.batch_mean).pow(2).mean(0) + self.eps
 
@@ -210,15 +212,19 @@ class BatchNormLayer(nn.Module):
         else:
             mean = self.running_mean
             var = self.running_var
+        # mean.shape == var.shape == (n * state_dim, )
 
-        x_hat = (inputs - mean) / var.sqrt()
-        y = torch.exp(self.log_gamma) * x_hat + self.beta
-        ildj = -self.log_gamma + 0.5 * torch.log(var)
+        x_hat = (inputs - mean) / var.sqrt() # (batch_size, n * state_dim)
+        y = torch.exp(self.log_gamma) * x_hat + self.beta # (batch_size, n * state_dim)
+        ildj = -self.log_gamma + 0.5 * torch.log(var) # (n * state_dim, )
+
+        # y.shape == (batch_size, 1, n * state_dim), ildj.shape == (1, 1, n * state_dim)
         return y[:, None, :], ildj[None, None, :]
     
 class SDEFlow(nn.Module):
 
-    def __init__(self, DEVICE, OBS_MODEL, STATE_DIM, T, DT, N, I_S_tensor, I_D_tensor, cond_inputs = 1, num_layers = 5):
+    def __init__(self, DEVICE, OBS_MODEL, STATE_DIM, T, DT, N,
+                 I_S_tensor=None, I_D_tensor=None, cond_inputs = 1, num_layers = 5):
         super().__init__()
         self.device = DEVICE
         self.obs_model = OBS_MODEL
@@ -226,7 +232,8 @@ class SDEFlow(nn.Module):
         self.t = T
         self.dt = DT
         self.n = N
-        self.i_tensor = torch.stack((I_S_tensor.reshape(-1), I_D_tensor.reshape(-1)))[None, :, 1:].repeat_interleave(3, -1)
+        if cond_inputs == 3:
+            self.i_tensor = torch.stack((I_S_tensor.reshape(-1), I_D_tensor.reshape(-1)))[None, :, 1:].repeat_interleave(3, -1)
 
         self.base_dist = d.normal.Normal(loc = 0., scale = 1.)
         self.cond_inputs = cond_inputs        
@@ -239,7 +246,7 @@ class SDEFlow(nn.Module):
         
     def forward(self, BATCH_SIZE, *args, **kwargs):
         eps = self.base_dist.sample([BATCH_SIZE, 1, self.state_dim * self.n]).to(self.device)
-        log_prob = self.base_dist.log_prob(eps).sum(-1)
+        log_prob = self.base_dist.log_prob(eps).sum(-1) # (batch_size, 1)
         
         #obs_tile = self.obs_model.mu[None, :, 1:, None].repeat(self.batch_size, self.state_dim, 1, 50).reshape(self.batch_size, self.state_dim, -1)
         #times = torch.arange(self.dt, self.t + self.dt, self.dt, device = eps.device)[(None,) * 2].repeat(self.batch_size, self.state_dim, 1).transpose(-2, -1).reshape(self.batch_size, 1, -1)
@@ -255,26 +262,32 @@ class SDEFlow(nn.Module):
             BATCH_SIZE, 1, 1) # (batch_size, obs_dim, state_dim * num_steps)
         times = torch.arange(self.dt, self.t + self.dt, self.dt, device = eps.device)[(None,) * 2].repeat( \
             BATCH_SIZE, self.state_dim, 1).transpose(-2, -1).reshape(BATCH_SIZE, 1, -1)
-        i_tensor = self.i_tensor.repeat(BATCH_SIZE, 1, 1)
+        
+        if self.cond_inputs == 3:
+            i_tensor = self.i_tensor.repeat(BATCH_SIZE, 1, 1)
+            features = (obs_tile, times, i_tensor)
+        else:
+            features = (obs_tile, times)
         #print(obs_tile)
 
         ildjs = []
         
         for i in range(self.num_layers):
-            eps, cl_ildj = self.coupling[i](self.permutation[i](eps), (obs_tile, times, i_tensor))
+            eps, cl_ildj = self.coupling[i](self.permutation[i](eps), features) # (batch_size, 1, n * state_dim)
             if i < (self.num_layers - 1):
-                eps, bn_ildj = self.batch_norm[i](eps)
+                eps, bn_ildj = self.batch_norm[i](eps) # (batch_size, 1, n * state_dim), (1, 1, n * state_dim)
                 ildjs.append(bn_ildj)
             ildjs.append(cl_ildj)
                 
-        eps, sp_ildj = self.SP(eps)
+        eps, sp_ildj = self.SP(eps) # (batch_size, 1, n * state_dim)
         ildjs.append(sp_ildj)
         
+        eps = eps.reshape(BATCH_SIZE, -1, self.state_dim) + 1e-6 # (batch_size, n, state_dim)
         for ildj in ildjs:
-            log_prob += ildj.sum(-1)
+            log_prob += ildj.sum(-1) # (batch_size, 1)
     
-        # x.shape == (batch_size, N, state_dim), log_prob.shape == (batch_size, 1)
-        return eps.reshape(BATCH_SIZE, self.state_dim, -1).permute(0, 2, 1) + 1e-6, log_prob
+        #return eps.reshape(BATCH_SIZE, self.state_dim, -1).permute(0, 2, 1) + 1e-6, log_prob
+        return eps, log_prob # (batch_size, n, state_dim), (batch_size, 1)
 
 ###################################################
 ##OBSERVATION MODEL RELATED CLASSES AND FUNCTIONS##
