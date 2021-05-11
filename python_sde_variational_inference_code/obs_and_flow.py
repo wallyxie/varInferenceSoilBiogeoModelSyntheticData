@@ -233,7 +233,7 @@ class SDEFlow(nn.Module):
         self.dt = DT
         self.n = N
         if cond_inputs == 3:
-            self.i_tensor = torch.stack((I_S_tensor.reshape(-1), I_D_tensor.reshape(-1)))[None, :, 1:].repeat_interleave(3, -1)
+            self.i_tensor = torch.stack((I_S_tensor.reshape(-1), I_D_tensor.reshape(-1)))[None, :, :].repeat_interleave(3, -1)
 
         self.base_dist = d.normal.Normal(loc = 0., scale = 1.)
         self.cond_inputs = cond_inputs        
