@@ -121,9 +121,9 @@ def drift_diffusion_SCON_C(C_PATH, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_T
     SOC, DOC, MBC =  torch.chunk(C_PATH, state_dim, -1) #Partition SOC, DOC, and MBC values. Split based on final C_PATH dim, which specifies state variables and is also indexed as dim #2 in tensor. 
     drift = torch.empty_like(C_PATH, device = C_PATH.device) #Initiate tensor with same dims as C_PATH to assign drift.
     #Decay parameters are forced by temperature changes.
-    k_S = arrhenius_temp_dep(SCON_C_params_dict['k_S_ref'], temp_tensor, SCON_C_params_dict['Ea_S'], TEMP_REF) #Apply vectorized temperature-dependent transformation to k_S_ref.
-    k_D = arrhenius_temp_dep(SCON_C_params_dict['k_D_ref'], temp_tensor, SCON_C_params_dict['Ea_D'], TEMP_REF) #Apply vectorized temperature-dependent transformation to k_D_ref.
-    k_M = arrhenius_temp_dep(SCON_C_params_dict['k_M_ref'], temp_tensor, SCON_C_params_dict['Ea_M'], TEMP_REF) #Apply vectorized temperature-dependent transformation to k_M_ref.
+    k_S = arrhenius_temp_dep(SCON_C_params_dict['k_S_ref'], TEMP_TENSOR, SCON_C_params_dict['Ea_S'], TEMP_REF) #Apply vectorized temperature-dependent transformation to k_S_ref.
+    k_D = arrhenius_temp_dep(SCON_C_params_dict['k_D_ref'], TEMP_TENSOR, SCON_C_params_dict['Ea_D'], TEMP_REF) #Apply vectorized temperature-dependent transformation to k_D_ref.
+    k_M = arrhenius_temp_dep(SCON_C_params_dict['k_M_ref'], TEMP_TENSOR, SCON_C_params_dict['Ea_M'], TEMP_REF) #Apply vectorized temperature-dependent transformation to k_M_ref.
     #Drift is calculated.
     drift_SOC = I_S_TENSOR + SCON_C_params_dict['a_DS'] * k_D * DOC + SCON_C_params_dict['a_M'] * SCON_C_params_dict['a_MSC'] * k_M * MBC - k_S * SOC
     drift_DOC = I_D_TENSOR + SCON_C_params_dict['a_SD'] * k_S * SOC + SCON_C_params_dict['a_M'] * (1 - SCON_C_params_dict['a_MSC']) * k_M * MBC - (SCON_C_params_dict['u_M'] + k_D) * DOC
