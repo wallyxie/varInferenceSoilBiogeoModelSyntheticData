@@ -334,14 +334,3 @@ class ObsModelCO2(ObsModel):
         #print(self.mu.permute(1, 0), x_with_CO2)
         obs_ll = d.normal.Normal(self.mu.permute(1, 0), self.scale).log_prob(x_with_CO2)
         return torch.sum(obs_ll, [-1, -2]).mean()
-
-######################
-##TRAINING FUNCTIONS##
-######################
-
-def calc_log_lik(C_PATH, T_SPAN_TENSOR, DT, I_S_TENSOR, I_D_TENSOR, DRIFT_DIFFUSION, PARAMS_DICT, TEMP_GEN, TEMP_REF):
-    drift, diffusion_sqrt = DRIFT_DIFFUSION(C_PATH[:, :-1, :], T_SPAN_TENSOR[:, :-1, :], I_S_TENSOR[:, :-1, :], I_D_TENSOR[:, :-1, :], PARAMS_DICT, TEMP_GEN, TEMP_REF)
-    euler_maruyama_state_sample_object =D.multivariate_normal.MultivariateNormal(loc = C_PATH[:, :-1, :] + drift * DT, scale_tril = diffusion_sqrt * math.sqrt(DT))
-    return euler_maruyama_state_sample_object.log_prob(C_PATH[:, 1:, :]).sum(-1)
-
-#def train(...) Add later once train function more finalized.
