@@ -302,7 +302,7 @@ class ObsModel(nn.Module):
         self.times = TIMES
         self.dt = DT
         self.idx = self.get_idx(TIMES, DT)        
-        self.mu = LowerBound.apply(torch.Tensor(MU).to(DEVICE), 1e-6) # (obs_dim, num_obs)
+        self.mu = torch.Tensor(MU).to(DEVICE)
         self.scale = SCALE
         self.obs_dim = self.mu.shape[0]
         
