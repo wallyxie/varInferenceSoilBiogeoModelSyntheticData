@@ -257,10 +257,11 @@ class SDEFlow(nn.Module):
 
         # NOTE: This currently assumes a regular time gap between observations!
         steps_bw_obs = self.obs_model.idx[1] - self.obs_model.idx[0]
-        #print(steps_bw_obs)
-        obs_tile = self.obs_model.mu[None, :, 1:].repeat_interleave(self.state_dim * steps_bw_obs, -1).repeat( \
+        reps = torch.ones(len(self.obs_model.idx), dtype=torch.long) * self.state_dim
+        reps[1:] *= steps_bw_obs
+        obs_tile = self.obs_model.mu[None, :, :].repeat_interleave(reps, -1).repeat( \
             BATCH_SIZE, 1, 1) # (batch_size, obs_dim, state_dim * num_steps)
-        times = torch.arange(self.dt, self.t + self.dt, self.dt, device = eps.device)[(None,) * 2].repeat( \
+        times = torch.arange(0, self.t + self.dt, self.dt, device = eps.device)[None, None, :].repeat( \
             BATCH_SIZE, self.state_dim, 1).transpose(-2, -1).reshape(BATCH_SIZE, 1, -1)
         
         if self.cond_inputs == 3:
