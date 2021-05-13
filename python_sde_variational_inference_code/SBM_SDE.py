@@ -135,8 +135,8 @@ def drift_diffusion_SCON_C(C_PATH, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_T
     drift[:, :, 2 : 3] = drift_MBC
     #drift[:, :, 3 : 4] = CO2 #CO2 is not a part of the drift. This is a hack for the explicit algebraic variable situation.
     #Diffusion matrix is assigned.
-    diffusion_sqrt_single = torch.diag(torch.sqrt(LowerBound.apply(torch.as_tensor([SCON_C_params_dict['c_SOC'], SCON_C_params_dict['c_DOC'], SCON_C_params_dict['c_MBC']]), 1e-6))) #Create single diffusion matrix by diagonalizing constant noise scale parameters.    
-    #diffusion_sqrt_single = torch.diag(torch.sqrt(LowerBound.apply(torch.as_tensor([SCON_C_params_dict['c_SOC'], SCON_C_params_dict['c_DOC'], SCON_C_params_dict['c_MBC'], SCON_C_params_dict['c_CO2']]), 1e-6))) #Create single diffusion matrix by diagonalizing constant noise scale parameters.
+    diffusion_sqrt_single = torch.diag(torch.sqrt(LowerBound.apply(torch.as_tensor([SCON_C_params_dict['c_SOC'], SCON_C_params_dict['c_DOC'], SCON_C_params_dict['c_MBC']]), 1e-9))) #Create single diffusion matrix by diagonalizing constant noise scale parameters.    
+    #diffusion_sqrt_single = torch.diag(torch.sqrt(LowerBound.apply(torch.as_tensor([SCON_C_params_dict['c_SOC'], SCON_C_params_dict['c_DOC'], SCON_C_params_dict['c_MBC'], SCON_C_params_dict['c_CO2']]), 1e-9))) #Create single diffusion matrix by diagonalizing constant noise scale parameters.
     diffusion_sqrt = diffusion_sqrt_single.expand(drift.size(0), drift.size(1), state_dim, state_dim) #Expand diffusion matrices across all paths and across discretized time steps.
     return drift, diffusion_sqrt
 
@@ -166,14 +166,14 @@ def drift_diffusion_SCON_SS(C_PATH, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_
     drift[:, :, 2 : 3] = drift_MBC
     #drift[:, :, 3 : 4] = CO2 #CO2 is not a part of the drift. This is a hack for the explicit algebraic variable situation.
     #Diffusion matrix is assigned.
-    diffusion_sqrt[:, :, 0 : 1, 0] = torch.sqrt(LowerBound.apply(SOC * SCON_SS_params_dict['s_SOC'], 1e-6)) #SOC diffusion standard deviation
-    diffusion_sqrt[:, :, 1 : 2, 1] = torch.sqrt(LowerBound.apply(DOC * SCON_SS_params_dict['s_DOC'], 1e-6)) #DOC diffusion standard deviation
-    diffusion_sqrt[:, :, 2 : 3, 2] = torch.sqrt(LowerBound.apply(MBC * SCON_SS_params_dict['s_MBC'], 1e-6)) #MBC diffusion standard deviation
-    #diffusion_sqrt[:, :, 3 : 4, 3] = torch.sqrt(LowerBound.apply(CO2 * SCON_SS_params_dict['s_CO2'], 1e-6)) #CO2 diffusion standard deviation
-    #diffusion_sqrt_diag[:, :, 0 : 1] = torch.sqrt(LowerBound.apply(SOC * SCON_SS_params_dict['s_SOC'], 1e-6)) #SOC diffusion standard deviation
-    #diffusion_sqrt_diag[:, :, 1 : 2] = torch.sqrt(LowerBound.apply(DOC * SCON_SS_params_dict['s_DOC'], 1e-6)) #DOC diffusion standard deviation
-    #diffusion_sqrt_diag[:, :, 2 : 3] = torch.sqrt(LowerBound.apply(MBC * SCON_SS_params_dict['s_MBC'], 1e-6)) #MBC diffusion standard deviation
-    #diffusion_sqrt_diag[:, :, 3 : 4] = torch.sqrt(LowerBound.apply(CO2 * SCON_SS_params_dict['s_CO2'], 1e-6)) #CO2 diffusion standard deviation
+    diffusion_sqrt[:, :, 0 : 1, 0] = torch.sqrt(LowerBound.apply(SOC * SCON_SS_params_dict['s_SOC'], 1e-9)) #SOC diffusion standard deviation
+    diffusion_sqrt[:, :, 1 : 2, 1] = torch.sqrt(LowerBound.apply(DOC * SCON_SS_params_dict['s_DOC'], 1e-9)) #DOC diffusion standard deviation
+    diffusion_sqrt[:, :, 2 : 3, 2] = torch.sqrt(LowerBound.apply(MBC * SCON_SS_params_dict['s_MBC'], 1e-9)) #MBC diffusion standard deviation
+    #diffusion_sqrt[:, :, 3 : 4, 3] = torch.sqrt(LowerBound.apply(CO2 * SCON_SS_params_dict['s_CO2'], 1e-9)) #CO2 diffusion standard deviation
+    #diffusion_sqrt_diag[:, :, 0 : 1] = torch.sqrt(LowerBound.apply(SOC * SCON_SS_params_dict['s_SOC'], 1e-9)) #SOC diffusion standard deviation
+    #diffusion_sqrt_diag[:, :, 1 : 2] = torch.sqrt(LowerBound.apply(DOC * SCON_SS_params_dict['s_DOC'], 1e-9)) #DOC diffusion standard deviation
+    #diffusion_sqrt_diag[:, :, 2 : 3] = torch.sqrt(LowerBound.apply(MBC * SCON_SS_params_dict['s_MBC'], 1e-9)) #MBC diffusion standard deviation
+    #diffusion_sqrt_diag[:, :, 3 : 4] = torch.sqrt(LowerBound.apply(CO2 * SCON_SS_params_dict['s_CO2'], 1e-9)) #CO2 diffusion standard deviation
     #diffusion_sqrt = torch.diag_embed(diffusion_sqrt_diag)
     return drift, diffusion_sqrt
 
@@ -203,8 +203,8 @@ def drift_diffusion_SAWB_C(C_PATH, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_T
     drift[:, :, 3 : 4] = drift_EEC
     #drift[:, :, 4 : 5] = CO2 #CO2 is not a part of the drift. This is a hack for the explicit algebraic variable situation.
     #Diffusion matrix is assigned.
-    diffusion_sqrt_single = torch.diag(torch.sqrt(LowerBound.apply(torch.as_tensor([SAWB_C_params_dict['c_SOC'], SAWB_C_params_dict['c_DOC'], SAWB_C_params_dict['c_MBC'], SAWB_C_params_dict['c_EEC']]), 1e-6))) #Create single diffusion matrix by diagonalizing constant noise scale parameters.    
-    #diffusion_sqrt_single = torch.diag(torch.sqrt(LowerBound.apply(torch.as_tensor([SAWB_C_params_dict['c_SOC'], SAWB_C_params_dict['c_DOC'], SAWB_C_params_dict['c_MBC'], SAWB_C_params_dict['c_EEC'], SAWB_C_params_dict['c_CO2']]), 1e-6))) #Create single diffusion matrix by diagonalizing constant noise scale parameters.
+    diffusion_sqrt_single = torch.diag(torch.sqrt(LowerBound.apply(torch.as_tensor([SAWB_C_params_dict['c_SOC'], SAWB_C_params_dict['c_DOC'], SAWB_C_params_dict['c_MBC'], SAWB_C_params_dict['c_EEC']]), 1e-9))) #Create single diffusion matrix by diagonalizing constant noise scale parameters.    
+    #diffusion_sqrt_single = torch.diag(torch.sqrt(LowerBound.apply(torch.as_tensor([SAWB_C_params_dict['c_SOC'], SAWB_C_params_dict['c_DOC'], SAWB_C_params_dict['c_MBC'], SAWB_C_params_dict['c_EEC'], SAWB_C_params_dict['c_CO2']]), 1e-9))) #Create single diffusion matrix by diagonalizing constant noise scale parameters.
     diffusion_sqrt = diffusion_sqrt_single.expand(drift.size(0), drift.size(1), state_dim, state_dim) #Expand diffusion matrices across all paths and across discretized time steps. Diffusion exists for explicit algebraic variable CO2.
     return drift, diffusion_sqrt
 
@@ -236,16 +236,16 @@ def drift_diffusion_SAWB_SS(C_PATH, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_
     drift[:, :, 3 : 4] = drift_EEC
     #drift[:, :, 4 : 5] = CO2 #CO2 is not a part of the drift. This is a hack for the explicit algebraic variable situation.
     #Diffusion matrix is assigned.
-    diffusion_sqrt[:, :, 0 : 1, 0] = torch.sqrt(LowerBound.apply(SOC * SAWB_SS_params_dict['s_SOC'], 1e-6)) #SOC diffusion standard deviation
-    diffusion_sqrt[:, :, 1 : 2, 1] = torch.sqrt(LowerBound.apply(DOC * SAWB_SS_params_dict['s_DOC'], 1e-6)) #DOC diffusion standard deviation
-    diffusion_sqrt[:, :, 2 : 3, 2] = torch.sqrt(LowerBound.apply(MBC * SAWB_SS_params_dict['s_MBC'], 1e-6)) #MBC diffusion standard deviation
-    diffusion_sqrt[:, :, 3 : 4, 3] = torch.sqrt(LowerBound.apply(EEC * SAWB_SS_params_dict['s_EEC'], 1e-6)) #EEC diffusion standard deviation
-    #diffusion_sqrt[:, :, 4 : 5, 4] = torch.sqrt(LowerBound.apply(CO2 * SAWB_SS_params_dict['s_CO2'], 1e-6)) #CO2 diffusion standard deviation
-    #diffusion_sqrt_diag[:, :, 0 : 1] = torch.sqrt(LowerBound.apply(SOC * SAWB_SS_params_dict['s_SOC'], 1e-6)) #SOC diffusion standard deviation
-    #diffusion_sqrt_diag[:, :, 1 : 2] = torch.sqrt(LowerBound.apply(DOC * SAWB_SS_params_dict['s_DOC'], 1e-6)) #DOC diffusion standard deviation
-    #diffusion_sqrt_diag[:, :, 2 : 3] = torch.sqrt(LowerBound.apply(MBC * SAWB_SS_params_dict['s_MBC'], 1e-6)) #MBC diffusion standard deviation
-    #diffusion_sqrt_diag[:, :, 3 : 4] = torch.sqrt(LowerBound.apply(EEC * SAWB_SS_params_dict['s_EEC'], 1e-6)) #EEC diffusion standard deviation
-    #diffusion_sqrt_diag[:, :, 4 : 5] = torch.sqrt(LowerBound.apply(CO2 * SAWB_SS_params_dict['s_CO2'], 1e-6)) #CO2 diffusion standard deviation
+    diffusion_sqrt[:, :, 0 : 1, 0] = torch.sqrt(LowerBound.apply(SOC * SAWB_SS_params_dict['s_SOC'], 1e-9)) #SOC diffusion standard deviation
+    diffusion_sqrt[:, :, 1 : 2, 1] = torch.sqrt(LowerBound.apply(DOC * SAWB_SS_params_dict['s_DOC'], 1e-9)) #DOC diffusion standard deviation
+    diffusion_sqrt[:, :, 2 : 3, 2] = torch.sqrt(LowerBound.apply(MBC * SAWB_SS_params_dict['s_MBC'], 1e-9)) #MBC diffusion standard deviation
+    diffusion_sqrt[:, :, 3 : 4, 3] = torch.sqrt(LowerBound.apply(EEC * SAWB_SS_params_dict['s_EEC'], 1e-9)) #EEC diffusion standard deviation
+    #diffusion_sqrt[:, :, 4 : 5, 4] = torch.sqrt(LowerBound.apply(CO2 * SAWB_SS_params_dict['s_CO2'], 1e-9)) #CO2 diffusion standard deviation
+    #diffusion_sqrt_diag[:, :, 0 : 1] = torch.sqrt(LowerBound.apply(SOC * SAWB_SS_params_dict['s_SOC'], 1e-9)) #SOC diffusion standard deviation
+    #diffusion_sqrt_diag[:, :, 1 : 2] = torch.sqrt(LowerBound.apply(DOC * SAWB_SS_params_dict['s_DOC'], 1e-9)) #DOC diffusion standard deviation
+    #diffusion_sqrt_diag[:, :, 2 : 3] = torch.sqrt(LowerBound.apply(MBC * SAWB_SS_params_dict['s_MBC'], 1e-9)) #MBC diffusion standard deviation
+    #diffusion_sqrt_diag[:, :, 3 : 4] = torch.sqrt(LowerBound.apply(EEC * SAWB_SS_params_dict['s_EEC'], 1e-9)) #EEC diffusion standard deviation
+    #diffusion_sqrt_diag[:, :, 4 : 5] = torch.sqrt(LowerBound.apply(CO2 * SAWB_SS_params_dict['s_CO2'], 1e-9)) #CO2 diffusion standard deviation
     #diffusion_sqrt = torch.diag_embed(diffusion_sqrt_diag)
     return drift, diffusion_sqrt
 
@@ -275,8 +275,8 @@ def drift_diffusion_SAWB_ECA_C(C_PATH, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TE
     drift[:, :, 3 : 4] = drift_EEC
     #drift[:, :, 4 : 5] = CO2 #CO2 is not a part of the drift. This is a hack for the explicit algebraic variable situation.
     #Diffusion matrix is assigned.
-    diffusion_sqrt_single = torch.diag(torch.sqrt(LowerBound.apply(torch.as_tensor([SAWB_ECA_C_params_dict['c_SOC'], SAWB_ECA_C_params_dict['c_DOC'], SAWB_ECA_C_params_dict['c_MBC'], SAWB_ECA_C_params_dict['c_EEC']]), 1e-6))) #Create single diffusion matrix by diagonalizing constant noise scale parameters.    
-    #diffusion_sqrt_single = torch.diag(torch.sqrt(LowerBound.apply(torch.as_tensor([SAWB_ECA_C_params_dict['c_SOC'], SAWB_ECA_C_params_dict['c_DOC'], SAWB_ECA_C_params_dict['c_MBC'], SAWB_ECA_C_params_dict['c_EEC'], SAWB_ECA_C_params_dict['c_CO2']]), 1e-6))) #Create single diffusion matrix by diagonalizing constant noise scale parameters.
+    diffusion_sqrt_single = torch.diag(torch.sqrt(LowerBound.apply(torch.as_tensor([SAWB_ECA_C_params_dict['c_SOC'], SAWB_ECA_C_params_dict['c_DOC'], SAWB_ECA_C_params_dict['c_MBC'], SAWB_ECA_C_params_dict['c_EEC']]), 1e-9))) #Create single diffusion matrix by diagonalizing constant noise scale parameters.    
+    #diffusion_sqrt_single = torch.diag(torch.sqrt(LowerBound.apply(torch.as_tensor([SAWB_ECA_C_params_dict['c_SOC'], SAWB_ECA_C_params_dict['c_DOC'], SAWB_ECA_C_params_dict['c_MBC'], SAWB_ECA_C_params_dict['c_EEC'], SAWB_ECA_C_params_dict['c_CO2']]), 1e-9))) #Create single diffusion matrix by diagonalizing constant noise scale parameters.
     diffusion_sqrt = diffusion_sqrt_single.expand(drift.size(0), drift.size(1), state_dim, state_dim) #Expand diffusion matrices across all paths and across discretized time steps. Diffusion exists for explicit algebraic variable CO2.
     return drift, diffusion_sqrt
 
@@ -308,15 +308,15 @@ def drift_diffusion_SAWB_ECA_SS(C_PATH, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, T
     drift[:, :, 3 : 4] = drift_EEC
     #drift[:, :, 4 : 5] = CO2 #CO2 is not a part of the drift. This is a hack for the explicit algebraic variable situation.
     #Diffusion matrix is assigned.
-    diffusion_sqrt[:, :, 0 : 1, 0] = torch.sqrt(LowerBound.apply(SOC * SAWB_ECA_SS_params_dict['s_SOC'], 1e-6)) #SOC diffusion standard deviation
-    diffusion_sqrt[:, :, 1 : 2, 1] = torch.sqrt(LowerBound.apply(DOC * SAWB_ECA_SS_params_dict['s_DOC'], 1e-6)) #DOC diffusion standard deviation
-    diffusion_sqrt[:, :, 2 : 3, 2] = torch.sqrt(LowerBound.apply(MBC * SAWB_ECA_SS_params_dict['s_MBC'], 1e-6)) #MBC diffusion standard deviation
-    diffusion_sqrt[:, :, 3 : 4, 3] = torch.sqrt(LowerBound.apply(EEC * SAWB_ECA_SS_params_dict['s_EEC'], 1e-6)) #EEC diffusion standard deviation
-    #diffusion_sqrt[:, :, 4 : 5, 4] = torch.sqrt(LowerBound.apply(CO2 * SAWB_ECA_SS_params_dict['s_CO2'], 1e-6)) #CO2 diffusion standard deviation
-    #diffusion_sqrt_diag[:, :, 0 : 1] = torch.sqrt(LowerBound.apply(SOC * SAWB_ECA_SS_params_dict['s_SOC'], 1e-6)) #SOC diffusion standard deviation
-    #diffusion_sqrt_diag[:, :, 1 : 2] = torch.sqrt(LowerBound.apply(DOC * SAWB_ECA_SS_params_dict['s_DOC'], 1e-6)) #DOC diffusion standard deviation
-    #diffusion_sqrt_diag[:, :, 2 : 3] = torch.sqrt(LowerBound.apply(MBC * SAWB_ECA_SS_params_dict['s_MBC'], 1e-6)) #MBC diffusion standard deviation
-    #diffusion_sqrt_diag[:, :, 3 : 4] = torch.sqrt(LowerBound.apply(EEC * SAWB_ECA_SS_params_dict['s_EEC'], 1e-6)) #EEC diffusion standard deviation
-    #diffusion_sqrt_diag[:, :, 4 : 5] = torch.sqrt(LowerBound.apply(CO2 * SAWB_ECA_SS_params_dict['s_CO2'], 1e-6)) #CO2 diffusion standard deviation
+    diffusion_sqrt[:, :, 0 : 1, 0] = torch.sqrt(LowerBound.apply(SOC * SAWB_ECA_SS_params_dict['s_SOC'], 1e-9)) #SOC diffusion standard deviation
+    diffusion_sqrt[:, :, 1 : 2, 1] = torch.sqrt(LowerBound.apply(DOC * SAWB_ECA_SS_params_dict['s_DOC'], 1e-9)) #DOC diffusion standard deviation
+    diffusion_sqrt[:, :, 2 : 3, 2] = torch.sqrt(LowerBound.apply(MBC * SAWB_ECA_SS_params_dict['s_MBC'], 1e-9)) #MBC diffusion standard deviation
+    diffusion_sqrt[:, :, 3 : 4, 3] = torch.sqrt(LowerBound.apply(EEC * SAWB_ECA_SS_params_dict['s_EEC'], 1e-9)) #EEC diffusion standard deviation
+    #diffusion_sqrt[:, :, 4 : 5, 4] = torch.sqrt(LowerBound.apply(CO2 * SAWB_ECA_SS_params_dict['s_CO2'], 1e-9)) #CO2 diffusion standard deviation
+    #diffusion_sqrt_diag[:, :, 0 : 1] = torch.sqrt(LowerBound.apply(SOC * SAWB_ECA_SS_params_dict['s_SOC'], 1e-9)) #SOC diffusion standard deviation
+    #diffusion_sqrt_diag[:, :, 1 : 2] = torch.sqrt(LowerBound.apply(DOC * SAWB_ECA_SS_params_dict['s_DOC'], 1e-9)) #DOC diffusion standard deviation
+    #diffusion_sqrt_diag[:, :, 2 : 3] = torch.sqrt(LowerBound.apply(MBC * SAWB_ECA_SS_params_dict['s_MBC'], 1e-9)) #MBC diffusion standard deviation
+    #diffusion_sqrt_diag[:, :, 3 : 4] = torch.sqrt(LowerBound.apply(EEC * SAWB_ECA_SS_params_dict['s_EEC'], 1e-9)) #EEC diffusion standard deviation
+    #diffusion_sqrt_diag[:, :, 4 : 5] = torch.sqrt(LowerBound.apply(CO2 * SAWB_ECA_SS_params_dict['s_CO2'], 1e-9)) #CO2 diffusion standard deviation
     #diffusion_sqrt = torch.diag_embed(diffusion_sqrt_diag)
     return drift, diffusion_sqrt
