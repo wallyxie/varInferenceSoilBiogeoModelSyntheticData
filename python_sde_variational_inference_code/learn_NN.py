@@ -40,6 +40,7 @@ pretrain_lr = 1e-2 #Norm regularization learning rate
 train_lr = 1e-3 #ELBO learning rate
 batch_size = 10
 obs_error_scale = 0.1 #Observation (y) standard deviation
+num_layers = 6
 
 #SBM prior means
 #System parameters from deterministic CON model
@@ -67,3 +68,21 @@ x0_SCON = [37, 0.1, 0.9]
 x0_SCON_tensor = torch.tensor(x0_SCON)
 x0_prior_SCON = D.multivariate_normal.MultivariateNormal(x0_SCON_tensor,
                                                          scale_tril=torch.eye(state_dim_SCON) * obs_error_scale * x0_SCON_tensor)
+
+#Generate exogenous input vectors.
+#Obtain temperature forcing function.
+temp_tensor = temp_gen(t_span_tensor, temp_ref, temp_rise)
+
+#Obtain SOC and DOC pool litter input vectors for use in flow SDE functions.
+i_s_tensor = i_s(t_span_tensor) #Exogenous SOC input function
+i_d_tensor = i_d(t_span_tensor) #Exogenous DOC input function
+
+#Call training loop function for SCON-C.
+net, ELBO_hist = train(devi, pretrain_lr, train_lr, niter, piter, batch_size, num_layers,
+          state_dim_SCON, 'y_from_x_t_8760_dt_0-01.csv', obs_error_scale, t, dt_flow, n, 
+          t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
+          drift_diffusion_SCON_C, x0_prior_SCON, SCON_C_params_dict,
+          LEARN_PARAMS = False, LR_DECAY = 0.1, DECAY_STEP_SIZE = 1000, PRINT_EVERY = 50)
+
+#Save torch .pt
+#To be continued
