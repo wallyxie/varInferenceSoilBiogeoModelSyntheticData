@@ -21,11 +21,17 @@ def calc_log_lik(C_PATH, T_SPAN_TENSOR, DT, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR,
     euler_maruyama_state_sample_object = D.multivariate_normal.MultivariateNormal(loc = C_PATH[:, :-1, :] + drift * DT, scale_tril = diffusion_sqrt * math.sqrt(DT))
     return euler_maruyama_state_sample_object.log_prob(C_PATH[:, 1:, :]).sum(-1)
 
-def train(DEVICE, PRETRAIN_LR, TRAIN_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, OBS_MODEL,
-          STATE_DIM, T, DT, N, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF,
+def train(DEVICE, PRETRAIN_LR, TRAIN_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LAYERS,
+          STATE_DIM, OBS_CSV_STR, OBS_ERROR_SCALE, T, DT, N, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF,
           DRIFT_DIFFUSION, X0_PRIOR, PARAMS_DICT,
-          LEARN_PARAMS = False, LR_DECAY = 0.1, DECAY_STEP_SIZE = 1000, PRINT_EVERY = 500):
-    net = SDEFlow(DEVICE, OBS_MODEL, STATE_DIM, T, DT, N, num_layers = 7).to(DEVICE)
+          LEARN_PARAMS = False, LR_DECAY = 0.1, DECAY_STEP_SIZE = 1000, PRINT_EVERY = 50):
+    
+    #Read in data to obtain y and establish observation model.
+    obs_times, obs_means_noCO2, obs_error = csv_to_obs_df(OBS_CSV_STR, STATE_DIM, t, OBS_ERROR_SCALE) #csv_to_obs_df function in obs_and_flow module
+    obs_model = ObsModel(DEVICE, TIMES = obs_times, DT = dt_flow, MU = obs_means_noCO2, SCALE = obs_error) 
+
+    #Establish neural network.
+    net = SDEFlow(DEVICE, obs_model, STATE_DIM, T, DT, N, num_layers = NUM_LAYERS).to(DEVICE)
     optimizer = optim.Adam(net.parameters(), lr = PRETRAIN_LR)
     
     if LEARN_PARAMS:
@@ -41,6 +47,7 @@ def train(DEVICE, PRETRAIN_LR, TRAIN_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, OBS_M
     #C0 = ANALYTICAL_STEADY_STATE_INIT(I_S_TENSOR[0, 0, 0].item(), I_D_TENSOR[0, 0, 0].item(), PARAMS_DICT) #Calculate deterministic initial conditions.
     #C0 = C0[(None,) * 2].repeat(BATCH_SIZE, 1, 1).to(DEVICE) #Assign initial conditions to C_PATH.
     
+    #Training loop
     with tqdm(total = NITER, desc = f'Train Diffusion', position = -1) as tq:
         for it in range(NITER):
             net.train()
@@ -49,11 +56,11 @@ def train(DEVICE, PRETRAIN_LR, TRAIN_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, OBS_M
             #C_PATH = torch.cat([C0, C_PATH], 1) #Append deterministic CON initial conditions conditional on parameter values to C path. 
             
             if it < PRETRAIN_ITER:
-                l1_norm_element = C_PATH - torch.mean(OBS_MODEL.mu[:3], -1)
+                l1_norm_element = C_PATH - torch.mean(obs_model.mu[:3], -1)
                 l1_norm = torch.sum(torch.abs(l1_norm_element)).mean()
                 best_loss_norm = l1_norm if l1_norm < best_loss_norm else best_loss_norm
                 norm_losses.append(l1_norm.item())
-                #l2_norm_element = C_PATH - torch.mean(OBS_MODEL.mu, -1)
+                #l2_norm_element = C_PATH - torch.mean(obs_model.mu, -1)
                 #l2_norm = torch.sqrt(torch.sum(torch.square(l2_norm_element))).mean()
                 #best_loss_norm = l2_norm if l2_norm < best_loss_norm else best_loss_norm
                 #norm_losses.append(l2_norm.item())
@@ -76,7 +83,7 @@ def train(DEVICE, PRETRAIN_LR, TRAIN_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, OBS_M
                                        TEMP_TENSOR, TEMP_REF, DRIFT_DIFFUSION, X0_PRIOR, theta_dict)
                 
                 # - log p(theta) + log q(theta) + log q(x|theta) - log p(x|theta) - log p(y|x, theta)
-                ELBO = -log_p_theta.mean() + log_q_theta.mean() - log_lik.mean() - OBS_MODEL(C_PATH, theta_dict) + log_prob.mean()
+                ELBO = -log_p_theta.mean() + log_q_theta.mean() - log_lik.mean() - obs_model(C_PATH, theta_dict) + log_prob.mean()
                 best_loss_ELBO = ELBO if ELBO < best_loss_ELBO else best_loss_ELBO
                 ELBO_losses.append(ELBO.item())
 
