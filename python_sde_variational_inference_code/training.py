@@ -16,10 +16,15 @@ This module containins the `calc_log_lik` and `training` functions for pre-train
 ##TRAINING AND ELBO FUNCTIONS##
 ###############################
 
-def calc_log_lik(C_PATH, T_SPAN_TENSOR, DT, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF, DRIFT_DIFFUSION, PARAMS_DICT):
+def calc_log_lik(C_PATH, T_SPAN_TENSOR, DT, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF, DRIFT_DIFFUSION, X0_PRIOR, PARAMS_DICT):
     drift, diffusion_sqrt = DRIFT_DIFFUSION(C_PATH[:, :-1, :], T_SPAN_TENSOR[:, :-1, :], I_S_TENSOR[:, :-1, :], I_D_TENSOR[:, :-1, :], TEMP_TENSOR[:, :-1, :], TEMP_REF, PARAMS_DICT)
     euler_maruyama_state_sample_object = D.multivariate_normal.MultivariateNormal(loc = C_PATH[:, :-1, :] + drift * DT, scale_tril = diffusion_sqrt * math.sqrt(DT))
-    return euler_maruyama_state_sample_object.log_prob(C_PATH[:, 1:, :]).sum(-1)
+    
+    # Compute log p(x|theta) = log p(x|x0, theta) + log p(x0|theta)
+    ll = euler_maruyama_state_sample_object.log_prob(C_PATH[:, 1:, :]).sum(-1) # log p(x|x0, theta)
+    ll += X0_PRIOR.log_prob(C_PATH[:, 0, :]) # log p(x0|theta)
+    
+    return ll
 
 def train(DEVICE, PRETRAIN_LR, TRAIN_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LAYERS,
           STATE_DIM, OBS_CSV_STR, OBS_ERROR_SCALE, T, DT, N, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF,
@@ -27,8 +32,8 @@ def train(DEVICE, PRETRAIN_LR, TRAIN_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_L
           LEARN_PARAMS = False, LR_DECAY = 0.1, DECAY_STEP_SIZE = 1000, PRINT_EVERY = 50):
     
     #Read in data to obtain y and establish observation model.
-    obs_times, obs_means_noCO2, obs_error = csv_to_obs_df(OBS_CSV_STR, STATE_DIM, t, OBS_ERROR_SCALE) #csv_to_obs_df function in obs_and_flow module
-    obs_model = ObsModel(DEVICE, TIMES = obs_times, DT = dt_flow, MU = obs_means_noCO2, SCALE = obs_error) 
+    obs_times, obs_means_noCO2, obs_error = csv_to_obs_df(OBS_CSV_STR, STATE_DIM, T, OBS_ERROR_SCALE) #csv_to_obs_df function in obs_and_flow module
+    obs_model = ObsModel(DEVICE, TIMES = obs_times, DT = DT, MU = obs_means_noCO2, SCALE = obs_error) 
 
     #Establish neural network.
     net = SDEFlow(DEVICE, obs_model, STATE_DIM, T, DT, N, num_layers = NUM_LAYERS).to(DEVICE)

@@ -4,6 +4,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 import math
+from datetime import date
 
 #Torch-related imports
 import torch
@@ -85,4 +86,4 @@ net, ELBO_hist = train(devi, pretrain_lr, train_lr, niter, piter, batch_size, nu
           LEARN_PARAMS = False, LR_DECAY = 0.1, DECAY_STEP_SIZE = 1000, PRINT_EVERY = 50)
 
 #Save net and ELBO files.
-torch.save
+torch.save(f'net_t_{t}_dt_{dt_flow}_iter_{niter}_.pt'
