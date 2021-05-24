@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-from obs_and_flow_classes_and_functions import LowerBound
+from obs_and_flow import LowerBound
 
 '''
 This script includes the linear and Arrhenius temperature dependence functions to induce temperature-based forcing in differential equation soil biogeochemical models (SBMs) and the SDE equation functions corresponding to the various parameterizations of the stochastic conventional (SCON), stochastic AWB (SAWB), and stochastic AWB-equilibrium chemistry approximation (SAWB-ECA) for incorporation with normalizing flow "neural stochastic differential equation" solvers. The following SBM SDE system parameterizations are contained in this script:

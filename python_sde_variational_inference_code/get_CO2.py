@@ -1,6 +1,6 @@
 import torch
 from SBM_SDE import *
-from obs_and_flow_classes_and_functions import LowerBound
+from obs_and_flow import LowerBound
 
 def get_CO2_CON(C_PATH, T_SPAN_TENSOR, SCON_params_dict, TEMP_GEN, TEMP_REF):
     state_dim = 3 #SCON has three state variables in SOC, DOC, and MBC.

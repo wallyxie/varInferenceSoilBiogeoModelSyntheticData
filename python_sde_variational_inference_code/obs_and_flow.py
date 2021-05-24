@@ -183,11 +183,11 @@ class SoftplusLayer(nn.Module):
 
 class BatchNormLayer(nn.Module):
     
-    def __init__(self, num_inputs, momentum = 0.0, eps = 1e-5):
+    def __init__(self, num_inputs, momentum = 0.1, eps = 1e-5, affine=True):
         super(BatchNormLayer, self).__init__()
 
-        self.log_gamma = nn.Parameter(torch.rand(num_inputs))
-        self.beta = nn.Parameter(torch.rand(num_inputs))
+        self.log_gamma = nn.Parameter(torch.rand(num_inputs)) if affine else torch.zeros(num_inputs)
+        self.beta = nn.Parameter(torch.rand(num_inputs)) if affine else torch.zeros(num_inputs)
         self.momentum = momentum
         self.eps = eps
 
@@ -196,16 +196,17 @@ class BatchNormLayer(nn.Module):
 
     def forward(self, inputs):
         inputs = inputs.squeeze(1) # (batch_size, n * state_dim)
+        #print(self.training)
         if self.training:
             # Compute mean and var across batch
             self.batch_mean = inputs.mean(0)
             self.batch_var = (inputs - self.batch_mean).pow(2).mean(0) + self.eps
 
-            self.running_mean.mul_(self.momentum)
-            self.running_var.mul_(self.momentum)
+            self.running_mean.mul_(1 - self.momentum)
+            self.running_var.mul_(1 - self.momentum)
 
-            self.running_mean.add_(self.batch_mean.data * (1 - self.momentum))
-            self.running_var.add_(self.batch_var.data * (1 - self.momentum))
+            self.running_mean.add_(self.batch_mean.data * self.momentum)
+            self.running_var.add_(self.batch_var.data * self.momentum)
 
             mean = self.batch_mean
             var = self.batch_var
@@ -215,6 +216,8 @@ class BatchNormLayer(nn.Module):
         # mean.shape == var.shape == (n * state_dim, )
 
         x_hat = (inputs - mean) / var.sqrt() # (batch_size, n * state_dim)
+        #print(mean, var)
+        #print('x_hat', x_hat)
         y = torch.exp(self.log_gamma) * x_hat + self.beta # (batch_size, n * state_dim)
         ildj = -self.log_gamma + 0.5 * torch.log(var) # (n * state_dim, )
 
@@ -246,21 +249,18 @@ class SDEFlow(nn.Module):
         
     def forward(self, BATCH_SIZE, *args, **kwargs):
         eps = self.base_dist.sample([BATCH_SIZE, 1, self.state_dim * self.n]).to(self.device)
+        #print('Base layer', eps)
         log_prob = self.base_dist.log_prob(eps).sum(-1) # (batch_size, 1)
         
         #obs_tile = self.obs_model.mu[None, :, 1:, None].repeat(self.batch_size, self.state_dim, 1, 50).reshape(self.batch_size, self.state_dim, -1)
         #times = torch.arange(self.dt, self.t + self.dt, self.dt, device = eps.device)[(None,) * 2].repeat(self.batch_size, self.state_dim, 1).transpose(-2, -1).reshape(self.batch_size, 1, -1)
-        #obs_dim = self.state_dim + 1
-        #obs_tile = self.obs_model.mu[None, :, 1:, None].repeat(self.batch_size, self.state_dim, 1, 50).reshape(self.batch_size, self.obs_model.obs_dim, -1)
-        #obs_tile = self.obs_model.mu[None, :, 1:, None].repeat( \
-        #    self.batch_size, 1, self.state_dim, steps_bw_obs).reshape(self.batch_size, self.obs_model.obs_dim, -1)
 
         # NOTE: This currently assumes a regular time gap between observations!
         steps_bw_obs = self.obs_model.idx[1] - self.obs_model.idx[0]
         reps = torch.ones(len(self.obs_model.idx), dtype=torch.long) * self.state_dim
         reps[1:] *= steps_bw_obs
         obs_tile = self.obs_model.mu[None, :, :].repeat_interleave(reps, -1).repeat( \
-            BATCH_SIZE, 1, 1) # (batch_size, obs_dim, state_dim * num_steps)
+            BATCH_SIZE, 1, 1) # (batch_size, obs_dim, state_dim * n)
         times = torch.arange(0, self.t + self.dt, self.dt, device = eps.device)[None, None, :].repeat( \
             BATCH_SIZE, self.state_dim, 1).transpose(-2, -1).reshape(BATCH_SIZE, 1, -1)
         
@@ -275,13 +275,16 @@ class SDEFlow(nn.Module):
         
         for i in range(self.num_layers):
             eps, cl_ildj = self.coupling[i](self.permutation[i](eps), features) # (batch_size, 1, n * state_dim)
+            #print('Coupling layer {}'.format(i), eps, cl_ildj)
             if i < (self.num_layers - 1):
                 eps, bn_ildj = self.batch_norm[i](eps) # (batch_size, 1, n * state_dim), (1, 1, n * state_dim)
                 ildjs.append(bn_ildj)
+                #print('BatchNorm layer {}'.format(i), eps, bn_ildj)
             ildjs.append(cl_ildj)
                 
         eps, sp_ildj = self.SP(eps) # (batch_size, 1, n * state_dim)
         ildjs.append(sp_ildj)
+        #print('Softplus layer', eps, sp_ildj)
         
         eps = eps.reshape(BATCH_SIZE, -1, self.state_dim) + 1e-6 # (batch_size, n, state_dim)
         for ildj in ildjs:
