@@ -4,7 +4,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 import math
-from datetime import date
+from datetime import datetime
 
 #Torch-related imports
 import torch
@@ -35,8 +35,8 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-niter = 11200
-piter = 200
+niter = 20000
+piter = 500
 pretrain_lr = 1e-2 #Norm regularization learning rate
 train_lr = 1e-3 #ELBO learning rate
 batch_size = 10
@@ -86,4 +86,7 @@ net, ELBO_hist = train(devi, pretrain_lr, train_lr, niter, piter, batch_size, nu
           LEARN_PARAMS = False, LR_DECAY = 0.1, DECAY_STEP_SIZE = 1000, PRINT_EVERY = 50)
 
 #Save net and ELBO files.
-torch.save(f'net_t_{t}_dt_{dt_flow}_iter_{niter}_.pt'
+now = datetime.now()
+now_string = now.strftime("%Y_%m_%d_%H_%M_%S")
+torch.save(net, f'net_t_{t}_dt_{dt_flow}_iter_{niter}_{now_string}.pt')
+torch.save(ELBO_hist, f'ELBO_t_{t}_dt_{dt_flow}_iter_{niter}_{now_string}.pt')
