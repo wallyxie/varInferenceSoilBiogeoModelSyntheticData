@@ -18,7 +18,9 @@ from SBM_SDE import *
 from obs_and_flow import *
 from training import *
 
+#PyTorch settings
 torch.manual_seed(0)
+cuda_id = 1
 devi = torch.device("".join(["cuda:",f'{cuda_id}']) if torch.cuda.is_available() else "cpu")
 
 #Neural SDE parameters
