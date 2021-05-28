@@ -37,7 +37,7 @@ def train(DEVICE, PRETRAIN_LR, TRAIN_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_L
 
     #Establish neural network.
     net = SDEFlow(DEVICE, obs_model, STATE_DIM, T, DT, N, num_layers = NUM_LAYERS).to(DEVICE)
-    optimizer = optim.Adam(net.parameters(), lr = PRETRAIN_LR)
+    optimizer = optim.Adamax(net.parameters(), lr = PRETRAIN_LR)
     
     if LEARN_PARAMS:
         theta_post = MeanField(PARAMS_DICT)
