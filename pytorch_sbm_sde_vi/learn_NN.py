@@ -22,6 +22,7 @@ from training import *
 torch.manual_seed(0)
 cuda_id = 0
 devi = torch.device("".join(["cuda:",f'{cuda_id}']) if torch.cuda.is_available())
+#devi = torch.device("".join(["cuda:",f'{cuda_id}']) if torch.cuda.is_available() else "cpu")
 
 #Neural SDE parameters
 dt_flow = 0.1
