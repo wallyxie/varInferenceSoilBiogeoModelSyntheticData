@@ -33,7 +33,7 @@ def train(DEVICE, PRETRAIN_LR, TRAIN_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_L
     
     #Read in data to obtain y and establish observation model.
     obs_times, obs_means_noCO2, obs_error = csv_to_obs_df(OBS_CSV_STR, STATE_DIM, T, OBS_ERROR_SCALE) #csv_to_obs_df function in obs_and_flow module
-    obs_model = ObsModel(DEVICE, TIMES = obs_times, DT = DT, MU = obs_means_noCO2, SCALE = obs_error) 
+    obs_model = ObsModel(DEVICE, TIMES = obs_times, DT = DT, MU = obs_means_noCO2, SCALE = obs_error).to(DEVICE) 
 
     #Establish neural network.
     net = SDEFlow(DEVICE, obs_model, STATE_DIM, T, DT, N, num_layers = NUM_LAYERS).to(DEVICE)
