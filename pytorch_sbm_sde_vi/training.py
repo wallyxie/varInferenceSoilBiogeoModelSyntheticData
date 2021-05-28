@@ -57,7 +57,7 @@ def train(DEVICE, PRETRAIN_LR, TRAIN_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_L
         for it in range(NITER):
             net.train()
             optimizer.zero_grad()
-            C_PATH, log_prob = net(BATCH_SIZE) #Obtain paths with solutions to times includint t0.
+            C_PATH, log_prob = net(BATCH_SIZE) #Obtain paths with solutions to times including t0.
             #C_PATH = torch.cat([C0, C_PATH], 1) #Append deterministic CON initial conditions conditional on parameter values to C path. 
             
             if it < PRETRAIN_ITER:
