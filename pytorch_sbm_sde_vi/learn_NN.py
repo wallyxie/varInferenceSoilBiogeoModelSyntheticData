@@ -30,7 +30,7 @@ dt_flow = 0.1
 t = 5000 #In hours.
 n = int(t / dt_flow) + 1
 t_span = np.linspace(0, t, n)
-t_span_tensor = torch.reshape(torch.Tensor(t_span), [1, n, 1]) #T_span needs to be converted to tensor object. Additionally, facilitates conversion of I_S and I_D to tensor objects.
+t_span_tensor = torch.reshape(torch.Tensor(t_span), [1, n, 1]).to(devi) #T_span needs to be converted to tensor object. Additionally, facilitates conversion of I_S and I_D to tensor objects.
 state_dim_SCON = 3 #Not including CO2 in STATE_DIM, because CO2 is an observation.
 state_dim_SAWB = 4 #Not including CO2 in STATE_DIM, because CO2 is an observation.
 
@@ -70,17 +70,17 @@ SCON_C_params_dict = {'u_M': u_M, 'a_SD': a_SD, 'a_DS': a_DS, 'a_M': a_M, 'a_MSC
 
 #Initial condition prior means
 x0_SCON = [65, 0.4, 2.5]
-x0_SCON_tensor = torch.tensor(x0_SCON)
+x0_SCON_tensor = torch.tensor(x0_SCON).to(devi)
 x0_prior_SCON = D.multivariate_normal.MultivariateNormal(x0_SCON_tensor,
                                                          scale_tril=torch.eye(state_dim_SCON) * obs_error_scale * x0_SCON_tensor)
 
 #Generate exogenous input vectors.
 #Obtain temperature forcing function.
-temp_tensor = temp_gen(t_span_tensor, temp_ref, temp_rise)
+temp_tensor = temp_gen(t_span_tensor, temp_ref, temp_rise).to(devi)
 
 #Obtain SOC and DOC pool litter input vectors for use in flow SDE functions.
-i_s_tensor = i_s(t_span_tensor) #Exogenous SOC input function
-i_d_tensor = i_d(t_span_tensor) #Exogenous DOC input function
+i_s_tensor = i_s(t_span_tensor).to(devi) #Exogenous SOC input function
+i_d_tensor = i_d(t_span_tensor).to(devi) #Exogenous DOC input function
 
 #Call training loop function for SCON-C.
 net, ELBO_hist = train(devi, pretrain_lr, train_lr, niter, piter, batch_size, num_layers,
