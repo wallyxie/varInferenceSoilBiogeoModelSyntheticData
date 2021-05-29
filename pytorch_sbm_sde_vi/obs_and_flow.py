@@ -257,7 +257,7 @@ class SDEFlow(nn.Module):
 
         # NOTE: This currently assumes a regular time gap between observations!
         steps_bw_obs = self.obs_model.idx[1] - self.obs_model.idx[0]
-        reps = torch.ones(len(self.obs_model.idx), dtype=torch.long) * self.state_dim
+        reps = torch.ones(len(self.obs_model.idx), dtype=torch.long).to(self.device) * self.state_dim
         reps[1:] *= steps_bw_obs
         obs_tile = self.obs_model.mu[None, :, :].repeat_interleave(reps, -1).repeat( \
             BATCH_SIZE, 1, 1) # (batch_size, obs_dim, state_dim * n)
