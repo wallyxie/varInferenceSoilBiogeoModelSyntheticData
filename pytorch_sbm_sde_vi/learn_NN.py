@@ -23,7 +23,7 @@ torch.manual_seed(0)
 print('cuda device available?: ', torch.cuda.is_available())
 active_device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 #active_device = torch.device('cuda')
-torch.set_default_tensor_type('torch.cuda.FloatTensor')
+#torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
 #Neural SDE parameters
 dt_flow = 0.1
