@@ -22,7 +22,8 @@ from training import *
 torch.manual_seed(0)
 print('cuda device available?: ', torch.cuda.is_available())
 gpu = torch.device('cuda')
-#gpu = torch.device("".join(["cuda:",f'{cuda_id}']) if torch.cuda.is_available() else "cpu")
+torch.set_default_tensor_type('torch.cuda.FloatTensor')
+#devi = torch.device("".join(["cuda:",f'{cuda_id}']) if torch.cuda.is_available() else "cpu")
 
 #Neural SDE parameters
 dt_flow = 0.1
@@ -42,9 +43,9 @@ niter = 2
 piter = 1
 pretrain_lr = 1e-2 #Norm regularization learning rate
 train_lr = 1e-3 #ELBO learning rate
-batch_size = 10
+batch_size = 8
 obs_error_scale = 0.1 #Observation (y) standard deviation
-num_layers = 6
+num_layers = 5
 
 #SBM prior means
 #System parameters from deterministic CON model
@@ -71,7 +72,7 @@ SCON_C_params_dict = {'u_M': u_M, 'a_SD': a_SD, 'a_DS': a_DS, 'a_M': a_M, 'a_MSC
 x0_SCON = [65, 0.4, 2.5]
 x0_SCON_tensor = torch.tensor(x0_SCON).to(gpu)
 x0_prior_SCON = D.multivariate_normal.MultivariateNormal(x0_SCON_tensor,
-                                                         scale_tril=torch.eye(state_dim_SCON) * obs_error_scale * x0_SCON_tensor)
+                                                         scale_tril = torch.eye(state_dim_SCON) * obs_error_scale * x0_SCON_tensor)
 
 #Generate exogenous input vectors.
 #Obtain temperature forcing function.
