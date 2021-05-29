@@ -23,7 +23,7 @@ torch.manual_seed(0)
 print('cuda device available?: ', torch.cuda.is_available())
 active_device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 #active_device = torch.device('cuda')
-#torch.set_default_tensor_type('torch.cuda.FloatTensor')
+torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
 #Neural SDE parameters
 dt_flow = 0.1
@@ -43,9 +43,9 @@ niter = 2
 piter = 1
 pretrain_lr = 1e-2 #Norm regularization learning rate
 train_lr = 1e-3 #ELBO learning rate
-batch_size = 8
+batch_size = 3
 obs_error_scale = 0.1 #Observation (y) standard deviation
-num_layers = 5
+num_layers = 4
 
 #SBM prior means
 #System parameters from deterministic CON model
