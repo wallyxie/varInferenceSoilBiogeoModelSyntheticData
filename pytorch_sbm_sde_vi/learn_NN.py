@@ -22,7 +22,7 @@ from training import *
 torch.manual_seed(0)
 print('cuda device available?: ', torch.cuda.is_available())
 gpu = torch.device('cuda')
-torch.set_default_tensor_type('torch.cuda.FloatTensor')
+#torch.set_default_tensor_type('torch.cuda.FloatTensor')
 #devi = torch.device("".join(["cuda:",f'{cuda_id}']) if torch.cuda.is_available() else "cpu")
 
 #Neural SDE parameters
@@ -72,7 +72,7 @@ SCON_C_params_dict = {'u_M': u_M, 'a_SD': a_SD, 'a_DS': a_DS, 'a_M': a_M, 'a_MSC
 x0_SCON = [65, 0.4, 2.5]
 x0_SCON_tensor = torch.tensor(x0_SCON).to(gpu)
 x0_prior_SCON = D.multivariate_normal.MultivariateNormal(x0_SCON_tensor,
-                                                         scale_tril = torch.eye(state_dim_SCON) * obs_error_scale * x0_SCON_tensor)
+                                                         scale_tril = torch.eye(state_dim_SCON).to(gpu) * obs_error_scale * x0_SCON_tensor)
 
 #Generate exogenous input vectors.
 #Obtain temperature forcing function.
