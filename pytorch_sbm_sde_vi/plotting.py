@@ -28,7 +28,7 @@ def plot_elbo(elbo_hist, num_layers, xmin = 0, ymax = None, yscale = 'linear'):
     plt.title(f'ELBO history after {xmin} iterations')
     plt.savefig(f'ELBO_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_iter_{niter}.png', dpi = 300)
     
-def plot_states_post(x, obs_model, num_layers, niter, dt, num_samples = 1, ymin = None, ymax = None, state_dim = 3):
+def plot_states_post(x, obs_model, num_layers, niter, dt, eval_batch_size = 1, ymin = None, ymax = None, state_dim = 3):
     state_list = ['SOC', 'DOC', 'MBC', 'EEC']   
     fig, axs = plt.subplots(state_dim)
 
@@ -44,6 +44,6 @@ def plot_states_post(x, obs_model, num_layers, niter, dt, num_samples = 1, ymin 
         axs[i].xlabel('Hour')
         axs[i].ylabel(state)
         axs[i].ylim((ymin, ymax))
-        #plt.title(f'Approximate posterior $q(x|\\theta, y)$\nNumber of samples = {num_samples}\nTimestep = {dt}\nIterations = {niter}')
+        #plt.title(f'Approximate posterior $q(x|\\theta, y)$\nNumber of samples = {eval_batch_size}\nTimestep = {dt}\nIterations = {niter}')
     
-    fig.savefig(f'net_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_iter_{niter}_{state}.png', dpi = 300)
+    fig.savefig(f'net_t_{t}_dt_{dt_flow}_batch_{batch_size}_samples_{eval_batch_size}_layers_{num_layers}_iter_{niter}_{state}.png', dpi = 300)
