@@ -41,9 +41,8 @@ def plot_states_post(x, obs_model, niter, t, dt, batch_size, eval_batch_size, nu
         axs[i].fill_between(obs_model.times, obs_model.mu[i, :] - 2 * obs_model.scale[:, i], obs_model.mu[i, :] + 2 * obs_model.scale[:, i], alpha = 0.5, label = 'Observation $\\mu \pm 2\sigma_y$')
         state = state_list[i]
         #axs[i].legend()
-        axs[i].xlabel('Hour')
-        axs[i].ylabel(state)
-        axs[i].ylim((ymin, ymax))
+        plt.setp(axs[i], ylabel = state)
+        axs[i].set_ylim([ymin, ymax])
         #plt.title(f'Approximate posterior $q(x|\\theta, y)$\nNumber of samples = {eval_batch_size}\nTimestep = {dt}\nIterations = {niter}')
-    
+    plt.xlabel('Hour')
     fig.savefig(f'net_iter_{niter}_t_{t}_dt_{dt}_batch_{batch_size}_samples_{eval_batch_size}_layers_{num_layers}.png', dpi = 300)

@@ -105,5 +105,5 @@ torch.save(ELBO_hist, f'ELBO_iter_{niter}_t_{t}_dt_{dt_flow}_{now_string}.pt')
 net.eval()
 x, _ = net(eval_batch_size)
 
-plot_elbo(ELBO_hist, num_layers, xmin = 500)
-plot_states_post(x, obs_model_noCO2, num_layers, niter, dt_flow, eval_batch_size)
+plot_elbo(ELBO_hist, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, xmin = 500) #xmin < niter.
+plot_states_post(x, obs_model_noCO2, niter, t, dt_flow, batch_size, eval_batch_size, num_layers)
