@@ -28,7 +28,7 @@ def plot_elbo(elbo_hist, num_layers, xmin = 0, ymax = None, yscale = 'linear'):
     plt.title(f'ELBO history after {xmin} iterations')
     plt.savefig(f'ELBO_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_iter_{niter}.png', dpi = 300)
     
-def plot_states_post(x, obs_model, num_layers, niter, dt, eval_batch_size = 1, ymin = None, ymax = None, state_dim = 3):
+def plot_states_post(x, obs_model, num_layers, niter, dt, eval_batch_size, ymin = None, ymax = None, state_dim = 3):
     state_list = ['SOC', 'DOC', 'MBC', 'EEC']   
     fig, axs = plt.subplots(state_dim)
 
