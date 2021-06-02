@@ -38,7 +38,7 @@ def plot_states_post(x, obs_model, niter, t, dt, batch_size, eval_batch_size, nu
         axs[i].plot(hours, q_mean, label='Posterior mean')
         axs[i].fill_between(hours, q_mean - 2 * q_std, q_mean + 2 * q_std, alpha = 0.5, label = 'Posterior $\\mu \pm 2\sigma_x$')
         axs[i].plot(obs_model.times, obs_model.mu[i, :], linestyle = 'None', marker = 'o', label = 'Observed')
-        axs[i].fill_between(obs_model.times, obs_model.mu[i, :] - 2 * obs_model.scale[:, i], obs_model.mu[i, :] + 2 * obs_model.scale[:, state_idx], alpha = 0.5, label = 'Observation $\\mu \pm 2\sigma_y$')
+        axs[i].fill_between(obs_model.times, obs_model.mu[i, :] - 2 * obs_model.scale[:, i], obs_model.mu[i, :] + 2 * obs_model.scale[:, i], alpha = 0.5, label = 'Observation $\\mu \pm 2\sigma_y$')
         state = state_list[i]
         #axs[i].legend()
         axs[i].xlabel('Hour')
