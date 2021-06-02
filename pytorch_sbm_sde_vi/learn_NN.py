@@ -83,6 +83,10 @@ temp_tensor = temp_gen(t_span_tensor, temp_ref, temp_rise).to(active_device)
 i_s_tensor = i_s(t_span_tensor).to(active_device) #Exogenous SOC input function
 i_d_tensor = i_d(t_span_tensor).to(active_device) #Exogenous DOC input function
 
+#Generate observation model.
+obs_times, obs_means_noCO2, obs_error = csv_to_obs_df'y_from_x_t_5000_dt_0-01.csv', state_dim_SCON, t, obs_error_scale)
+obs_model_noCO2 = ObsModel(active_device, TIMES = obs_times, DT = dt, MU = obs_means_noCO2, SCALE = obs_error).to(active_device) 
+
 #Call training loop function for SCON-C.
 net, ELBO_hist = train(active_device, pretrain_lr, train_lr, niter, piter, batch_size, num_layers,
           state_dim_SCON, 'y_from_x_t_5000_dt_0-01.csv', obs_error_scale, t, dt_flow, n, 
@@ -98,4 +102,7 @@ torch.save(ELBO_hist, f'ELBO_t_{t}_dt_{dt_flow}_iter_{niter}_{now_string}.pt')
 
 #Plot training results and ELBO history.
 net.eval()
+x, _ = net(eval_batch_size)
 
+plot_elbo(elbo_hist, num_layers, xmin = 1000)
+plot_states_post(x, obs_model_noCO2, num_layers, niter, dt_flow, eval_batch_size)
