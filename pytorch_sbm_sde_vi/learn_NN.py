@@ -23,7 +23,8 @@ from plotting import *
 torch.manual_seed(0)
 print('cuda device available?: ', torch.cuda.is_available())
 active_device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-torch.set_default_tensor_type('torch.cuda.FloatTensor')
+if torch.cuda.is_available():
+    torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
 #Neural SDE parameters
 dt_flow = 0.1
@@ -39,8 +40,8 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-niter = 25000
-piter = 750
+niter = 5
+piter = 1
 pretrain_lr = 1e-2 #Norm regularization learning rate
 train_lr = 1e-3 #ELBO learning rate
 batch_size = 3 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM.
@@ -84,8 +85,8 @@ i_s_tensor = i_s(t_span_tensor).to(active_device) #Exogenous SOC input function
 i_d_tensor = i_d(t_span_tensor).to(active_device) #Exogenous DOC input function
 
 #Generate observation model.
-obs_times, obs_means_noCO2, obs_error = csv_to_obs_df'y_from_x_t_5000_dt_0-01.csv', state_dim_SCON, t, obs_error_scale)
-obs_model_noCO2 = ObsModel(active_device, TIMES = obs_times, DT = dt, MU = obs_means_noCO2, SCALE = obs_error).to(active_device) 
+obs_times, obs_means_noCO2, obs_error = csv_to_obs_df('y_from_x_t_5000_dt_0-01.csv', state_dim_SCON, t, obs_error_scale)
+obs_model_noCO2 = ObsModel(active_device, TIMES = obs_times, DT = dt_flow, MU = obs_means_noCO2, SCALE = obs_error).to(active_device) 
 
 #Call training loop function for SCON-C.
 net, ELBO_hist = train(active_device, pretrain_lr, train_lr, niter, piter, batch_size, num_layers,
