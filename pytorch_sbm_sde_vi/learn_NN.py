@@ -41,7 +41,7 @@ temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
 niter = 5
-piter = 1
+piter = 2
 pretrain_lr = 1e-2 #Norm regularization learning rate
 train_lr = 1e-3 #ELBO learning rate
 batch_size = 3 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM.
@@ -98,12 +98,12 @@ net, ELBO_hist = train(active_device, pretrain_lr, train_lr, niter, piter, batch
 #Save net and ELBO files.
 now = datetime.now()
 now_string = now.strftime("%Y_%m_%d_%H_%M_%S")
-torch.save(net, f'net_t_{t}_dt_{dt_flow}_iter_{niter}_{now_string}.pt')
-torch.save(ELBO_hist, f'ELBO_t_{t}_dt_{dt_flow}_iter_{niter}_{now_string}.pt')
+torch.save(net, f'net_iter_{niter}_t_{t}_dt_{dt_flow}_{now_string}.pt')
+torch.save(ELBO_hist, f'ELBO_iter_{niter}_t_{t}_dt_{dt_flow}_{now_string}.pt')
 
 #Plot training results and ELBO history.
 net.eval()
 x, _ = net(eval_batch_size)
 
-plot_elbo(elbo_hist, num_layers, xmin = 1000)
+plot_elbo(ELBO_hist, num_layers, xmin = 500)
 plot_states_post(x, obs_model_noCO2, num_layers, niter, dt_flow, eval_batch_size)
