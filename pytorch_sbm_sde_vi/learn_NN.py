@@ -17,12 +17,12 @@ from torch.autograd import Function
 from SBM_SDE import *
 from obs_and_flow import *
 from training import *
+from plotting import *
 
 #PyTorch settings
 torch.manual_seed(0)
 print('cuda device available?: ', torch.cuda.is_available())
 active_device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-#active_device = torch.device('cuda')
 torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
 #Neural SDE parameters
@@ -44,6 +44,7 @@ piter = 750
 pretrain_lr = 1e-2 #Norm regularization learning rate
 train_lr = 1e-3 #ELBO learning rate
 batch_size = 3 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM.
+eval_batch_size = 10 
 obs_error_scale = 0.1 #Observation (y) standard deviation
 num_layers = 5 #5 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM.
 
@@ -94,3 +95,7 @@ now = datetime.now()
 now_string = now.strftime("%Y_%m_%d_%H_%M_%S")
 torch.save(net, f'net_t_{t}_dt_{dt_flow}_iter_{niter}_{now_string}.pt')
 torch.save(ELBO_hist, f'ELBO_t_{t}_dt_{dt_flow}_iter_{niter}_{now_string}.pt')
+
+#Plot training results and ELBO history.
+net.eval()
+
