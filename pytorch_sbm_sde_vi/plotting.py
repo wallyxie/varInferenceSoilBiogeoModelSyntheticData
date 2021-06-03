@@ -19,8 +19,7 @@ from obs_and_flow import *
 from training import *
 
 def plot_elbo(elbo_hist, niter, t, dt, batch_size, eval_batch_size, num_layers, xmin = 0, ymax = None, yscale = 'linear'):
-    elbo_hist.cpu() #Convert CUDA tensor to CPU tensor for plotting.
-    iters = torch.arange(xmin + 1, len(elbo_hist) + 1).cpu()
+    iters = torch.arange(xmin + 1, len(elbo_hist) + 1)
     plt.plot(iters, elbo_hist[xmin:])
     plt.ylim((None, ymax))
     plt.yscale(yscale)
@@ -34,8 +33,8 @@ def plot_states_post(x, obs_model, niter, t, dt, batch_size, eval_batch_size, nu
     fig, axs = plt.subplots(state_dim)
 
     for i in range(state_dim):
-        q_mean, q_std = x[:, :, i].mean(0).detach().cpu(), x[:, :, i].std(0).detach().cpu()
-        hours = torch.arange(0, t + dt, dt).cpu()
+        q_mean, q_std = x[:, :, i].mean(0).detach(), x[:, :, i].std(0).detach()
+        hours = torch.arange(0, t + dt, dt)
         axs[i].plot(hours, q_mean, label = 'Posterior mean')
         axs[i].fill_between(hours, q_mean - 2 * q_std, q_mean + 2 * q_std, alpha = 0.5, label = 'Posterior $\\mu \pm 2\sigma_x$')
         axs[i].plot(obs_model.times, obs_model.mu[i, :], linestyle = 'None', marker = 'o', label = 'Observed')
