@@ -27,8 +27,8 @@ if torch.cuda.is_available():
     torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
 #Neural SDE parameters
-dt_flow = 0.1
-t = 2500 #5000. Reduced to see impact on memory. #In hours.
+dt_flow = 0.2 #Increased from 0.1 to reduce memory.
+t = 1800 #5000. Reduced to see impact on memory. #In hours.
 n = int(t / dt_flow) + 1
 t_span = np.linspace(0, t, n)
 t_span_tensor = torch.reshape(torch.Tensor(t_span), [1, n, 1]).to(active_device) #T_span needs to be converted to tensor object. Additionally, facilitates conversion of I_S and I_D to tensor objects.
@@ -40,14 +40,14 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-niter = 10000
+niter = 9500
 piter = 500
 pretrain_lr = 1e-2 #Norm regularization learning rate
 train_lr = 1e-3 #ELBO learning rate
 batch_size = 4 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM.
 eval_batch_size = 4
 obs_error_scale = 0.1 #Observation (y) standard deviation
-num_layers = 4 #5 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM.
+num_layers = 5 #5 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM.
 
 #SBM prior means
 #System parameters from deterministic CON model
@@ -93,17 +93,25 @@ net, ELBO_hist = train(active_device, pretrain_lr, train_lr, niter, piter, batch
           state_dim_SCON, 'y_from_x_t_5000_dt_0-01.csv', obs_error_scale, t, dt_flow, n, 
           t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
           drift_diffusion_SCON_C, x0_prior_SCON, SCON_C_params_dict,
-          LEARN_PARAMS = False, LR_DECAY = 0.1, DECAY_STEP_SIZE = 1000, PRINT_EVERY = 50)
+          LEARN_PARAMS = False, LR_DECAY = 0.1, DECAY_STEP_SIZE = 1000, PRINT_EVERY = 100)
+
+net.to(active_device)
 
 #Save net and ELBO files.
 now = datetime.now()
 now_string = now.strftime("%Y_%m_%d_%H_%M_%S")
-torch.save(net, f'net_iter_{niter}_t_{t}_dt_{dt_flow}_{now_string}.pt')
-torch.save(ELBO_hist, f'ELBO_iter_{niter}_t_{t}_dt_{dt_flow}_{now_string}.pt')
+net_save_string = f'net_iter_{niter}_t_{t}_dt_{dt_flow}_{now_string}.pt'
+ELBO_save_string = f'ELBO_iter_{niter}_t_{t}_dt_{dt_flow}_{now_string}.pt'
+torch.save(net, net_save_string)
+torch.save(ELBO_hist, ELBO_save_string)
 
-#Plot training results and ELBO history.
+#Release some CUDA memory and load .pt files.
+torch.cuda.empty_cache()
+net = torch.load(net_save_string)
+ELBO_hist = torch.load(ELBO_save_string)
+
+#Plot training posterior results and ELBO history.
 net.eval()
 x, _ = net(eval_batch_size)
-
 plot_elbo(ELBO_hist, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, xmin = 500) #xmin < niter.
 plot_states_post(x, obs_model_noCO2, niter, t, dt_flow, batch_size, eval_batch_size, num_layers)
