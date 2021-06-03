@@ -32,7 +32,6 @@ def plot_states_post(x, obs_model, niter, t, dt, batch_size, eval_batch_size, nu
     state_list = ['SOC', 'DOC', 'MBC', 'EEC']   
     fig, axs = plt.subplots(state_dim)
 
-    obs_model.times = obs_model.times.cpu().detach().numpy()
     obs_model.mu = obs_model.mu.cpu().detach().numpy()
     obs_model.scale = obs_model.scale.cpu().detach().numpy()
 
