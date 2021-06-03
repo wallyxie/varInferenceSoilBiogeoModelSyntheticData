@@ -108,7 +108,6 @@ torch.cuda.empty_cache()
 net = torch.load(net_save_string)
 net.to(active_device)
 ELBO_hist = torch.load(ELBO_save_string)
-ELBO_hist.to(active_device)
 
 #Plot training posterior results and ELBO history.
 net.eval()
