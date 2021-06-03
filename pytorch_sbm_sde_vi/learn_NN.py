@@ -95,8 +95,6 @@ net, ELBO_hist = train(active_device, pretrain_lr, train_lr, niter, piter, batch
           drift_diffusion_SCON_C, x0_prior_SCON, SCON_C_params_dict,
           LEARN_PARAMS = False, LR_DECAY = 0.1, DECAY_STEP_SIZE = 1000, PRINT_EVERY = 100)
 
-net.to(active_device)
-
 #Save net and ELBO files.
 now = datetime.now()
 now_string = now.strftime("%Y_%m_%d_%H_%M_%S")
@@ -108,7 +106,9 @@ torch.save(ELBO_hist, ELBO_save_string)
 #Release some CUDA memory and load .pt files.
 torch.cuda.empty_cache()
 net = torch.load(net_save_string)
+net.to(active_device)
 ELBO_hist = torch.load(ELBO_save_string)
+ELBO_hist(active_device)
 
 #Plot training posterior results and ELBO history.
 net.eval()
