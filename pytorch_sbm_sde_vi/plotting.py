@@ -35,7 +35,7 @@ def plot_states_post(x, obs_model, niter, t, dt, batch_size, eval_batch_size, nu
     for i in range(state_dim):
         q_mean, q_std = x[:, :, i].mean(0).detach(), x[:, :, i].std(0).detach()
         hours = torch.arange(0, t + dt, dt)
-        axs[i].plot(hours, q_mean, label='Posterior mean')
+        axs[i].plot(hours, q_mean, label = 'Posterior mean')
         axs[i].fill_between(hours, q_mean - 2 * q_std, q_mean + 2 * q_std, alpha = 0.5, label = 'Posterior $\\mu \pm 2\sigma_x$')
         axs[i].plot(obs_model.times, obs_model.mu[i, :], linestyle = 'None', marker = 'o', label = 'Observed')
         axs[i].fill_between(obs_model.times, obs_model.mu[i, :] - 2 * obs_model.scale[:, i], obs_model.mu[i, :] + 2 * obs_model.scale[:, i], alpha = 0.5, label = 'Observation $\\mu \pm 2\sigma_y$')
