@@ -40,8 +40,8 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-niter = 9500
-piter = 500
+niter = 1000
+piter = 200
 pretrain_lr = 1e-2 #Norm regularization learning rate
 train_lr = 1e-3 #ELBO learning rate
 batch_size = 4 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM.
