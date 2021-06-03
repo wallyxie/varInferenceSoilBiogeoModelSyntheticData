@@ -40,8 +40,8 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-niter = 1000
-piter = 200
+niter = 100
+piter = 10
 pretrain_lr = 1e-2 #Norm regularization learning rate
 train_lr = 1e-3 #ELBO learning rate
 batch_size = 4 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM.
@@ -108,10 +108,10 @@ torch.cuda.empty_cache()
 net = torch.load(net_save_string)
 net.to(active_device)
 ELBO_hist = torch.load(ELBO_save_string)
-ELBO_hist(active_device)
+ELBO_hist.to(active_device)
 
 #Plot training posterior results and ELBO history.
 net.eval()
 x, _ = net(eval_batch_size)
-plot_elbo(ELBO_hist, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, xmin = 500) #xmin < niter.
+plot_elbo(ELBO_hist, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, xmin = 10) #xmin < niter.
 plot_states_post(x, obs_model_noCO2, niter, t, dt_flow, batch_size, eval_batch_size, num_layers)
