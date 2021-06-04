@@ -14,10 +14,11 @@ import torch.optim as optim
 from torch.autograd import Function
 
 #Model-specific imports
-from SBM_SDE import *
+from SBM_SDE_tensor import *
 from obs_and_flow import *
 from training import *
 from plotting import *
+from mean_field import *
 
 #PyTorch settings
 torch.manual_seed(0)
@@ -46,7 +47,8 @@ pretrain_lr = 1e-3 #Norm regularization learning rate
 train_lr = 1e-3 #ELBO learning rate
 batch_size = 10 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
 eval_batch_size = 5
-obs_error_scale = 0.1 #Observation (y) standard deviation
+obs_error_scale = 0.1 #Observation (y) standard deviation.
+prior_scale_factor = 0.1 #Proportion of prior standard deviation to prior means.
 num_layers = 5 #5 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
 
 #SBM prior means
@@ -90,7 +92,7 @@ obs_model_noCO2 = ObsModel(active_device, TIMES = obs_times, DT = dt_flow, MU = 
 
 #Call training loop function for SCON-C.
 net, ELBO_hist = train(active_device, pretrain_lr, train_lr, niter, piter, batch_size, num_layers,
-          state_dim_SCON, 'y_from_x_t_5000_dt_0-01.csv', obs_error_scale, t, dt_flow, n, 
+          state_dim_SCON, 'y_from_x_t_5000_dt_0-01.csv', obs_error_scale, prior_scale_factor, t, dt_flow, n, 
           t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
           drift_diffusion_SCON_C, x0_prior_SCON, SCON_C_params_dict,
           LEARN_PARAMS = False, LR_DECAY = 0.1, DECAY_STEP_SIZE = 1000, PRINT_EVERY = 50)
