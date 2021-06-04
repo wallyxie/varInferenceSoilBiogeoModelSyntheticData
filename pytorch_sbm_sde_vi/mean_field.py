@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-from obs_and_flow_classes_and_functions import LowerBound
+from obs_and_flow import LowerBound
 import torch.distributions as D
 
 '''
