@@ -40,7 +40,7 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-niter = 8500
+niter = 5500
 piter = 100
 pretrain_lr = 1e-3 #Norm regularization learning rate
 train_lr = 2e-3 #ELBO learning rate
