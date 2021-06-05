@@ -62,7 +62,7 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
 
     #Initiate optimizers.
     pretrain_optimizer = optim.Adam(net.parameters(), lr = PRETRAIN_LR, eps = 1e-7)
-    elbo_params = list(net.parameters()) + list(q_theta.parameters()) if LEARN_THETA else net.parameters()
+    ELBO_params = list(net.parameters()) + list(q_theta.parameters()) if LEARN_THETA else net.parameters()
     ELBO_optimizer = optim.Adam(elbo_params, lr = ELBO_LR, eps = 1e-7)
 
     #C0 = ANALYTICAL_STEADY_STATE_INIT(I_S_TENSOR[0, 0, 0].item(), I_D_TENSOR[0, 0, 0].item(), PARAM_PRIOR_MEANS_DICT) #Calculate deterministic initial conditions.
@@ -123,8 +123,11 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
 
                 ELBO.backward()
                 ELBO_optimizer.step()                
-                
-            torch.nn.utils.clip_grad_norm_(net.parameters(), 3.0)
+            
+            if LEARN_THETA:
+                torch.nn.utils.clip_grad_norm_(ELBO_params, 3.0)
+            else:
+                torch.nn.utils.clip_grad_norm_(net.parameters(), 3.0)
 
             if it % DECAY_STEP_SIZE == 0 and it > 0:
                 ELBO_optimizer.param_groups[0]['lr'] *= LR_DECAY
