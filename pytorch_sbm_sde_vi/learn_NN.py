@@ -28,7 +28,7 @@ if torch.cuda.is_available():
     torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
 #Neural SDE parameters
-dt_flow = 0.25 #Increased from 0.1 to reduce memory.
+dt_flow = 0.2 #Increased from 0.1 to reduce memory.
 t = 1500 #5000. Reduced to see impact on memory. #In hours.
 n = int(t / dt_flow) + 1
 t_span = np.linspace(0, t, n)
@@ -45,11 +45,11 @@ niter = 12000
 piter = 1000
 pretrain_lr = 1e-4 #Norm regularization learning rate
 train_lr = 1e-4 #ELBO learning rate
-batch_size = 1 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
+batch_size = 5 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
 eval_batch_size = 5
 obs_error_scale = 0.1 #Observation (y) standard deviation.
 prior_scale_factor = 0.1 #Proportion of prior standard deviation to prior means.
-num_layers = 5 #5 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
+num_layers = 6 #5 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
 
 #SBM prior means
 #System parameters from deterministic CON model
@@ -114,5 +114,5 @@ ELBO_hist = torch.load(ELBO_save_string)
 #Plot training posterior results and ELBO history.
 net.eval()
 x, _ = net(eval_batch_size)
-plot_elbo(ELBO_hist, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, now_string, xmin = 500) #xmin < niter.
-plot_states_post(x, obs_model_noCO2, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, now_string, ymin = 0)
+plot_elbo(ELBO_hist, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, now_string, xmin = 1000) #xmin < niter.
+plot_states_post(x, obs_model_noCO2, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, now_string, y_min_list = [0, 0, 0], y_max_list = [80, 2.2, 4.5])
