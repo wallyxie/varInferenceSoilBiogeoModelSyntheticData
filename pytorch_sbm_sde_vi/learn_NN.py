@@ -28,8 +28,8 @@ if torch.cuda.is_available():
     torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
 #Neural SDE parameters
-dt_flow = 0.2 #Increased from 0.1 to reduce memory.
-t = 1500 #5000. Reduced to see impact on memory. #In hours.
+dt_flow = 0.1 #Increased from 0.1 to reduce memory.
+t = 400 #5000. Reduced to see impact on memory. #In hours.
 n = int(t / dt_flow) + 1
 t_span = np.linspace(0, t, n)
 t_span_tensor = torch.reshape(torch.Tensor(t_span), [1, n, 1]).to(active_device) #T_span needs to be converted to tensor object. Additionally, facilitates conversion of I_S and I_D to tensor objects.
@@ -41,15 +41,15 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-niter = 11000
+niter = 1050
 piter = 1000
 pretrain_lr = 1e-4 #Norm regularization learning rate
-train_lr = 8e-5 #ELBO learning rate
-batch_size = 4 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
+train_lr = 2e-5 #ELBO learning rate
+batch_size = 5 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
 eval_batch_size = 5
 obs_error_scale = 0.1 #Observation (y) standard deviation.
 prior_scale_factor = 0.1 #Proportion of prior standard deviation to prior means.
-num_layers = 6 #5 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
+num_layers = 5 #5 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
 
 #SBM prior means
 #System parameters from deterministic CON model
@@ -95,13 +95,13 @@ net, ELBO_hist = train(active_device, pretrain_lr, train_lr, niter, piter, batch
           state_dim_SCON, 'y_from_x_t_5000_dt_0-01.csv', obs_error_scale, prior_scale_factor, t, dt_flow, n, 
           t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
           drift_diffusion_SCON_C, x0_prior_SCON, SCON_C_params_dict,
-          LEARN_THETA = False, LR_DECAY = 0.05, DECAY_STEP_SIZE = 1000, PRINT_EVERY = 10)
+          LEARN_THETA = False, LR_DECAY = 0.05, DECAY_STEP_SIZE = 2000, PRINT_EVERY = 5)
 
 #Save net and ELBO files.
 now = datetime.now()
 now_string = now.strftime("%Y_%m_%d_%H_%M_%S")
-net_save_string = f'net_iter_{niter}_t_{t}_dt_{dt_flow}_{now_string}.pt'
-ELBO_save_string = f'ELBO_iter_{niter}_t_{t}_dt_{dt_flow}_{now_string}.pt'
+net_save_string = f'net_iter_{niter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_samples_{eval_batch_size}_layers_{num_layers}_{now_string}.pt'
+ELBO_save_string = f'ELBO_iter_{niter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_samples_{eval_batch_size}_layers_{num_layers}_{now_string}.pt'
 torch.save(net, net_save_string)
 torch.save(ELBO_hist, ELBO_save_string)
 

@@ -55,15 +55,15 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
         q_theta = None
 
     #Record loss throughout training
-    best_loss_norm = 1e10
-    best_loss_ELBO = 1e10
+    best_loss_norm = 1e20
+    best_loss_ELBO = 1e20
     norm_losses = []
     ELBO_losses = []
 
     #Initiate optimizers.
-    pretrain_optimizer = optim.Adam(net.parameters(), lr = PRETRAIN_LR, eps = 1e-6)
+    pretrain_optimizer = optim.Adam(net.parameters(), lr = PRETRAIN_LR, eps = 1e-7)
     elbo_params = list(net.parameters()) + list(q_theta.parameters()) if LEARN_THETA else net.parameters()
-    ELBO_optimizer = optim.Adamax(elbo_params, lr = ELBO_LR, eps = 1e-6)
+    ELBO_optimizer = optim.Adam(elbo_params, lr = ELBO_LR, eps = 1e-7)
 
     #C0 = ANALYTICAL_STEADY_STATE_INIT(I_S_TENSOR[0, 0, 0].item(), I_D_TENSOR[0, 0, 0].item(), PARAM_PRIOR_MEANS_DICT) #Calculate deterministic initial conditions.
     #C0 = C0[(None,) * 2].repeat(BATCH_SIZE, 1, 1).to(DEVICE) #Assign initial conditions to C_PATH.
