@@ -95,7 +95,7 @@ net, ELBO_hist = train(active_device, pretrain_lr, train_lr, niter, piter, batch
           state_dim_SCON, 'y_from_x_t_5000_dt_0-01.csv', obs_error_scale, prior_scale_factor, t, dt_flow, n, 
           t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
           drift_diffusion_SCON_C, x0_prior_SCON, SCON_C_params_dict,
-          LEARN_THETA = False, LR_DECAY = 0.05, DECAY_STEP_SIZE = 2000, PRINT_EVERY = 10)
+          LEARN_THETA = False, LR_DECAY = 0.05, DECAY_STEP_SIZE = 1000, PRINT_EVERY = 10)
 
 #Save net and ELBO files.
 now = datetime.now()
