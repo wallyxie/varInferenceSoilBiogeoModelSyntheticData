@@ -41,7 +41,7 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-niter = 9000
+niter = 9500
 piter = 600
 pretrain_lr = 1e-4 #Norm regularization learning rate
 train_lr = 1e-4 #ELBO learning rate
@@ -114,5 +114,5 @@ ELBO_hist = torch.load(ELBO_save_string)
 #Plot training posterior results and ELBO history.
 net.eval()
 x, _ = net(eval_batch_size)
-plot_elbo(ELBO_hist, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, now_string, xmin = niter * 0.25) #xmin < niter.
+plot_elbo(ELBO_hist, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, now_string, xmin = (niter - piter) * 0.25) #xmin < niter.
 plot_states_post(x, obs_model_noCO2, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, now_string, ymin_list = [0, 0, 0], ymax_list = [80, 2.8, 5.0])
