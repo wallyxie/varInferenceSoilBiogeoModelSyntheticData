@@ -35,7 +35,7 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
           LEARN_THETA = False, LR_DECAY = 0.1, DECAY_STEP_SIZE = 1000, PRINT_EVERY = 20):
 
     if PRETRAIN_ITER >= NITER:
-        raise Exception("PRETRAIN_ITER must be < NITER.")
+        raise ValueError('PRETRAIN_ITER must be < NITER.')
 
     #Convert prior means dictionary values to tensor.
     prior_means_tensor = torch.Tensor(list(PARAM_PRIOR_MEANS_DICT.values())).to(DEVICE)
@@ -75,7 +75,10 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
         for it in range(NITER):
             net.train()
             C_PATH, log_prob = net(BATCH_SIZE) #Obtain paths with solutions to times including t0.
-            #C_PATH = torch.cat([C0, C_PATH], 1) #Append deterministic CON initial conditions conditional on parameter values to C path. 
+            #C_PATH = torch.cat([C0, C_PATH], 1) #Append deterministic CON initial conditions conditional on parameter values to C path.
+            
+            if torch.isnan(C_PATH).any():
+                raise ValueError('nan in x. Try reducing learning rate to start.')
             
             if it < PRETRAIN_ITER:
                 pretrain_optimizer.zero_grad()
