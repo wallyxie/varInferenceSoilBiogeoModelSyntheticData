@@ -44,8 +44,8 @@ temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 #Training parameters
 niter = 105
 piter = 100
-pretrain_lr = 1e-4 #Norm regularization learning rate
-train_lr = 1e-5 #ELBO learning rate
+pretrain_lr = 1e-3 #Norm regularization learning rate
+train_lr = 1e-4 #ELBO learning rate
 batch_size = 5 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
 eval_batch_size = 5
 obs_error_scale = 0.1 #Observation (y) standard deviation.
@@ -96,7 +96,7 @@ net, ELBO_hist = train(active_device, pretrain_lr, train_lr, niter, piter, batch
           state_dim_SCON, 'y_from_x_t_5000_dt_0-01.csv', obs_error_scale, prior_scale_factor, t, dt_flow, n, 
           t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
           drift_diffusion_SCON_C, x0_prior_SCON, SCON_C_params_dict,
-          LEARN_THETA = False, LR_DECAY = 0.05, DECAY_STEP_SIZE = 2000, PRINT_EVERY = 5)
+          LEARN_THETA = False, LR_DECAY = 0.1, DECAY_STEP_SIZE = 500, PRINT_EVERY = 5)
 
 #Save net and ELBO files.
 now = datetime.now()
