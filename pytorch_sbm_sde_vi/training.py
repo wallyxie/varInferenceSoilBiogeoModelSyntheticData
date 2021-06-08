@@ -80,12 +80,12 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
             if it < PRETRAIN_ITER:
                 pretrain_optimizer.zero_grad()
 
-                l1_norm_element = C_PATH - torch.mean(obs_model.mu, -1)
-                l1_norm = torch.sum(torch.abs(l1_norm_element)).mean()
+                l1_norm_element = C_PATH - torch.mean(obs_model.mu, -1)[None, None, :]
+                l1_norm = torch.sum(torch.abs(l1_norm_element), (-1, -2)).mean()
                 best_loss_norm = l1_norm if l1_norm < best_loss_norm else best_loss_norm
                 norm_losses.append(l1_norm.item())
-                #l2_norm_element = C_PATH - torch.mean(obs_model.mu, -1)
-                #l2_norm = torch.sqrt(torch.sum(torch.square(l2_norm_element))).mean()
+                #l2_norm_element = C_PATH - torch.mean(obs_model.mu, -1)[None, None, :]
+                #l2_norm = torch.sqrt(torch.sum(torch.square(l2_norm_element), (-1, -2)).mean()
                 #best_loss_norm = l2_norm if l2_norm < best_loss_norm else best_loss_norm
                 #norm_losses.append(l2_norm.item())
                 
