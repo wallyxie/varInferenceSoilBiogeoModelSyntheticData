@@ -96,7 +96,9 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
 
                 l1_norm.backward()
                 #l2_norm.backward()
-                pretrain_optimizer.step()                
+                pretrain_optimizer.step()
+
+                torch.nn.utils.clip_grad_norm_(net.parameters(), 3.0)                
                 
             else:
                 ELBO_optimizer.zero_grad()                
@@ -126,7 +128,7 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
                 ELBO.backward()
                 ELBO_optimizer.step()                
             
-            torch.nn.utils.clip_grad_norm_(ELBO_params, 3.0)
+                torch.nn.utils.clip_grad_norm_(ELBO_params, 3.0)
 
             if it % DECAY_STEP_SIZE == 0 and it > PRETRAIN_ITER:
                 ELBO_optimizer.param_groups[0]['lr'] *= LR_DECAY
