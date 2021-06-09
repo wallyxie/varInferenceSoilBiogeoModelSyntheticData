@@ -42,8 +42,8 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-niter = 6501
-piter = 500
+niter = 6501 #Total number of training iterations, including ELBO iterations.
+piter = 500 #Number of pre-training iterations.
 pretrain_lr = 1e-3 #Norm regularization learning rate
 train_lr = 1e-4 #ELBO learning rate
 batch_size = 5 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
@@ -101,8 +101,8 @@ net, ELBO_hist = train(active_device, pretrain_lr, train_lr, niter, piter, batch
 #Save net and ELBO files.
 now = datetime.now()
 now_string = now.strftime("%Y_%m_%d_%H_%M_%S")
-net_save_string = f'net_iter_{niter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_samples_{eval_batch_size}_layers_{num_layers}_{now_string}.pt'
-ELBO_save_string = f'ELBO_iter_{niter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_samples_{eval_batch_size}_layers_{num_layers}_{now_string}.pt'
+net_save_string = f'net_iter_{niter}_piter_{piter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_samples_{eval_batch_size}_layers_{num_layers}_{now_string}.pt'
+ELBO_save_string = f'ELBO_iter_{niter}_piter_{piter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_samples_{eval_batch_size}_layers_{num_layers}_{now_string}.pt'
 torch.save(net, net_save_string)
 torch.save(ELBO_hist, ELBO_save_string)
 
@@ -115,5 +115,5 @@ ELBO_hist = torch.load(ELBO_save_string)
 #Plot training posterior results and ELBO history.
 net.eval()
 x, _ = net(eval_batch_size)
-plot_elbo(ELBO_hist, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, now_string, xmin = int((niter - piter) * 0.2)) #xmin < (niter - piter).
-plot_states_post(x, obs_model_noCO2, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, now_string, ymin_list = [0, 0, 0], ymax_list = [80, 2.8, 5.0])
+plot_elbo(ELBO_hist, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, now_string, xmin = int((niter - piter) * 0.2)) #xmin < (niter - piter).
+plot_states_post(x, obs_model_noCO2, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, now_string, ymin_list = [0, 0, 0], ymax_list = [80, 2.8, 5.0])
