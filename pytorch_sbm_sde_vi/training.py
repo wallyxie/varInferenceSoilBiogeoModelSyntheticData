@@ -78,7 +78,7 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
             #C_PATH = torch.cat([C0, C_PATH], 1) #Append deterministic CON initial conditions conditional on parameter values to C path.
             
             if torch.isnan(C_PATH).any():
-                raise ValueError('nan in x. Try reducing learning rate to start.')
+                raise ValueError(f'nan in x at niter: {it}. Try reducing learning rate to start.')
             
             if it <= PRETRAIN_ITER:
                 pretrain_optimizer.zero_grad()
