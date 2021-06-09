@@ -118,7 +118,7 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
                                        TEMP_TENSOR, TEMP_REF, DRIFT_DIFFUSION, X0_PRIOR, theta_dict)
                 
                 # - log p(theta) + log q(theta) + log q(x|theta) - log p(x|theta) - log p(y|x, theta)
-                ELBO = -log_p_theta.mean() + log_q_theta.mean() - log_lik.mean() - obs_model(C_PATH, theta_dict) + log_prob.mean()
+                ELBO = -log_p_theta.mean() + log_q_theta.mean() + log_prob.mean() - log_lik.mean() - obs_model(C_PATH, theta_dict)
                 best_loss_ELBO = ELBO if ELBO < best_loss_ELBO else best_loss_ELBO
                 ELBO_losses.append(ELBO.item())
 
