@@ -80,7 +80,7 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
             if torch.isnan(C_PATH).any():
                 raise ValueError('nan in x. Try reducing learning rate to start.')
             
-            if it < PRETRAIN_ITER:
+            if it <= PRETRAIN_ITER:
                 pretrain_optimizer.zero_grad()
 
                 l1_norm_element = C_PATH - torch.mean(obs_model.mu, -1)[None, None, :] #Compute difference between x and observed state means.
@@ -133,8 +133,8 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
             
                 torch.nn.utils.clip_grad_norm_(ELBO_params, 3.0)
 
-            if it % DECAY_STEP_SIZE == 0 and it > PRETRAIN_ITER:
-                ELBO_optimizer.param_groups[0]['lr'] *= LR_DECAY
+                if it % DECAY_STEP_SIZE == 0:
+                    ELBO_optimizer.param_groups[0]['lr'] *= LR_DECAY
 
             tq.update()
             
