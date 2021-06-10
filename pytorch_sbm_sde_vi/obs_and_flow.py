@@ -227,7 +227,7 @@ class BatchNormLayer(nn.Module):
 class SDEFlow(nn.Module):
 
     def __init__(self, DEVICE, OBS_MODEL, STATE_DIM, T, DT, N,
-                 I_S_tensor=None, I_D_tensor=None, cond_inputs = 1, num_layers = 5):
+                 I_S_TENSOR = None, I_D_TENSOR = None, cond_inputs = 1, num_layers = 5):
         super().__init__()
         self.device = DEVICE
         self.obs_model = OBS_MODEL
@@ -236,7 +236,7 @@ class SDEFlow(nn.Module):
         self.dt = DT
         self.n = N
         if cond_inputs == 3:
-            self.i_tensor = torch.stack((I_S_tensor.reshape(-1), I_D_tensor.reshape(-1)))[None, :, :].repeat_interleave(3, -1)
+            self.i_tensor = torch.stack((I_S_TENSOR.reshape(-1), I_D_TENSOR.reshape(-1)))[None, :, :].repeat_interleave(3, -1)
 
         self.base_dist = d.normal.Normal(loc = 0., scale = 1.)
         self.cond_inputs = cond_inputs        
