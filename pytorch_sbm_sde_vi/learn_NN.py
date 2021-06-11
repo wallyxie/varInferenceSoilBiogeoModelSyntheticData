@@ -30,7 +30,7 @@ if torch.cuda.is_available():
 
 #Neural SDE parameters
 dt_flow = 0.25 #Increased from 0.1 to reduce memory.
-t = 2200 #5000. Reduced to see impact on memory. #In hours.
+t = 2300 #5000. Reduced to see impact on memory. #In hours.
 n = int(t / dt_flow) + 1
 t_span = np.linspace(0, t, n)
 t_span_tensor = torch.reshape(torch.Tensor(t_span), [1, n, 1]).to(active_device) #T_span needs to be converted to tensor object. Additionally, facilitates conversion of I_S and I_D to tensor objects.
@@ -42,12 +42,12 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-niter = 5501 #Total number of training iterations, including ELBO iterations.
-piter = 250 #Number of pre-training iterations.
-pretrain_lr = 2e-3 #Norm regularization learning rate
-train_lr = 5e-4 #ELBO learning rate
-batch_size = 10 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
-eval_batch_size = 10
+niter = 10001 #Total number of training iterations, including ELBO iterations.
+piter = 300 #Number of pre-training iterations.
+pretrain_lr = 5e-3 #Norm regularization learning rate
+train_lr = 2e-3 #ELBO learning rate
+batch_size = 5 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
+eval_batch_size = 5
 obs_error_scale = 0.1 #Observation (y) standard deviation.
 prior_scale_factor = 0.1 #Proportion of prior standard deviation to prior means.
 num_layers = 5 #5 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
@@ -96,7 +96,7 @@ net, ELBO_hist = train(active_device, pretrain_lr, train_lr, niter, piter, batch
           state_dim_SCON, 'y_from_x_t_5000_dt_0-01.csv', obs_error_scale, prior_scale_factor, t, dt_flow, n, 
           t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
           drift_diffusion_SCON_C, x0_prior_SCON, SCON_C_params_dict,
-          LEARN_THETA = False, LR_DECAY = 0.95, DECAY_STEP_SIZE = 2000, PRINT_EVERY = 5)
+          LEARN_THETA = False, LR_DECAY = 0.99, DECAY_STEP_SIZE = 5000, PRINT_EVERY = 10)
 
 #Save net and ELBO files.
 now = datetime.now()
@@ -115,5 +115,5 @@ ELBO_hist = torch.load(ELBO_save_string)
 #Plot training posterior results and ELBO history.
 net.eval()
 x, _ = net(eval_batch_size)
-plot_elbo(ELBO_hist, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, now_string, xmin = int((niter - piter) * 0.2)) #xmin < (niter - piter).
+plot_elbo(ELBO_hist, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, now_string, xmin = int((niter - piter) * 0.4)) #xmin < (niter - piter).
 plot_states_post(x, obs_model_noCO2, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, now_string, ymin_list = [0, 0, 0], ymax_list = [100., 3., 6.])
