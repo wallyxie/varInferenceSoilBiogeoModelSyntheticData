@@ -48,7 +48,8 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
     obs_model = ObsModel(DEVICE, TIMES = obs_times, DT = DT, MU = obs_means_noCO2, SCALE = obs_error).to(DEVICE) 
 
     #Establish neural network.
-    net = SDEFlow(DEVICE, obs_model, STATE_DIM, T, DT, N, I_S_TENSOR = I_S_TENSOR, I_D_TENSOR = I_D_TENSOR, num_layers = NUM_LAYERS).to(DEVICE)
+    #net = SDEFlow(DEVICE, obs_model, STATE_DIM, T, DT, N, I_S_TENSOR = I_S_TENSOR, I_D_TENSOR = I_D_TENSOR, num_layers = NUM_LAYERS).to(DEVICE)
+    net = SDEFlow(DEVICE, obs_model, STATE_DIM, T, DT, N, num_layers = NUM_LAYERS).to(DEVICE)
     
     if LEARN_THETA:
         priors = D.normal.Normal(prior_means_tensor, prior_means_tensor * PRIOR_SCALE_FACTOR)
