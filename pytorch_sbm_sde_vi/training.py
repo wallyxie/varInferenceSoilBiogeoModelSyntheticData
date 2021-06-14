@@ -129,9 +129,9 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
                 if (it + 1) % PRINT_EVERY == 0:
                     print('log_prob.mean() =', log_prob.mean())
                     print('log_lik.mean() =', log_lik.mean())
+                    print('obs_model(C_PATH, theta_dict) =', obs_model(C_PATH, theta_dict))                    
                     print('drift = ', drift)
                     print('diffusion_sqrt = ', diffusion_sqrt)                    
-                    print('obs_model(C_PATH, theta_dict) =', obs_model(C_PATH, theta_dict))
                     print(f'Moving average ELBO loss at {it + 1} iterations is: {sum(ELBO_losses[-10:]) / len(ELBO_losses[-10:])}. Best ELBO loss value is: {best_loss_ELBO}.')
                     print('\nC_PATH mean =', C_PATH.mean(-2))
                     print('\nC_PATH =', C_PATH)
