@@ -1,7 +1,7 @@
 import torch
 from torch.autograd import Function
 from torch import nn
-import torch.distributions as d
+import torch.distributions as D
 import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
@@ -101,8 +101,8 @@ class ResNetBlockUnMasked(nn.Module):
     
     def __init__(self, inp_cha, out_cha, stride = 1, batch_norm = False):
         super().__init__()
-        self.conv1 = nn.Conv1d(inp_cha,  out_cha, 3, stride, 1)
-        self.conv2 = nn.Conv1d(out_cha,  out_cha, 3, 1, 1)
+        self.conv1 = nn.Conv1d(inp_cha, out_cha, 3, stride, 1)
+        self.conv2 = nn.Conv1d(out_cha, out_cha, 3, 1, 1)
         #in_channels, out_channels, kernel_size, stride=1, padding=0
 
         self.act1 = nn.PReLU(out_cha, init = 0.2)
@@ -132,12 +132,9 @@ class CouplingLayer(nn.Module):
     def __init__(self, cond_inputs, stride, h_cha = 96):
         # cond_inputs = cond_inputs + obs_dim = 1 + obs_dim = 4 by default (w/o CO2)
         super().__init__()
-        self.feature_net = nn.Sequential(ResNetBlockUnMasked(cond_inputs, h_cha),
-        #self.feature_net = nn.Sequential(ResNetBlockUnMasked(cond_inputs, h_cha),
-                                         ResNetBlockUnMasked(h_cha, cond_inputs))
+        self.feature_net = nn.Sequential(ResNetBlockUnMasked(cond_inputs, h_cha), ResNetBlockUnMasked(h_cha, cond_inputs))
         self.first_block = ResNetBlock(1, h_cha, first = True)
-        self.second_block = nn.Sequential(ResNetBlock(h_cha + cond_inputs, h_cha, first = False),
-                                          MaskedConv1d('B', h_cha,  2, 3, stride, 1, bias = False))
+        self.second_block = nn.Sequential(ResNetBlock(h_cha + cond_inputs, h_cha, first = False), MaskedConv1d('B', h_cha,  2, 3, stride, 1, bias = False))
         
         self.unpack = True if cond_inputs > 1 else False
 
@@ -183,7 +180,7 @@ class SoftplusLayer(nn.Module):
 
 class BatchNormLayer(nn.Module):
     
-    def __init__(self, num_inputs, momentum = 0.1, eps = 1e-5, affine=True):
+    def __init__(self, num_inputs, momentum = 1e-2, eps = 1e-6, affine = True):
         super(BatchNormLayer, self).__init__()
 
         self.log_gamma = nn.Parameter(torch.rand(num_inputs)) if affine else torch.zeros(num_inputs)
@@ -202,11 +199,11 @@ class BatchNormLayer(nn.Module):
             self.batch_mean = inputs.mean(0)
             self.batch_var = (inputs - self.batch_mean).pow(2).mean(0) + self.eps
 
-            self.running_mean.mul_(1 - self.momentum)
-            self.running_var.mul_(1 - self.momentum)
+            self.running_mean.mul_(self.momentum)
+            self.running_var.mul_(self.momentum)
 
-            self.running_mean.add_(self.batch_mean.data * self.momentum)
-            self.running_var.add_(self.batch_var.data * self.momentum)
+            self.running_mean.add_(self.batch_mean.data * (1 - self.momentum))
+            self.running_var.add_(self.batch_var.data * (1 - self.momentum))
 
             mean = self.batch_mean
             var = self.batch_var
@@ -238,7 +235,7 @@ class SDEFlow(nn.Module):
         if cond_inputs == 3:
             self.i_tensor = torch.stack((I_S_TENSOR.reshape(-1), I_D_TENSOR.reshape(-1)))[None, :, :].repeat_interleave(3, -1)
 
-        self.base_dist = d.normal.Normal(loc = 0., scale = 1.)
+        self.base_dist = D.normal.Normal(loc = 0., scale = 1.)
         self.cond_inputs = cond_inputs        
         self.num_layers = num_layers
 
@@ -310,7 +307,7 @@ class ObsModel(nn.Module):
         self.obs_dim = self.mu.shape[0]
         
     def forward(self, x, theta):
-        obs_ll = d.normal.Normal(self.mu.permute(1, 0), self.scale).log_prob(x[:, self.idx, :])
+        obs_ll = D.normal.Normal(self.mu.permute(1, 0), self.scale).log_prob(x[:, self.idx, :])
         return torch.sum(obs_ll, [-1, -2]).mean()
 
     def get_idx(self, TIMES, DT):
@@ -336,5 +333,5 @@ class ObsModelCO2(ObsModel):
         CO2 = self.get_CO2(x, self.t_span_tensor, theta, self.temp_gen, self.temp_ref)
         x_with_CO2 = torch.cat((x[:, self.idx, :], CO2[:, self.idx, :]), dim = -1)
         #print(self.mu.permute(1, 0), x_with_CO2)
-        obs_ll = d.normal.Normal(self.mu.permute(1, 0), self.scale).log_prob(x_with_CO2)
+        obs_ll = D.normal.Normal(self.mu.permute(1, 0), self.scale).log_prob(x_with_CO2)
         return torch.sum(obs_ll, [-1, -2]).mean()
