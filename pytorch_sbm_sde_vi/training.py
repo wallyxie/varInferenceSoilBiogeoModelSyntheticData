@@ -134,7 +134,7 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
                     print('\n C_PATH =', C_PATH)
 
                 ELBO.backward()
-                torch.nn.utils.clip_grad_norm_(ELBO_params, 3.0)                
+                torch.nn.utils.clip_grad_norm_(net.parameters(), 3.0)                
                 ELBO_optimizer.step()                
             
                 if it % DECAY_STEP_SIZE == 0:
