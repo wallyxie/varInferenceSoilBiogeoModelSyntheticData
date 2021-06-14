@@ -152,7 +152,7 @@ class CouplingLayer(nn.Module):
         output = self.second_block(feature_vec) # (batch_size, 2, n * state_dim)
         mu, sigma = torch.chunk(output, 2, 1) # (batch_size, 1, n * state_dim)
         #print('mu and sigma shapes:', mu.shape, sigma.shape)
-        sigma = LowerBound.apply(sigma, 1e-6)
+        sigma = LowerBound.apply(sigma, 1e-8)
         x = mu + sigma * x # (batch_size, 1, n * state_dim)
         return x, -torch.log(sigma) # each of shape (batch_size, 1, n * state_dim)
 
