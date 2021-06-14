@@ -180,7 +180,7 @@ class SoftplusLayer(nn.Module):
 
 class BatchNormLayer(nn.Module):
     
-    def __init__(self, num_inputs, momentum = 1e-2, eps = 1e-6, affine = True):
+    def __init__(self, num_inputs, momentum = 1e-2, eps = 1e-5, affine = True):
         super(BatchNormLayer, self).__init__()
 
         self.log_gamma = nn.Parameter(torch.rand(num_inputs)) if affine else torch.zeros(num_inputs)
