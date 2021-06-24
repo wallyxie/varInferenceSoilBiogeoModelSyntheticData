@@ -17,7 +17,7 @@ This module containins the `calc_log_lik` and `training` functions for pre-train
 ##TRAINING AND ELBO FUNCTIONS##
 ###############################
 
-def calc_log_lik(C_PATH, T_SPAN_TENSOR, DT, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF, DRIFT_DIFFUSION, X0_PRIOR, PARAMS_DICT):
+def calc_log_lik(C_PATH, T_SPAN_TENSOR, DT, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF, DRIFT_DIFFUSION, INIT_PRIOR, PARAMS_DICT):
     drift, diffusion_sqrt = DRIFT_DIFFUSION(C_PATH[:, :-1, :], T_SPAN_TENSOR[:, :-1, :], I_S_TENSOR[:, :-1, :], I_D_TENSOR[:, :-1, :], TEMP_TENSOR[:, :-1, :], TEMP_REF, PARAMS_DICT)
     #print('\ndrift = ', drift)
     #print('\ndiffusion = ', diffusion_sqrt)      
@@ -25,13 +25,13 @@ def calc_log_lik(C_PATH, T_SPAN_TENSOR, DT, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR,
     
     # Compute log p(x|theta) = log p(x|x0, theta) + log p(x0|theta)
     ll = euler_maruyama_state_sample_object.log_prob(C_PATH[:, 1:, :]).sum(-1) # log p(x|x0, theta)
-    ll += X0_PRIOR.log_prob(C_PATH[:, 0, :]) # log p(x0|theta)
+    ll += INIT_PRIOR.log_prob(C_PATH[:, 0, :]) # log p(x0|theta)
     
     return ll, drift, diffusion_sqrt
 
 def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LAYERS,
           STATE_DIM, OBS_CSV_STR, OBS_ERROR_SCALE, PRIOR_SCALE_FACTOR, T, DT, N, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF,
-          DRIFT_DIFFUSION, X0_PRIOR, PARAM_PRIOR_MEANS_DICT,
+          DRIFT_DIFFUSION, INIT_PRIOR, PARAM_PRIOR_MEANS_DICT,
           LEARN_THETA = False, LR_DECAY = 0.9, DECAY_STEP_SIZE = 1000, PRINT_EVERY = 10):
 
     if PRETRAIN_ITER >= NITER:
@@ -109,20 +109,24 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
             else:
                 ELBO_optimizer.zero_grad()                
                 
+                #Create x_0 prior
+                x_0 = C_PATH[:, 0, :]
+                x_0_prior = D.normal.Normal(loc = x_0, scale = x_0 * OBS_ERROR_SCALE)
+                #log p(y_0 | x_0, theta)
+                log_p_y_0 = x_0_prior.log_prob(obs_model.mu[:, 0]).sum(-1)  
+
                 if LEARN_THETA:
                     theta_dict, theta, log_q_theta = q_theta(BATCH_SIZE)
                     print('\ntheta_dict = ', theta_dict)
                     log_p_theta = priors.log_prob(theta).sum(-1)
-                    #log_p_y_0_giv_x_0_and_theta = 0 #Temporary value. log_p_y_0_giv_x_0_and_theta = obs_model(C_0, theta_dict)/obs_model_CO2(C_0_with_CO2, theta_dict)
                 else:
                     log_q_theta, log_p_theta = torch.zeros(2).to(DEVICE)                    
-                    #log_p_y_0_giv_x_0_and_theta = 0 #Ignore for now. Presently, no separate probability modeled for y_0 given x_0.
 
                 log_lik, drift, diffusion_sqrt = calc_log_lik(C_PATH, T_SPAN_TENSOR.to(DEVICE), DT, I_S_TENSOR.to(DEVICE), I_D_TENSOR.to(DEVICE),
-                                       TEMP_TENSOR, TEMP_REF, DRIFT_DIFFUSION, X0_PRIOR, theta_dict)
+                                       TEMP_TENSOR, TEMP_REF, DRIFT_DIFFUSION, INIT_PRIOR, theta_dict)
                 
-                # - log p(theta) + log q(theta) + log q(x|theta) - log p(x|theta) - log p(y|x, theta)
-                ELBO = -log_p_theta.mean() + log_q_theta.mean() + log_prob.mean() - log_lik.mean() - obs_model(C_PATH, theta_dict)
+                # - log p(theta) + log q(theta) - log p(y_0|x_0, theta) + log q(x|theta) - log p(x|theta) - log p(y|x, theta)
+                ELBO = -log_p_theta.mean() + log_q_theta.mean() - log_p_y_0.mean() + log_prob.mean() - log_lik.mean() - obs_model(C_PATH, theta_dict)
                 best_loss_ELBO = ELBO if ELBO < best_loss_ELBO else best_loss_ELBO
                 ELBO_losses.append(ELBO.item())
 
