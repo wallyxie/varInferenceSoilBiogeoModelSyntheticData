@@ -109,11 +109,12 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
             else:
                 ELBO_optimizer.zero_grad()                
                 
+                #Commented out because log p(y_0 | x_0, theta) already accounted for in output of obs_model (we are now learning x_0).
                 #Create x_0 prior
-                x_0 = C_PATH[:, 0, :]
-                x_0_prior = D.normal.Normal(loc = x_0, scale = x_0 * OBS_ERROR_SCALE)
+                #x_0 = C_PATH[:, 0, :]
+                #x_0_prior = D.normal.Normal(loc = x_0, scale = x_0 * OBS_ERROR_SCALE)
                 #log p(y_0 | x_0, theta)
-                log_p_y_0 = x_0_prior.log_prob(obs_model.mu[:, 0]).sum(-1)  
+                #log_p_y_0 = x_0_prior.log_prob(obs_model.mu[:, 0]).sum(-1)  
 
                 if LEARN_THETA:
                     theta_dict, theta, log_q_theta = q_theta(BATCH_SIZE)
@@ -125,8 +126,8 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
                 log_lik, drift, diffusion_sqrt = calc_log_lik(C_PATH, T_SPAN_TENSOR.to(DEVICE), DT, I_S_TENSOR.to(DEVICE), I_D_TENSOR.to(DEVICE),
                                        TEMP_TENSOR, TEMP_REF, DRIFT_DIFFUSION, INIT_PRIOR, theta_dict)
                 
-                # - log p(theta) + log q(theta) - log p(y_0|x_0, theta) + log q(x|theta) - log p(x|theta) - log p(y|x, theta)
-                ELBO = -log_p_theta.mean() + log_q_theta.mean() - log_p_y_0.mean() + log_prob.mean() - log_lik.mean() - obs_model(C_PATH, theta_dict)
+                #Negative ELBO: -log p(theta) + log q(theta) - log p(y_0|x_0, theta) [already accounted for in obs_model output when learning x_0] + log q(x|theta) - log p(x|theta) - log p(y|x, theta)
+                ELBO = -log_p_theta.mean() + log_q_theta.mean() + log_prob.mean() - log_lik.mean() - obs_model(C_PATH, theta_dict)
                 best_loss_ELBO = ELBO if ELBO < best_loss_ELBO else best_loss_ELBO
                 ELBO_losses.append(ELBO.item())
 
