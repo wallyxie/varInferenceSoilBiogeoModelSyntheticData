@@ -1,4 +1,4 @@
-import math
+import math, sys
 from tqdm import tqdm
 from datetime import datetime
 
@@ -42,12 +42,12 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-niter = 2
-piter = 1
-pretrain_lr = 1e-4 #Norm regularization learning rate
-train_lr = 2e-5 #ELBO learning rate
+niter = 5000
+piter = 0
+pretrain_lr = 1e-2 #Norm regularization learning rate
+train_lr = 1e-2 #ELBO learning rate
 batch_size = 5 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
-eval_batch_size = 5
+eval_batch_size = 10
 obs_error_scale = 0.1 #Observation (y) standard deviation.
 prior_scale_factor = 0.1 #Proportion of prior standard deviation to prior means.
 num_layers = 5 #5 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
@@ -88,32 +88,39 @@ i_s_tensor = i_s(t_span_tensor).to(active_device) #Exogenous SOC input function
 i_d_tensor = i_d(t_span_tensor).to(active_device) #Exogenous DOC input function
 
 #Generate observation model.
-obs_times, obs_means_noCO2, obs_error = csv_to_obs_df('y_from_x_t_5000_dt_0-01.csv', state_dim_SCON, t, obs_error_scale)
-obs_model_noCO2 = ObsModel(active_device, TIMES = obs_times, DT = dt_flow, MU = obs_means_noCO2, SCALE = obs_error).to(active_device) 
+obs_times, obs_means_noCO2, obs_error = csv_to_obs_df('y_from_x_t_5000_dt_0-01_new.csv', state_dim_SCON, t, obs_error_scale)
+obs_model = ObsModel(active_device, TIMES = obs_times, DT = dt_flow, MU = obs_means_noCO2, SCALE = obs_error).to(active_device) 
+torch.save(obs_model, 'obs_model.pt')
+sys.exit(0)
 
 #Call training loop function for SCON-C.
-net, ELBO_hist = train(active_device, pretrain_lr, train_lr, niter, piter, batch_size, num_layers,
-          state_dim_SCON, 'y_from_x_t_5000_dt_0-01.csv', obs_error_scale, prior_scale_factor, t, dt_flow, n, 
+net, obs_model, ELBO_hist = train(active_device, pretrain_lr, train_lr, niter, piter, batch_size, num_layers,
+          state_dim_SCON, 'y_from_x_t_5000_dt_0-01_new.csv', obs_error_scale, prior_scale_factor, t, dt_flow, n, 
           t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
           drift_diffusion_SCON_C, x0_prior_SCON, SCON_C_params_dict,
-          LEARN_THETA = False, LR_DECAY = 0.05, DECAY_STEP_SIZE = 2000, PRINT_EVERY = 5)
+          LEARN_THETA = False, LR_DECAY = 1.0, DECAY_STEP_SIZE = 10000, PRINT_EVERY = 500)
 
+#net, elbo_hist = train(active_device, 1e-2, 1e-2, niter, piter, 5, obs_model,
+#                       state_dim_SCON, t, dt_flow, n, t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
+#                       drift_diffusion_SCON_C, x0_prior_SCON, SCON_C_params_dict,
+#                       LR_DECAY=1.0, DECAY_STEP_SIZE=10000)
+#
 #Save net and ELBO files.
 now = datetime.now()
 now_string = now.strftime("%Y_%m_%d_%H_%M_%S")
-net_save_string = f'net_iter_{niter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_samples_{eval_batch_size}_layers_{num_layers}_{now_string}.pt'
-ELBO_save_string = f'ELBO_iter_{niter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_samples_{eval_batch_size}_layers_{num_layers}_{now_string}.pt'
-torch.save(net, net_save_string)
-torch.save(ELBO_hist, ELBO_save_string)
+#net_save_string = f'net_iter_{niter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_samples_{eval_batch_size}_layers_{num_layers}_{now_string}.pt'
+save_string = f'out_iter_{niter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_{now_string}.pt'
+torch.save((net, obs_model, ELBO_hist), save_string)
+#torch.save(ELBO_hist, ELBO_save_string)
 
 #Release some CUDA memory and load .pt files.
-torch.cuda.empty_cache()
-net = torch.load(net_save_string)
-net.to(active_device)
-ELBO_hist = torch.load(ELBO_save_string)
+#torch.cuda.empty_cache()
+#net = torch.load(net_save_string)
+#net.to(active_device)
+#ELBO_hist = torch.load(ELBO_save_string)
 
 #Plot training posterior results and ELBO history.
-net.eval()
-x, _ = net(eval_batch_size)
-plot_elbo(ELBO_hist, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, now_string, xmin = int((niter - piter) * 0.2)) #xmin < (niter - piter).
-plot_states_post(x, obs_model_noCO2, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, now_string, ymin_list = [0, 0, 0], ymax_list = [80, 2.8, 5.0])
+#net.eval()
+#x, _ = net(eval_batch_size)
+#plot_elbo(ELBO_hist, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, now_string, xmin = int((niter - piter) * 0.2)) #xmin < (niter - piter).
+#plot_states_post(x, obs_model, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, now_string, ymin_list = [0, 0, 0], ymax_list = [80, 2.8, 5.0])
