@@ -34,7 +34,7 @@ class BoundedSigmoid(nn.Module):
         return torch.log(ildj)
 
 class MeanField(nn.Module):
-    def __init__(self, init_params, sdev_scale_factor):
+    def __init__(self, device, init_params, sdev_scale_factor):
         super().__init__()
 
         #Use param dict to intialise the means for the mean-field approximations.
@@ -49,9 +49,10 @@ class MeanField(nn.Module):
             upper_bounds.append(upper)
             lower_bounds.append(lower)
 
-        self.means = nn.Parameter(torch.Tensor(means))
+        self.means = nn.Parameter(torch.Tensor(means).to(device))
         self.sds = nn.Parameter(self.means * sdev_scale_factor)
-        self.sigmoid = BoundedSigmoid(upper_bounds, lower_bounds)
+        self.sigmoid = BoundedSigmoid(torch.tensor(upper_bounds).to(device),
+                                      torch.tensor(lower_bounds).to(device))
         
         #Save keys for forward output.
         self.keys = keys

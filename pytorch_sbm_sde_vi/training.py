@@ -31,18 +31,13 @@ def calc_log_lik(C_PATH, T_SPAN_TENSOR, DT, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR,
 
 def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LAYERS,
           STATE_DIM, OBS_CSV_STR, OBS_ERROR_SCALE, PRIOR_SCALE_FACTOR, T, DT, N, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF,
-<<<<<<< HEAD
-          DRIFT_DIFFUSION, X0_PRIOR, PARAM_PRIOR_MEANS_DICT,
-=======
           DRIFT_DIFFUSION, INIT_PRIOR, PARAM_PRIOR_MEANS_DICT,
->>>>>>> a7d3ae801f0c38bc915b96be1e5af74afa009252
           LEARN_THETA = False, LR_DECAY = 0.9, DECAY_STEP_SIZE = 1000, PRINT_EVERY = 10):
-
     if PRETRAIN_ITER >= NITER:
         raise ValueError('PRETRAIN_ITER must be < NITER.')
 
     #Convert prior means dictionary values to tensor.
-    prior_means_tensor = torch.Tensor(list(PARAM_PRIOR_MEANS_DICT.values())).to(DEVICE)    
+    prior_means_tensor = torch.tensor([v for v, _, _ in PARAM_PRIOR_MEANS_DICT.values()]).to(DEVICE)
 
     #Read in data to obtain y and establish observation model.
     obs_times, obs_means_noCO2, obs_error = csv_to_obs_df(OBS_CSV_STR, STATE_DIM, T, OBS_ERROR_SCALE) #csv_to_obs_df function in obs_and_flow module
@@ -54,7 +49,8 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
     
     if LEARN_THETA:
         priors = D.normal.Normal(prior_means_tensor, prior_means_tensor * PRIOR_SCALE_FACTOR)
-        q_theta = MeanField(PARAM_PRIOR_MEANS_DICT, PRIOR_SCALE_FACTOR)
+        # Initialize posterior q(theta) using its prior p(theta)
+        q_theta = MeanField(DEVICE, PARAM_PRIOR_MEANS_DICT, PRIOR_SCALE_FACTOR)
     else:
         #Establish initial dictionary of theta means in tensor form.
         theta_dict = {k: torch.tensor(v).to(DEVICE).expand(BATCH_SIZE) for k, (v, _, _) in PARAM_PRIOR_MEANS_DICT.items()}
@@ -68,16 +64,11 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
 
     #Initiate optimizers.
     pretrain_optimizer = optim.Adam(net.parameters(), lr = PRETRAIN_LR)
-<<<<<<< HEAD
-    ELBO_params = list(net.parameters()) + list(q_theta.parameters()) if LEARN_THETA else net.parameters()
-    ELBO_optimizer = optim.Adam(ELBO_params, lr = ELBO_LR)
-=======
     if LEARN_THETA:
         ELBO_params = list(net.parameters()) + list(q_theta.parameters())
         ELBO_optimizer = optim.Adam(ELBO_params, lr = ELBO_LR)
     else:
         ELBO_optimizer = optim.Adam(net.parameters(), lr = ELBO_LR)
->>>>>>> a7d3ae801f0c38bc915b96be1e5af74afa009252
 
     #C0 = ANALYTICAL_STEADY_STATE_INIT(I_S_TENSOR[0, 0, 0].item(), I_D_TENSOR[0, 0, 0].item(), PARAM_PRIOR_MEANS_DICT) #Calculate deterministic initial conditions.
     #C0 = C0[(None,) * 2].repeat(BATCH_SIZE, 1, 1).to(DEVICE) #Assign initial conditions to C_PATH.
@@ -134,42 +125,27 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
                 log_lik, drift, diffusion_sqrt = calc_log_lik(C_PATH, T_SPAN_TENSOR.to(DEVICE), DT, I_S_TENSOR.to(DEVICE), I_D_TENSOR.to(DEVICE),
                                        TEMP_TENSOR, TEMP_REF, DRIFT_DIFFUSION, INIT_PRIOR, theta_dict)
                 
-<<<<<<< HEAD
-                # - log p(theta) + log q(theta) + log q(x|theta) - log p(x|theta) - log p(y|x, theta)
-                #ELBO = -log_p_theta.mean() + log_q_theta.mean() + 0.5 * log_prob.mean() - log_lik.mean() - obs_model(C_PATH, theta_dict)
-                ELBO = -log_p_theta.mean() + log_q_theta.mean() - log_lik.mean() - obs_model(C_PATH, theta_dict) + log_prob.mean()
-=======
                 #Negative ELBO: -log p(theta) + log q(theta) - log p(y_0|x_0, theta) [already accounted for in obs_model output when learning x_0] + log q(x|theta) - log p(x|theta) - log p(y|x, theta)
                 ELBO = -log_p_theta.mean() + log_q_theta.mean() + log_prob.mean() - log_lik.mean() - obs_model(C_PATH, theta_dict)
->>>>>>> a7d3ae801f0c38bc915b96be1e5af74afa009252
                 best_loss_ELBO = ELBO if ELBO < best_loss_ELBO else best_loss_ELBO
                 ELBO_losses.append(ELBO.item())
 
                 if (it + 1) % PRINT_EVERY == 0:
                     print('log_prob.mean() =', log_prob.mean())
                     print('log_lik.mean() =', log_lik.mean())
-<<<<<<< HEAD
-                    print('obs_model(C_PATH, theta_dict) =', obs_model(C_PATH, theta_dict))
-=======
                     print('obs_model(C_PATH, theta_dict) =', obs_model(C_PATH, theta_dict))                    
-                    print('drift = ', drift)
-                    print('diffusion_sqrt = ', diffusion_sqrt)                    
->>>>>>> a7d3ae801f0c38bc915b96be1e5af74afa009252
+                    #print('drift = ', drift)
+                    #print('diffusion_sqrt = ', diffusion_sqrt)                    
                     print(f'Moving average ELBO loss at {it + 1} iterations is: {sum(ELBO_losses[-10:]) / len(ELBO_losses[-10:])}. Best ELBO loss value is: {best_loss_ELBO}.')
                     print('\nC_PATH mean =', C_PATH.mean(-2))
                     print('\nC_PATH =', C_PATH)
 
                 ELBO.backward()
-<<<<<<< HEAD
-                torch.nn.utils.clip_grad_norm_(net.parameters(), 3.0)      # ELBO_params           
-                ELBO_optimizer.step()
-=======
                 if LEARN_THETA:
                     torch.nn.utils.clip_grad_norm_(ELBO_params, 3.0)
                 else:
                     torch.nn.utils.clip_grad_norm_(net.parameters(), 3.0)
-                ELBO_optimizer.step()                
->>>>>>> a7d3ae801f0c38bc915b96be1e5af74afa009252
+                ELBO_optimizer.step()
             
                 if it % DECAY_STEP_SIZE == 0:
                     ELBO_optimizer.param_groups[0]['lr'] *= LR_DECAY
