@@ -30,7 +30,7 @@ if torch.cuda.is_available():
 
 #Neural SDE parameters
 dt_flow = 0.5 #Increased from 0.1 to reduce memory.
-t = 250 #5000. Reduced to see impact on memory. #In hours.
+t = 2600 #5000. Reduced to see impact on memory. #In hours.
 n = int(t / dt_flow) + 1
 t_span = np.linspace(0, t, n)
 t_span_tensor = torch.reshape(torch.Tensor(t_span), [1, n, 1]).to(active_device) #T_span needs to be converted to tensor object. Additionally, facilitates conversion of I_S and I_D to tensor objects.
@@ -42,12 +42,21 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
+<<<<<<< HEAD
 niter = 5000
 piter = 0
 pretrain_lr = 1e-2 #Norm regularization learning rate
 train_lr = 1e-2 #ELBO learning rate
 batch_size = 5 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
 eval_batch_size = 10
+=======
+niter = 71000 #Total number of training iterations, including ELBO iterations.
+piter = 100 #Number of pre-training iterations.
+pretrain_lr = 9e-3 #Norm regularization learning rate
+train_lr = 9.5e-4 #ELBO learning rate
+batch_size = 9 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
+eval_batch_size = 9
+>>>>>>> a7d3ae801f0c38bc915b96be1e5af74afa009252
 obs_error_scale = 0.1 #Observation (y) standard deviation.
 prior_scale_factor = 0.1 #Proportion of prior standard deviation to prior means.
 num_layers = 5 #5 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
@@ -98,7 +107,11 @@ net, obs_model, ELBO_hist = train(active_device, pretrain_lr, train_lr, niter, p
           state_dim_SCON, 'y_from_x_t_5000_dt_0-01_new.csv', obs_error_scale, prior_scale_factor, t, dt_flow, n, 
           t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
           drift_diffusion_SCON_C, x0_prior_SCON, SCON_C_params_dict,
+<<<<<<< HEAD
           LEARN_THETA = False, LR_DECAY = 1.0, DECAY_STEP_SIZE = 10000, PRINT_EVERY = 500)
+=======
+          LEARN_THETA = False, LR_DECAY = 0.98, DECAY_STEP_SIZE = 2000, PRINT_EVERY = 20)
+>>>>>>> a7d3ae801f0c38bc915b96be1e5af74afa009252
 
 #net, elbo_hist = train(active_device, 1e-2, 1e-2, niter, piter, 5, obs_model,
 #                       state_dim_SCON, t, dt_flow, n, t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
@@ -108,10 +121,17 @@ net, obs_model, ELBO_hist = train(active_device, pretrain_lr, train_lr, niter, p
 #Save net and ELBO files.
 now = datetime.now()
 now_string = now.strftime("%Y_%m_%d_%H_%M_%S")
+<<<<<<< HEAD
 #net_save_string = f'net_iter_{niter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_samples_{eval_batch_size}_layers_{num_layers}_{now_string}.pt'
 save_string = f'out_iter_{niter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_{now_string}.pt'
 torch.save((net, obs_model, ELBO_hist), save_string)
 #torch.save(ELBO_hist, ELBO_save_string)
+=======
+net_save_string = f'net_iter_{niter}_piter_{piter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_samples_{eval_batch_size}_layers_{num_layers}_{now_string}.pt'
+ELBO_save_string = f'ELBO_iter_{niter}_piter_{piter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_samples_{eval_batch_size}_layers_{num_layers}_{now_string}.pt'
+torch.save(net, net_save_string)
+torch.save(ELBO_hist, ELBO_save_string)
+>>>>>>> a7d3ae801f0c38bc915b96be1e5af74afa009252
 
 #Release some CUDA memory and load .pt files.
 #torch.cuda.empty_cache()
@@ -120,7 +140,14 @@ torch.save((net, obs_model, ELBO_hist), save_string)
 #ELBO_hist = torch.load(ELBO_save_string)
 
 #Plot training posterior results and ELBO history.
+<<<<<<< HEAD
 #net.eval()
 #x, _ = net(eval_batch_size)
 #plot_elbo(ELBO_hist, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, now_string, xmin = int((niter - piter) * 0.2)) #xmin < (niter - piter).
 #plot_states_post(x, obs_model, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, now_string, ymin_list = [0, 0, 0], ymax_list = [80, 2.8, 5.0])
+=======
+net.eval()
+x, _ = net(eval_batch_size)
+plot_elbo(ELBO_hist, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, now_string, xmin = int((niter - piter) * 0.2)) #xmin < (niter - piter).
+plot_states_post(x, obs_model_noCO2, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, now_string, ymin_list = [0, 0, 0], ymax_list = [100., 3., 6.])
+>>>>>>> a7d3ae801f0c38bc915b96be1e5af74afa009252
