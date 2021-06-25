@@ -44,6 +44,7 @@ class LowerBound(Function):
         b = b.type(inputs.dtype)
         ctx.save_for_backward(inputs, b)
         return torch.max(inputs, b)
+
     @staticmethod
     def backward(ctx, grad_output):
         inputs, b = ctx.saved_tensors
