@@ -95,7 +95,7 @@ torch.save(obs_model, 'obs_model.pt')
 
 #Call training loop function for SCON-C.
 net, obs_model, ELBO_hist = train(active_device, pretrain_lr, train_lr, niter, piter, batch_size, num_layers,
-          state_dim_SCON, 'y_from_x_t_5000_dt_0-01_new.csv', obs_error_scale, prior_scale_factor, t, dt_flow, n, 
+          state_dim_SCON, 'y_from_x_t_5000_dt_0-01.csv', obs_error_scale, prior_scale_factor, t, dt_flow, n, 
           t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
           drift_diffusion_SCON_C, x0_prior_SCON, SCON_C_params_dict,
           LEARN_THETA = learn_theta, LR_DECAY = 1.0, DECAY_STEP_SIZE = 10000, PRINT_EVERY = 1)
