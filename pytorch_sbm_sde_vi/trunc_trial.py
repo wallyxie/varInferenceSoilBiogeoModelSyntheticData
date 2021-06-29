@@ -74,6 +74,10 @@ c_SOC = c_SOC_dist.rsample()
 c_DOC = c_DOC_dist.rsample()
 c_MBC = c_MBC_dist.rsample()
 
+theta_dict = {'u_M': u_M, 'a_SD': a_SD, 'a_DS': a_DS, 'a_M': a_M, 'k_S_ref': k_S_ref, 'k_D_ref': k_D_ref, 'k_M_ref': k_M_ref, 'Ea_S': Ea_S, 'Ea_D': Ea_D, 'Ea_M': Ea_M, 'c_SOC': c_SOC, 'c_DOC': c_DOC, 'c_MBC': c_MBC}
+print(theta_dict)
+
+
 #SCON-C log prob evaluations
 u_M_lp = u_M_dist.log_prob(u_M)
 a_SD_lp = a_SD_dist.log_prob(a_SD)
