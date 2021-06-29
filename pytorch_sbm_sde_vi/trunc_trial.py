@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 #Torch-related imports
 import torch
-import torch.detailsributions as D
+import torch.distributions as D
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.autograd import Function
@@ -25,38 +25,38 @@ torch.set_printoptions(precision = 6)
 error_scale = 0.25
 
 #SCON theta truncated normal distribution parameters in order of mean, sdev, lower, and upper.
-u_M_details = torch.Tensor([0.001, 0.001 * error_scale, 0, 0.01])
-a_SD_details = torch.Tensor([0.5, 0.5 * error_scale, 0, 1])
-a_DS_details = torch.Tensor([0.5, 0.5 * error_scale, 0, 1])
-a_M_details = torch.Tensor([0.5, 0.5 * error_scale, 0, 1])
-a_MSC_details = torch.Tensor([0.5, 0.5 * error_scale, 0, 1])
-k_S_ref_details = torch.Tensor([0.0002, 0.0002 * error_scale, 0, 0.001])
-k_D_ref_details = torch.Tensor([0.0008, 0.0008 * error_scale, 0, 0.001])
-k_M_ref_details = torch.Tensor([0.0003, 0.0003 * error_scale, 0, 0.001])
-Ea_S_details = torch.Tensor([55, 55 * error_scale, 20, 120])
-Ea_D_details = torch.Tensor([48, 48 * error_scale, 20, 120])
-Ea_M_details = torch.Tensor([48, 48 * error_scale, 20, 120])
+u_M_s = torch.Tensor([0.001, 0.001 * error_scale, 0, 0.01])
+a_SD_s = torch.Tensor([0.5, 0.5 * error_scale, 0, 1])
+a_DS_s = torch.Tensor([0.5, 0.5 * error_scale, 0, 1])
+a_M_s = torch.Tensor([0.5, 0.5 * error_scale, 0, 1])
+a_MSC_s = torch.Tensor([0.5, 0.5 * error_scale, 0, 1])
+k_S_ref_s = torch.Tensor([0.0002, 0.0002 * error_scale, 0, 0.001])
+k_D_ref_s = torch.Tensor([0.0008, 0.0008 * error_scale, 0, 0.001])
+k_M_ref_s = torch.Tensor([0.0003, 0.0003 * error_scale, 0, 0.001])
+Ea_S_s = torch.Tensor([55, 55 * error_scale, 20, 120])
+Ea_D_s = torch.Tensor([48, 48 * error_scale, 20, 120])
+Ea_M_s = torch.Tensor([48, 48 * error_scale, 20, 120])
 
-#SCON-C diffusion matrix parameter distribution details
-c_SOC_details = torch.Tensor([0.05, 0.05 * error_scale, 0, 0.1])
-c_DOC_details = torch.Tensor([0.001, 0.001 * error_scale, 0, 0.01])
-c_MBC_details = torch.Tensor([0.001, 0.001 * error_scale, 0, 0.01])
+#SCON-C diffusion matrix parameter distribution s
+c_SOC_s = torch.Tensor([0.05, 0.05 * error_scale, 0, 0.1])
+c_DOC_s = torch.Tensor([0.001, 0.001 * error_scale, 0, 0.01])
+c_MBC_s = torch.Tensor([0.001, 0.001 * error_scale, 0, 0.01])
 
 #SCON-C theta distribution objects
-u_M_dist = TruncatedNormal(loc = u_M_details[0], scale = u_M_details[1], a = u_M_details[2], b = u_M_details[3])
-a_SD_dist = TruncatedNormal(loc = a_SD_details[0], scale = a_SD_details[1], a = a_SD_details[2], b = a_SD_details[3])
-a_DS_dist = TruncatedNormal(loc = a_DS_details[0], scale = a_DS_details[1], a = a_DS_details[2], b = a_DS_details[3])
-a_M_dist = TruncatedNormal(loc = a_M_details[0], scale = a_M_details[1], a = a_M_details[2], b = a_M_details[3])
-a_MSC_dist = TruncatedNormal(loc = a_MSC_details[0], scale = a_MSC_details[1], a = a_MSC_details[2], b = a_MSC_details[3])
-k_S_ref_dist = TruncatedNormal(loc = k_S_ref_details[0], scale = k_S_ref_details[1], a = k_S_ref_details[2], b = k_S_ref_details[3])
-k_D_ref_dist = TruncatedNormal(loc = k_D_ref_details[0], scale = k_D_ref_details[1], a = k_D_ref_details[2], b = k_D_ref_details[3])
-k_M_ref_dist = TruncatedNormal(loc = k_M_ref_details[0], scale = k_M_ref_details[1], a = k_M_ref_details[2], b = k_M_ref_details[3])
-Ea_S_dist = TruncatedNormal(loc = Ea_S_details[0], scale = Ea_S_details[1], a = Ea_S_details[2], b = Ea_S_details[3])
-Ea_D_dist = TruncatedNormal(loc = Ea_D_details[0], scale = Ea_D_details[1], a = Ea_D_details[2], b = Ea_D_details[3])
-Ea_M_dist = TruncatedNormal(loc = Ea_M_details[0], scale = Ea_M_details[1], a = Ea_M_details[2], b = Ea_M_details[3])
-c_SOC_dist = TruncatedNormal(loc = c_SOC_details[0], scale = c_SOC_details[1], a = c_SOC_details[2], b = c_SOC_details[3])
-c_DOC_dist = TruncatedNormal(loc = c_DOC_details[0], scale = c_DOC_details[1], a = c_DOC_details[2], b = c_DOC_details[3])
-c_MBC_dist = TruncatedNormal(loc = c_MBC_details[0], scale = c_MBC_details[1], a = c_MBC_details[2], b = c_MBC_details[3])
+u_M_dist = TruncatedNormal(loc = u_M_s[0], scale = u_M_details[1], a = u_M_details[2], b = u_M_details[3])
+a_SD_dist = TruncatedNormal(loc = a_SD_s[0], scale = a_SD_details[1], a = a_SD_details[2], b = a_SD_details[3])
+a_DS_dist = TruncatedNormal(loc = a_DS_s[0], scale = a_DS_details[1], a = a_DS_details[2], b = a_DS_details[3])
+a_M_dist = TruncatedNormal(loc = a_M_s[0], scale = a_M_details[1], a = a_M_details[2], b = a_M_details[3])
+a_MSC_dist = TruncatedNormal(loc = a_MSC_s[0], scale = a_MSC_details[1], a = a_MSC_details[2], b = a_MSC_details[3])
+k_S_ref_dist = TruncatedNormal(loc = k_S_ref_s[0], scale = k_S_ref_details[1], a = k_S_ref_details[2], b = k_S_ref_details[3])
+k_D_ref_dist = TruncatedNormal(loc = k_D_ref_s[0], scale = k_D_ref_details[1], a = k_D_ref_details[2], b = k_D_ref_details[3])
+k_M_ref_dist = TruncatedNormal(loc = k_M_ref_s[0], scale = k_M_ref_details[1], a = k_M_ref_details[2], b = k_M_ref_details[3])
+Ea_S_dist = TruncatedNormal(loc = Ea_S_s[0], scale = Ea_S_details[1], a = Ea_S_details[2], b = Ea_S_details[3])
+Ea_D_dist = TruncatedNormal(loc = Ea_D_s[0], scale = Ea_D_details[1], a = Ea_D_details[2], b = Ea_D_details[3])
+Ea_M_dist = TruncatedNormal(loc = Ea_M_s[0], scale = Ea_M_details[1], a = Ea_M_details[2], b = Ea_M_details[3])
+c_SOC_dist = TruncatedNormal(loc = c_SOC_s[0], scale = c_SOC_details[1], a = c_SOC_details[2], b = c_SOC_details[3])
+c_DOC_dist = TruncatedNormal(loc = c_DOC_s[0], scale = c_DOC_details[1], a = c_DOC_details[2], b = c_DOC_details[3])
+c_MBC_dist = TruncatedNormal(loc = c_MBC_s[0], scale = c_MBC_details[1], a = c_MBC_details[2], b = c_MBC_details[3])
 
 #SCON-C theta rsample draws
 u_M = u_M_dist.rsample()
