@@ -22,7 +22,7 @@ if torch.cuda.is_available():
 
 torch.set_printoptions(precision = 6)
 
-error_scale = 0.25
+error_scale = 0.1
 
 #SCON theta truncated normal distribution parameters in order of mean, sdev, lower, and upper.
 u_M_details = torch.Tensor([0.001, 0.001 * error_scale, 0, 0.01])
