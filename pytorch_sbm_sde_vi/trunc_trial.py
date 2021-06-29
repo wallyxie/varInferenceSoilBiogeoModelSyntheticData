@@ -95,5 +95,4 @@ c_MBC_lp = c_MBC_dist.log_prob(c_MBC)
 
 lp_dict = {'u_M_lp': u_M_lp, 'a_SD_lp': a_SD_lp, 'a_DS_lp': a_DS_lp, 'a_M_lp': a_M_lp, 'k_S_ref_lp': k_S_ref_lp, 'k_D_ref_lp': k_D_ref_lp, 'k_M_ref_lp': k_M_ref, 'Ea_S_lp': Ea_S_lp, 'Ea_D_lp': Ea_D_lp, 'Ea_M_lp': Ea_M_lp, 'c_SOC_lp': c_SOC_lp, 'c_DOC_lp': c_DOC_lp, 'c_MBC_lp': c_MBC_lp}
 
-for k, v in lp_dict:
-    print(f'{k}: {v}')
+print(lp_dict)
