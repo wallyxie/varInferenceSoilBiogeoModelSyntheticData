@@ -25,22 +25,22 @@ torch.set_printoptions(precision = 6)
 error_scale = 0.25
 
 #SCON theta truncated normal distribution parameters in order of mean, sdev, lower, and upper.
-u_M_s = torch.Tensor([0.001, 0.001 * error_scale, 0, 0.01])
-a_SD_s = torch.Tensor([0.5, 0.5 * error_scale, 0, 1])
-a_DS_s = torch.Tensor([0.5, 0.5 * error_scale, 0, 1])
-a_M_s = torch.Tensor([0.5, 0.5 * error_scale, 0, 1])
-a_MSC_s = torch.Tensor([0.5, 0.5 * error_scale, 0, 1])
-k_S_ref_s = torch.Tensor([0.0002, 0.0002 * error_scale, 0, 0.001])
-k_D_ref_s = torch.Tensor([0.0008, 0.0008 * error_scale, 0, 0.001])
-k_M_ref_s = torch.Tensor([0.0003, 0.0003 * error_scale, 0, 0.001])
-Ea_S_s = torch.Tensor([55, 55 * error_scale, 20, 120])
-Ea_D_s = torch.Tensor([48, 48 * error_scale, 20, 120])
-Ea_M_s = torch.Tensor([48, 48 * error_scale, 20, 120])
+u_M_details = torch.Tensor([0.001, 0.001 * error_scale, 0, 0.01])
+a_SD_details = torch.Tensor([0.5, 0.5 * error_scale, 0, 1])
+a_DS_details = torch.Tensor([0.5, 0.5 * error_scale, 0, 1])
+a_M_details = torch.Tensor([0.5, 0.5 * error_scale, 0, 1])
+a_MSC_details = torch.Tensor([0.5, 0.5 * error_scale, 0, 1])
+k_S_ref_details = torch.Tensor([0.0002, 0.0002 * error_scale, 0, 0.001])
+k_D_ref_details = torch.Tensor([0.0008, 0.0008 * error_scale, 0, 0.001])
+k_M_ref_details = torch.Tensor([0.0003, 0.0003 * error_scale, 0, 0.001])
+Ea_S_details = torch.Tensor([55, 55 * error_scale, 20, 120])
+Ea_D_details = torch.Tensor([48, 48 * error_scale, 20, 120])
+Ea_M_details = torch.Tensor([48, 48 * error_scale, 20, 120])
 
 #SCON-C diffusion matrix parameter distribution s
-c_SOC_s = torch.Tensor([0.05, 0.05 * error_scale, 0, 0.1])
-c_DOC_s = torch.Tensor([0.001, 0.001 * error_scale, 0, 0.01])
-c_MBC_s = torch.Tensor([0.001, 0.001 * error_scale, 0, 0.01])
+c_SOC_details = torch.Tensor([0.05, 0.05 * error_scale, 0, 0.1])
+c_DOC_details = torch.Tensor([0.001, 0.001 * error_scale, 0, 0.01])
+c_MBC_details = torch.Tensor([0.001, 0.001 * error_scale, 0, 0.01])
 
 #SCON-C theta distribution objects
 u_M_dist = TruncatedNormal(loc = u_M_details[0], scale = u_M_details[1], a = u_M_details[2], b = u_M_details[3])
