@@ -55,22 +55,22 @@ num_layers = 5 #5 - number needed to fit UCI HPC3 RAM requirements with 16 GB RA
 learn_theta = True
 
 #SCON theta truncated normal distribution parameter details in order of mean, lower, and upper. Distribution sdev assumed to be some proportion of the mean. 
-u_M_details = torch.Tensor([0.001, 0.001 * error_scale, 0, 0.01])
-a_SD_details = torch.Tensor([0.5, 0.5 * error_scale, 0, 1])
-a_DS_details = torch.Tensor([0.5, 0.5 * error_scale, 0, 1])
-a_M_details = torch.Tensor([0.5, 0.5 * error_scale, 0, 1])
-a_MSC_details = torch.Tensor([0.5, 0.5 * error_scale, 0, 1])
-k_S_ref_details = torch.Tensor([0.0002, 0.0002 * error_scale, 0, 0.001])
-k_D_ref_details = torch.Tensor([0.0008, 0.0008 * error_scale, 0, 0.001])
-k_M_ref_details = torch.Tensor([0.0003, 0.0003 * error_scale, 0, 0.001])
-Ea_S_details = torch.Tensor([55, 55 * error_scale, 20, 120])
-Ea_D_details = torch.Tensor([48, 48 * error_scale, 20, 120])
-Ea_M_details = torch.Tensor([48, 48 * error_scale, 20, 120])
+u_M_details = torch.Tensor([0.001, 0.001 * prior_scale_factor, 0, 0.01])
+a_SD_details = torch.Tensor([0.5, 0.5 * prior_scale_factor, 0, 1])
+a_DS_details = torch.Tensor([0.5, 0.5 * prior_scale_factor, 0, 1])
+a_M_details = torch.Tensor([0.5, 0.5 * prior_scale_factor, 0, 1])
+a_MSC_details = torch.Tensor([0.5, 0.5 * prior_scale_factor, 0, 1])
+k_S_ref_details = torch.Tensor([0.0002, 0.0002 * prior_scale_factor, 0, 0.001])
+k_D_ref_details = torch.Tensor([0.0008, 0.0008 * prior_scale_factor, 0, 0.001])
+k_M_ref_details = torch.Tensor([0.0003, 0.0003 * prior_scale_factor, 0, 0.001])
+Ea_S_details = torch.Tensor([55, 55 * prior_scale_factor, 20, 120])
+Ea_D_details = torch.Tensor([48, 48 * prior_scale_factor, 20, 120])
+Ea_M_details = torch.Tensor([48, 48 * prior_scale_factor, 20, 120])
 
 #SCON-C diffusion matrix parameter distribution s
-c_SOC_details = torch.Tensor([0.05, 0.05 * error_scale, 0, 0.1])
-c_DOC_details = torch.Tensor([0.001, 0.001 * error_scale, 0, 0.01])
-c_MBC_details = torch.Tensor([0.001, 0.001 * error_scale, 0, 0.01])
+c_SOC_details = torch.Tensor([0.05, 0.05 * prior_scale_factor, 0, 0.1])
+c_DOC_details = torch.Tensor([0.001, 0.001 * prior_scale_factor, 0, 0.01])
+c_MBC_details = torch.Tensor([0.001, 0.001 * prior_scale_factor, 0, 0.01])
 
 SCON_C_priors_details = {'u_M': u_M_details, 'a_SD': a_SD_details, 'a_DS': a_DS_details, 'a_M': a_M_details, 'a_MSC': a_MSC_details, 'k_S_ref': k_S_ref_details, 'k_D_ref': k_D_ref_details, 'k_M_ref': k_M_ref_details, 'Ea_S': Ea_S_details, 'Ea_D': Ea_D_details, 'Ea_M': Ea_M_details, 'c_SOC': c_SOC_details, 'c_DOC': c_DOC_details, 'c_MBC': c_MBC_details}
 
