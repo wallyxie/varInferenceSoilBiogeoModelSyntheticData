@@ -43,7 +43,7 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
 
     #Convert prior details dictionary values to tensors.
     prior_means_list, prior_sds_list, prior_lowers_list, prior_uppers_list = list(zip(*PARAM_PRIORS_DETAILS_DICT.values())) #Unzip prior distribution details from dictionary values into individual lists.
-    prior_means_tensor, prior_sds_tensor, prior_lowers_tensor, prior_uppers_tensor = torch.tensor(prior_means_list, prior_sds_list, prior_lowers_list, prior_uppers_list).to(DEVICE) #Ensure conversion of lists into tensors.
+    prior_means_tensor, prior_sds_tensor, prior_lowers_tensor, prior_uppers_tensor = torch.tensor([prior_means_list, prior_sds_list, prior_lowers_list, prior_uppers_list]).to(DEVICE) #Ensure conversion of lists into tensors.
 
     #Read in data to obtain y and establish observation model.
     obs_times, obs_means_noCO2, obs_error = csv_to_obs_df(OBS_CSV_STR, STATE_DIM, T, OBS_ERROR_SCALE) #csv_to_obs_df function in obs_and_flow module
