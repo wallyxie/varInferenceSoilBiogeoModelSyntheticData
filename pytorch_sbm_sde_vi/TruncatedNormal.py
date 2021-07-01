@@ -116,8 +116,14 @@ class TruncatedNormal(TruncatedStandardNormal):
 
     def __init__(self, loc, scale, a, b, validate_args=None):
         self.loc, self.scale, a, b = broadcast_all(loc, scale, a, b)
+        print('loc', loc)
+        print('scale', scale)
+        print('a', a)
+        print('b', b)
         a = (a - self.loc) / self.scale
         b = (b - self.loc) / self.scale
+        print('a`', a)
+        print('b`', b)        
         super(TruncatedNormal, self).__init__(a, b, validate_args=validate_args)
         self._log_scale = self.scale.log()
         self._mean = self._mean * self.scale + self.loc
