@@ -106,9 +106,9 @@ class MeanFieldTruncNorm(nn.Module):
             upper_bounds.append(LowerBound.apply(upper, 0))            
 
         self.means = nn.Parameter(torch.Tensor(means).to(DEVICE))
-        self.sds = nn.Parameter(self.means * sdev_scale_factor)
-        self.lowers = nn.Parameter(torch.tensor(lower_bounds).to(DEVICE))
-        self.uppers = nn.Parameter(torch.tensor(upper_bounds).to(DEVICE))
+        self.sds = nn.Parameter(torch.Tensor(sds).to(DEVICE))
+        self.lowers = nn.Parameter(torch.Tensor(lower_bounds).to(DEVICE))
+        self.uppers = nn.Parameter(torch.Tensor(upper_bounds).to(DEVICE))
         
         #Save keys for forward output.
         self.keys = keys
