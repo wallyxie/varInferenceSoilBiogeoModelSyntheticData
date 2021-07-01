@@ -119,8 +119,8 @@ class MeanFieldTruncNorm(nn.Module):
         print('keys', self.keys)
         print('means', self.means)
         print('sds', self.sds)
-        print('lowers', self.lower_bounds)
-        print('uppers', self.upper_bounds)
+        print('lowers', self.lowers)
+        print('uppers', self.uppers)
         #Sample theta ~ q(theta).
         samples = q_dist.rsample([N])
         #Evaluate log prob of theta samples.
