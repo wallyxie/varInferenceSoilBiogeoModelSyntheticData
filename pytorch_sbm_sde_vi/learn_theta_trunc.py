@@ -8,6 +8,7 @@ import torch.distributions as D
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.autograd import Function
+from TruncatedNormal import *
 
 import numpy as np
 import pandas as pd
