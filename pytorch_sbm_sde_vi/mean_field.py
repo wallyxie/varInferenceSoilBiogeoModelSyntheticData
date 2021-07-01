@@ -107,8 +107,8 @@ class MeanFieldTruncNorm(nn.Module):
 
         self.means = nn.Parameter(torch.Tensor(means).to(DEVICE))
         self.sds = nn.Parameter(torch.Tensor(sds).to(DEVICE))
-        self.lowers = nn.Parameter(torch.Tensor(lower_bounds).to(DEVICE))
-        self.uppers = nn.Parameter(torch.Tensor(upper_bounds).to(DEVICE))
+        self.lowers = torch.Tensor(lower_bounds).to(DEVICE)
+        self.uppers = torch.Tensor(upper_bounds).to(DEVICE)
         
         #Save keys for forward output.
         self.keys = keys
@@ -116,6 +116,11 @@ class MeanFieldTruncNorm(nn.Module):
     def forward(self, N = 10): #N should be assigned batch size in `train` function from training.py.
         #Update posterior.
         q_dist = TruncatedNormal(loc = self.means, scale = self.sds, a = self.lowers, b = self.uppers)
+        print('keys', self.keys)
+        print('means', self.means)
+        print('sds', self.sds)
+        print('lowers', self.lower_bounds)
+        print('uppers', self.upper_bounds)
         #Sample theta ~ q(theta).
         samples = q_dist.rsample([N])
         #Evaluate log prob of theta samples.
