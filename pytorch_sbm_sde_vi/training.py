@@ -56,7 +56,7 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
     if LEARN_THETA:
         priors = TruncatedNormal(loc = prior_means_tensor, scale = prior_sds_tensor, a = prior_lowers_tensor, b = prior_uppers_tensor)
         # Initialize posterior q(theta) using its prior p(theta)
-        q_theta = MeanFieldTruncNorm(DEVICE, PARAM_PRIORS_DETAILS_DICT, BATCH_SIZE) 
+        q_theta = MeanFieldTruncNorm(DEVICE, PARAM_PRIORS_DETAILS_DICT) 
     else:
         #Establish initial dictionary of theta means in tensor form.
         theta_dict = {k: torch.tensor(v).to(DEVICE).expand(BATCH_SIZE) for k, (v, _, _, _) in PARAM_PRIORS_DETAILS_DICT.items()}

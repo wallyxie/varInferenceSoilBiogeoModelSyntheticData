@@ -88,7 +88,7 @@ class MeanFieldTruncNorm(nn.Module):
     Takes dictionary of parameter distribution information in order of mean, sdev, upper bound, and lower bound.
     '''
 
-    def __init__(self, device, PARAMS_DETAILS_DICT):
+    def __init__(self, DEVICE, PARAMS_DETAILS_DICT):
         super().__init__()
 
         #Use param dict to intialise the means for the mean-field approximations.
@@ -105,10 +105,10 @@ class MeanFieldTruncNorm(nn.Module):
             lower_bounds.append(LowerBound.apply(lower, 0))
             upper_bounds.append(LowerBound.apply(upper, 0))            
 
-        self.means = nn.Parameter(torch.Tensor(means).to(device))
+        self.means = nn.Parameter(torch.Tensor(means).to(DEVICE))
         self.sds = nn.Parameter(self.means * sdev_scale_factor)
-        self.lowers = nn.Parameter(torch.tensor(lower_bounds).to(device))
-        self.uppers = nn.Parameter(torch.tensor(upper_bounds).to(device))
+        self.lowers = nn.Parameter(torch.tensor(lower_bounds).to(DEVICE))
+        self.uppers = nn.Parameter(torch.tensor(upper_bounds).to(DEVICE))
         
         #Save keys for forward output.
         self.keys = keys
