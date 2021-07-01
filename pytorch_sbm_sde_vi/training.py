@@ -31,13 +31,13 @@ def calc_log_lik(C_PATH, T_SPAN_TENSOR, DT, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR,
 
 def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LAYERS,
           STATE_DIM, OBS_CSV_STR, OBS_ERROR_SCALE, PRIOR_SCALE_FACTOR, T, DT, N, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF,
-          DRIFT_DIFFUSION, INIT_PRIOR, PARAM_PRIOR_MEANS_DICT,
+          DRIFT_DIFFUSION, INIT_PRIOR, PARAM_PRIORS_DETAILS,
           LEARN_THETA = False, LR_DECAY = 0.9, DECAY_STEP_SIZE = 1000, PRINT_EVERY = 10):
     if PRETRAIN_ITER >= NITER:
         raise ValueError('PRETRAIN_ITER must be < NITER.')
 
-    #Convert prior means dictionary values to tensor.
-    prior_means_tensor = torch.tensor([v for v, _, _ in PARAM_PRIOR_MEANS_DICT.values()]).to(DEVICE)
+    #Convert prior details dictionary values to tensor.
+    prior_means_tensor = torch.tensor([v for v, _, _, _ in PARAM_PRIORS_DETAILS.values()]).to(DEVICE)
 
     #Read in data to obtain y and establish observation model.
     obs_times, obs_means_noCO2, obs_error = csv_to_obs_df(OBS_CSV_STR, STATE_DIM, T, OBS_ERROR_SCALE) #csv_to_obs_df function in obs_and_flow module
@@ -48,9 +48,9 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
     net = SDEFlow(DEVICE, obs_model, STATE_DIM, T, DT, N, num_layers = NUM_LAYERS).to(DEVICE)
     
     if LEARN_THETA:
-        priors = D.normal.Normal(prior_means_tensor, prior_means_tensor * PRIOR_SCALE_FACTOR)
+        priors = D.normal.Normal(prior_means_tensor, )
         # Initialize posterior q(theta) using its prior p(theta)
-        q_theta = MeanField(DEVICE, PARAM_PRIOR_MEANS_DICT, PRIOR_SCALE_FACTOR)
+        q_theta = MeanField(DEVICE, PARAM_PRIORS_DETAILS, ) 
     else:
         #Establish initial dictionary of theta means in tensor form.
         theta_dict = {k: torch.tensor(v).to(DEVICE).expand(BATCH_SIZE) for k, (v, _, _) in PARAM_PRIOR_MEANS_DICT.items()}

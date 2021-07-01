@@ -38,6 +38,7 @@ class BoundedSigmoid(nn.Module):
         return torch.log(ildj)
 
 class MeanField(nn.Module):
+
     def __init__(self, device, init_params, sdev_scale_factor):
         super().__init__()
 
@@ -79,3 +80,37 @@ class MeanField(nn.Module):
             dict_out[f"{key}"] = sample.squeeze(1) #Each sample is of shape [n].
         #Return samples in dictionary and tensor format.
         return dict_out, samples, log_q_theta
+
+class MeanFieldTruncNorm(nn.Module):
+
+    '''
+    Class for mean-field variational inference of SBM SDE parameters.
+    Takes dictionary of parameter distribution information in order of mean, sdev, upper bound, and lower bound.
+    '''
+
+    def __init__(self, device, init_params, sdev_scale_factor):
+        super().__init__()
+
+        #Use param dict to intialise the means for the mean-field approximations.
+        # init_params: name -> (init_value, lower, upper)
+        keys = []
+        means = []
+        sds = []
+        lower_bounds = []        
+        upper_bounds = []
+        for key, (mean, sd, lower, upper) in init_params.items():
+            keys.append(key)
+            means.append(mean)
+            sds.append(sd)
+            upper_bounds.append(upper)
+            lower_bounds.append(lower)
+
+        self.means = nn.Parameter(torch.Tensor(means).to(device))
+        self.sds = nn.Parameter(self.means * sdev_scale_factor)
+        self.lowers = torch.tensor(lower_bounds).to(device)
+        self.uppers = torch.tensor(upper_bounds).to(device)
+        
+        #Save keys for forward output.
+        self.keys = keys
+
+

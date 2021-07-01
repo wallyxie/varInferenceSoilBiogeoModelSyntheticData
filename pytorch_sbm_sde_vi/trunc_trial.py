@@ -24,7 +24,7 @@ torch.set_printoptions(precision = 6)
 
 error_scale = 0.1
 
-#SCON theta truncated normal distribution parameters in order of mean, sdev, lower, and upper.
+#SCON SDE truncated normal distribution parameter details in order of mean, sdev, lower, and upper.
 u_M_details = torch.Tensor([0.001, 0.001 * error_scale, 0, 0.01])
 a_SD_details = torch.Tensor([0.5, 0.5 * error_scale, 0, 1])
 a_DS_details = torch.Tensor([0.5, 0.5 * error_scale, 0, 1])
@@ -37,7 +37,7 @@ Ea_S_details = torch.Tensor([55, 55 * error_scale, 20, 120])
 Ea_D_details = torch.Tensor([48, 48 * error_scale, 20, 120])
 Ea_M_details = torch.Tensor([48, 48 * error_scale, 20, 120])
 
-#SCON-C diffusion matrix parameter distribution s
+#SCON-C diffusion matrix parameter distribution details in order of mean, sdev, lower, and upper.
 c_SOC_details = torch.Tensor([0.05, 0.05 * error_scale, 0, 0.1])
 c_DOC_details = torch.Tensor([0.001, 0.001 * error_scale, 0, 0.01])
 c_MBC_details = torch.Tensor([0.001, 0.001 * error_scale, 0, 0.01])
