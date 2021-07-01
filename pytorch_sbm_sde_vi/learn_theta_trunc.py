@@ -88,15 +88,15 @@ i_s_tensor = i_s(t_span_tensor).to(active_device) #Exogenous SOC input function
 i_d_tensor = i_d(t_span_tensor).to(active_device) #Exogenous DOC input function
 
 #Generate observation model.
-obs_times, obs_means_noCO2, obs_error = csv_to_obs_df('y_from_x_t_5000_dt_0-01.csv', state_dim_SCON, t, obs_error_scale)
+obs_times, obs_means_noCO2, obs_error = csv_to_obs_df('trunc_sample_t_2000_dt_0-02', state_dim_SCON, t, obs_error_scale)
 obs_model = ObsModel(active_device, TIMES = obs_times, DT = dt_flow, MU = obs_means_noCO2, SCALE = obs_error).to(active_device) 
 torch.save(obs_model, 'obs_model.pt')
 
 #Call training loop function for SCON-C.
 net, obs_model, ELBO_hist = train(active_device, pretrain_lr, train_lr, niter, piter, batch_size, num_layers,
-          state_dim_SCON, 'y_from_x_t_5000_dt_0-01.csv', obs_error_scale, prior_scale_factor, t, dt_flow, n, 
+          state_dim_SCON, 'trunc_sample_t_2000_dt_0-02', obs_error_scale, prior_scale_factor, t, dt_flow, n, 
           t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
-          drift_diffusion_SCON_C, x0_prior_SCON, SCON_C_params_dict,
+          drift_diffusion_SCON_C, x0_prior_SCON, SCON_C_priors_details,
           LEARN_THETA = learn_theta, LR_DECAY = 1.0, DECAY_STEP_SIZE = 10000, PRINT_EVERY = 1)
 
 #Save net and ELBO files.
