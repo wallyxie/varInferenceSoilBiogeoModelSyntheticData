@@ -1,11 +1,11 @@
+from obs_and_flow import LowerBound
+
 import torch
 from torch import nn
 from obs_and_flow import LowerBound, SoftplusLayer
 import torch.distributions as D
 from torch.autograd import Function
-
-from obs_and_flow import LowerBound
-
+from TruncatedNormal import *
 
 '''
 This module defines the MeanField class for mean field VI inference of the soil biogeochemical model SDE system parameters.
@@ -88,29 +88,42 @@ class MeanFieldTruncNorm(nn.Module):
     Takes dictionary of parameter distribution information in order of mean, sdev, upper bound, and lower bound.
     '''
 
-    def __init__(self, device, init_params, sdev_scale_factor):
+    def __init__(self, device, PARAMS_DETAILS_DICT):
         super().__init__()
 
         #Use param dict to intialise the means for the mean-field approximations.
-        # init_params: name -> (init_value, lower, upper)
+        # init_params: name -> (mean, sd, lower, upper)
         keys = []
         means = []
         sds = []
         lower_bounds = []        
         upper_bounds = []
-        for key, (mean, sd, lower, upper) in init_params.items():
+        for key, (mean, sd, lower, upper) in PARAMS_DETAILS_DICT.items():
             keys.append(key)
-            means.append(mean)
-            sds.append(sd)
-            upper_bounds.append(upper)
-            lower_bounds.append(lower)
+            means.append(LowerBound.apply(mean, 1e-8))
+            sds.append(LowerBound.apply(sd, 1e-8))
+            lower_bounds.append(LowerBound.apply(lower, 0))
+            upper_bounds.append(LowerBound.apply(upper, 0))            
 
         self.means = nn.Parameter(torch.Tensor(means).to(device))
         self.sds = nn.Parameter(self.means * sdev_scale_factor)
-        self.lowers = torch.tensor(lower_bounds).to(device)
-        self.uppers = torch.tensor(upper_bounds).to(device)
+        self.lowers = nn.Parameter(torch.tensor(lower_bounds).to(device))
+        self.uppers = nn.Parameter(torch.tensor(upper_bounds).to(device))
         
         #Save keys for forward output.
         self.keys = keys
 
+    def forward(self, N = 10): #N should be assigned batch size in `train` function from training.py.
+        #Update posterior.
+        q_dist = TruncatedNormal(loc = self.means, scale = self.sds, a = self.lowers, b = self.uppers)
+        #Sample theta ~ q(theta).
+        samples = q_dist.rsample([N])
+        #Evaluate log prob of theta samples.
+        log_q_theta = torch.sum(q_dist.log_prob(samples), -1)
+        #Return samples in same dictionary format.
+        dict_out = {} #Define dictionary with n samples for each parameter.
+        for key, sample in zip(self.keys, torch.split(samples, 1, -1),):
+            dict_out[f"{key}"] = sample.squeeze(1) #Each sample is of shape [n].
+        #Return samples in dictionary and tensor format.
+        return dict_out, samples, log_q_theta
 

@@ -1,13 +1,17 @@
+import math
+
+from tqdm import tqdm
+
 from obs_and_flow import *
 from mean_field import *
+
 import torch
 from torch.autograd import Function
 from torch import nn
 import torch.distributions as D
 import torch.nn.functional as F
 import torch.optim as optim
-import math
-from tqdm import tqdm
+from TruncatedNormal import *
 
 '''
 This module containins the `calc_log_lik` and `training` functions for pre-training and ELBO training of the soil biogeochemical model SDE systems.
@@ -31,13 +35,14 @@ def calc_log_lik(C_PATH, T_SPAN_TENSOR, DT, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR,
 
 def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LAYERS,
           STATE_DIM, OBS_CSV_STR, OBS_ERROR_SCALE, PRIOR_SCALE_FACTOR, T, DT, N, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF,
-          DRIFT_DIFFUSION, INIT_PRIOR, PARAM_PRIORS_DETAILS,
-          LEARN_THETA = False, LR_DECAY = 0.9, DECAY_STEP_SIZE = 1000, PRINT_EVERY = 10):
+          DRIFT_DIFFUSION, INIT_PRIOR, PARAM_PRIORS_DETAILS_DICT,
+          LEARN_THETA = False, LR_DECAY = 0.95, DECAY_STEP_SIZE = 5000, PRINT_EVERY = 10):
     if PRETRAIN_ITER >= NITER:
         raise ValueError('PRETRAIN_ITER must be < NITER.')
 
-    #Convert prior details dictionary values to tensor.
-    prior_means_tensor = torch.tensor([v for v, _, _, _ in PARAM_PRIORS_DETAILS.values()]).to(DEVICE)
+    #Convert prior details dictionary values to tensors.
+    prior_means_list, prior_sds_list, prior_lowers_list, prior_uppers_list = list(zip(*PARAM_PRIORS_DETAILS_DICT.values())) #Unzip prior distribution details from dictionary values into individual lists.
+    prior_means_tensor, prior_sds_tensor, prior_lowers_tensor, prior_uppers_tensor = torch.tensor(prior_means_list, prior_sds_list, prior_lowers_list, prior_uppers_list).to(DEVICE) #Ensure conversion of lists into tensors.
 
     #Read in data to obtain y and establish observation model.
     obs_times, obs_means_noCO2, obs_error = csv_to_obs_df(OBS_CSV_STR, STATE_DIM, T, OBS_ERROR_SCALE) #csv_to_obs_df function in obs_and_flow module
@@ -48,12 +53,12 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
     net = SDEFlow(DEVICE, obs_model, STATE_DIM, T, DT, N, num_layers = NUM_LAYERS).to(DEVICE)
     
     if LEARN_THETA:
-        priors = D.normal.Normal(prior_means_tensor, )
+        priors = TruncatedNormal(loc = prior_means_tensor, scale = prior_sds_tensor, a = prior_lowers_tensor, b = prior_uppers_tensor)
         # Initialize posterior q(theta) using its prior p(theta)
-        q_theta = MeanField(DEVICE, PARAM_PRIORS_DETAILS, ) 
+        q_theta = MeanField(DEVICE, PARAM_PRIORS_DETAILS_DICT, N = BATCH_SIZE) 
     else:
         #Establish initial dictionary of theta means in tensor form.
-        theta_dict = {k: torch.tensor(v).to(DEVICE).expand(BATCH_SIZE) for k, (v, _, _) in PARAM_PRIOR_MEANS_DICT.items()}
+        theta_dict = {k: torch.tensor(v).to(DEVICE).expand(BATCH_SIZE) for k, (v, _, _, _) in PARAM_PRIORS_DETAILS_DICT.items()}
         q_theta = None
 
     #Record loss throughout training
@@ -70,7 +75,7 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
     else:
         ELBO_optimizer = optim.Adam(net.parameters(), lr = ELBO_LR)
 
-    #C0 = ANALYTICAL_STEADY_STATE_INIT(I_S_TENSOR[0, 0, 0].item(), I_D_TENSOR[0, 0, 0].item(), PARAM_PRIOR_MEANS_DICT) #Calculate deterministic initial conditions.
+    #C0 = ANALYTICAL_STEADY_STATE_INIT(I_S_TENSOR[0, 0, 0].item(), I_D_TENSOR[0, 0, 0].item(), PARAM_PRIORS_DETAILS_DICT) #Calculate deterministic initial conditions.
     #C0 = C0[(None,) * 2].repeat(BATCH_SIZE, 1, 1).to(DEVICE) #Assign initial conditions to C_PATH.
     
     #Training loop
