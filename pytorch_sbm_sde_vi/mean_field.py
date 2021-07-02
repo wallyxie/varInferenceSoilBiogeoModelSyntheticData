@@ -100,8 +100,8 @@ class MeanFieldTruncNorm(nn.Module):
         upper_bounds = []
         for key, (mean, sd, lower, upper) in PARAMS_DETAILS_DICT.items():
             keys.append(key)
-            means.append(LowerBound.apply(mean, 1e-8))
-            sds.append(LowerBound.apply(sd, 1e-8))
+            means.append(mean)
+            sds.append(sd)
             lower_bounds.append(lower)
             upper_bounds.append(upper)            
 
@@ -115,7 +115,7 @@ class MeanFieldTruncNorm(nn.Module):
 
     def forward(self, N = 10): #N should be assigned batch size in `train` function from training.py.
         #Update posterior.
-        q_dist = TruncatedNormal(loc = self.means, scale = self.sds, a = self.lowers, b = self.uppers)
+        q_dist = TruncatedNormal(loc = LowerBound.apply(self.means, 1e-6), scale = LowerBound.apply(self.sds, 1e-7), a = self.lowers, b = self.uppers)
         #Sample theta ~ q(theta).
         samples = q_dist.rsample([N])
         #Evaluate log prob of theta samples.
