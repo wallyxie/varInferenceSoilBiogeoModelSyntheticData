@@ -115,7 +115,7 @@ class MeanFieldTruncNorm(nn.Module):
 
     def forward(self, N = 10): #N should be assigned batch size in `train` function from training.py.
         #Update posterior.
-        q_dist = TruncatedNormal(loc = LowerBound.apply(self.means, 1e-6), scale = LowerBound.apply(self.sds, 1e-8), a = self.lowers, b = self.uppers)
+        q_dist = TruncatedNormal(loc = LowerBound.apply(self.means, 1e-5), scale = LowerBound.apply(self.sds, 1e-8), a = self.lowers, b = self.uppers)
         #Sample theta ~ q(theta).
         samples = q_dist.rsample([N])
         #Evaluate log prob of theta samples.
