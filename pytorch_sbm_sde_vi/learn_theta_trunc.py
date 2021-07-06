@@ -99,7 +99,7 @@ net, obs_model, ELBO_hist, list_theta, list_parent_loc_scale = train(active_devi
           state_dim_SCON, 'trunc_sample_y_from_x_t_2000_dt_0-02.csv', obs_error_scale, prior_scale_factor, t, dt_flow, n, 
           t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
           drift_diffusion_SCON_C, x0_prior_SCON, SCON_C_priors_details,
-          LEARN_THETA = learn_theta, LR_DECAY = 0.99, DECAY_STEP_SIZE = 10000, PRINT_EVERY = 1)
+          LEARN_THETA = learn_theta, LR_DECAY = 0.99, DECAY_STEP_SIZE = 10000, PRINT_EVERY = 50)
 
 #Save net and ELBO files.
 now = datetime.now()
