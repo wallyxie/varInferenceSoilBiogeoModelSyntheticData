@@ -119,12 +119,18 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
                 #x_0 = C_PATH[:, 0, :]
                 #x_0_prior = D.normal.Normal(loc = x_0, scale = x_0 * OBS_ERROR_SCALE)
                 #log p(y_0 | x_0, theta)
-                #log_p_y_0 = x_0_prior.log_prob(obs_model.mu[:, 0]).sum(-1)  
+                #log_p_y_0 = x_0_prior.log_prob(obs_model.mu[:, 0]).sum(-1)
+
+                list_theta = []
+                list_parent_loc_scale = []
 
                 if LEARN_THETA:
-                    theta_dict, theta, log_q_theta = q_theta(BATCH_SIZE)
+                    theta_dict, theta, log_q_theta, parent_loc_scale_dict = q_theta(BATCH_SIZE)
                     print('\ntheta_dict = ', theta_dict)
+                    print('\nparent_loc_scale_dict = ', parent_loc_scale_dict)
                     log_p_theta = priors.log_prob(theta).sum(-1)
+                    list_theta.append(theta_dict)
+                    list_parent_loc_scale.append(parent_loc_scale_dict)
                 else:
                     log_q_theta, log_p_theta = torch.zeros(2).to(DEVICE)                    
 
@@ -142,7 +148,7 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
                     #print('obs_model(C_PATH, theta_dict) =', obs_model(C_PATH, theta_dict))                    
                     #print('drift = ', drift)
                     #print('diffusion_sqrt = ', diffusion_sqrt)                    
-                    print(f'Moving average ELBO loss at {it + 1} iterations is: {sum(ELBO_losses[-10:]) / len(ELBO_losses[-10:])}. Best ELBO loss value is: {best_loss_ELBO}.')
+                    print(f'\nMoving average ELBO loss at {it + 1} iterations is: {sum(ELBO_losses[-10:]) / len(ELBO_losses[-10:])}. Best ELBO loss value is: {best_loss_ELBO}.')
                     print('\nC_PATH mean =', C_PATH.mean(-2))
                     print('\nC_PATH =', C_PATH)
 
@@ -158,4 +164,4 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
 
             tq.update()
             
-    return net, obs_model, ELBO_losses
+    return net, obs_model, ELBO_losses, list_theta, list_parent_loc_scale

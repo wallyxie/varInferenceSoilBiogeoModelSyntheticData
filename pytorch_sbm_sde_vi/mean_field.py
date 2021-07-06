@@ -92,7 +92,7 @@ class MeanFieldTruncNorm(nn.Module):
         super().__init__()
 
         #Use param dict to intialise the means for the mean-field approximations.
-        # init_params: name -> (mean, sd, lower, upper)
+        # init_params: name -> (parent mean, parent sd, true lower, true upper)
         keys = []
         means = []
         sds = []
@@ -115,15 +115,20 @@ class MeanFieldTruncNorm(nn.Module):
 
     def forward(self, N = 10): #N should be assigned batch size in `train` function from training.py.
         #Update posterior.
-        q_dist = TruncatedNormal(loc = LowerBound.apply(self.means, 1e-5), scale = LowerBound.apply(self.sds, 1e-8), a = self.lowers, b = self.uppers)
+        parent_loc = LowerBound.apply(self.means, 1e-5)
+        parent_scale = LowerBound.apply(self.sds, 1e-8)
+        q_dist = TruncatedNormal(loc = parent_loc, scale = parent_scale, a = self.lowers, b = self.uppers)
         #Sample theta ~ q(theta).
         samples = q_dist.rsample([N])
         #Evaluate log prob of theta samples.
         log_q_theta = torch.sum(q_dist.log_prob(samples), -1)
         #Return samples in same dictionary format.
         dict_out = {} #Define dictionary with n samples for each parameter.
+        dict_parent_loc_scale = {} #Define dictionary to store parent parameter normal distribution means and standard deviations. 
         for key, sample in zip(self.keys, torch.split(samples, 1, -1),):
-            dict_out[f"{key}"] = sample.squeeze(1) #Each sample is of shape [n].
+            dict_out[f'{key}'] = sample.squeeze(1) #Each sample is of shape [n].
+        for key, loc_scale in zip(self.keys, torch.split(torch.stack([parent_loc, parent_scale], 1), 1, 0)):
+            dict_parent_loc_scale[f'{key}'] = loc_scale
         #Return samples in dictionary and tensor format.
-        return dict_out, samples, log_q_theta
+        return dict_out, samples, log_q_theta, dict_parent_loc_scale
 

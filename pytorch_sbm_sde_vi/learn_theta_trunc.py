@@ -44,8 +44,8 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-niter = 100
-piter = 0
+niter = 11000
+piter = 50
 pretrain_lr = 1e-2 #Norm regularization learning rate
 train_lr = 1e-5 #ELBO learning rate
 batch_size = 10 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
@@ -95,7 +95,7 @@ obs_model = ObsModel(active_device, TIMES = obs_times, DT = dt_flow, MU = obs_me
 torch.save(obs_model, 'obs_model.pt')
 
 #Call training loop function for SCON-C.
-net, obs_model, ELBO_hist = train(active_device, pretrain_lr, train_lr, niter, piter, batch_size, num_layers,
+net, obs_model, ELBO_hist, list_theta, list_parent_loc_scale = train(active_device, pretrain_lr, train_lr, niter, piter, batch_size, num_layers,
           state_dim_SCON, 'trunc_sample_y_from_x_t_2000_dt_0-02.csv', obs_error_scale, prior_scale_factor, t, dt_flow, n, 
           t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
           drift_diffusion_SCON_C, x0_prior_SCON, SCON_C_priors_details,
@@ -105,7 +105,7 @@ net, obs_model, ELBO_hist = train(active_device, pretrain_lr, train_lr, niter, p
 now = datetime.now()
 now_string = now.strftime("%Y_%m_%d_%H_%M_%S")
 save_string = f'out_iter_{niter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_{now_string}.pt'
-torch.save((net, obs_model, ELBO_hist), save_string)
+torch.save((net, obs_model, ELBO_hist, list_theta, list_parent_loc_scale), save_string)
 
 #Release some CUDA memory and load .pt files.
 #torch.cuda.empty_cache()
