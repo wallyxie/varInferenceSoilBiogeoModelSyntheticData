@@ -123,11 +123,11 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
 
                 list_theta = []
                 list_parent_loc_scale = []
+                theta_dict = None #Initiate theta_dict variable for printing in PRINT_EVERY loop.
+                parent_loc_scale_dict = None #Initiate parent_loc_scale_dict variable for printing in PRINT_EVERY loop.
 
                 if LEARN_THETA:
                     theta_dict, theta, log_q_theta, parent_loc_scale_dict = q_theta(BATCH_SIZE)
-                    print('\ntheta_dict = ', theta_dict)
-                    print('\nparent_loc_scale_dict = ', parent_loc_scale_dict)
                     log_p_theta = priors.log_prob(theta).sum(-1)
                     list_theta.append(theta_dict)
                     list_parent_loc_scale.append(parent_loc_scale_dict)
@@ -147,7 +147,9 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
                     #print('log_lik.mean() =', log_lik.mean())
                     #print('obs_model(C_PATH, theta_dict) =', obs_model(C_PATH, theta_dict))                    
                     #print('drift = ', drift)
-                    #print('diffusion_sqrt = ', diffusion_sqrt)                    
+                    #print('diffusion_sqrt = ', diffusion_sqrt)
+                    print('\ntheta_dict = ', theta_dict)
+                    print('\nparent_loc_scale_dict = ', parent_loc_scale_dict)
                     print(f'\nMoving average ELBO loss at {it + 1} iterations is: {sum(ELBO_losses[-10:]) / len(ELBO_losses[-10:])}. Best ELBO loss value is: {best_loss_ELBO}.')
                     print('\nC_PATH mean =', C_PATH.mean(-2))
                     print('\nC_PATH =', C_PATH)
