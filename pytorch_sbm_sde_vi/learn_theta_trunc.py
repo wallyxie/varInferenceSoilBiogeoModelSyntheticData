@@ -27,11 +27,12 @@ torch.manual_seed(0)
 print('cuda device available?: ', torch.cuda.is_available())
 active_device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 if torch.cuda.is_available():
-    torch.set_default_tensor_type('torch.cuda.DoubleTensor')
+    torch.set_default_tensor_type('torch.cuda.FloatTensor')
+torch.set_printoptions(precision = 8)
 
 #Neural SDE parameters
 dt_flow = 0.5 #Increased from 0.1 to reduce memory.
-t = 500 #2000. #In hours.
+t = 200 #2000. #In hours.
 n = int(t / dt_flow) + 1
 t_span = np.linspace(0, t, n)
 t_span_tensor = torch.reshape(torch.Tensor(t_span), [1, n, 1]).to(active_device) #T_span needs to be converted to tensor object. Additionally, facilitates conversion of I_S and I_D to tensor objects.
@@ -46,9 +47,9 @@ temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 niter = 100
 piter = 0
 pretrain_lr = 1e-2 #Norm regularization learning rate
-train_lr = 5e-4 #ELBO learning rate
-batch_size = 15 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
-eval_batch_size = 15
+train_lr = 1e-4 #ELBO learning rate
+batch_size = 10 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
+eval_batch_size = 10
 obs_error_scale = 0.1 #Observation (y) standard deviation.
 prior_scale_factor = 0.1 #Proportion of prior standard deviation to prior means.
 num_layers = 5 #5 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
