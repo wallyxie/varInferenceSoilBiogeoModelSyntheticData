@@ -92,7 +92,6 @@ i_d_tensor = i_d(t_span_tensor).to(active_device) #Exogenous DOC input function
 #Generate observation model.
 obs_times, obs_means_noCO2, obs_error = csv_to_obs_df('trunc_sample_y_from_x_t_2000_dt_0-02.csv', state_dim_SCON, t, obs_error_scale)
 obs_model = ObsModel(active_device, TIMES = obs_times, DT = dt_flow, MU = obs_means_noCO2, SCALE = obs_error).to(active_device) 
-torch.save(obs_model, 'obs_model.pt')
 
 #Call training loop function for SCON-C.
 net, obs_model, ELBO_hist, list_theta, list_parent_loc_scale = train(active_device, pretrain_lr, train_lr, niter, piter, batch_size, num_layers,
@@ -105,7 +104,7 @@ net, obs_model, ELBO_hist, list_theta, list_parent_loc_scale = train(active_devi
 now = datetime.now()
 now_string = now.strftime("%Y_%m_%d_%H_%M_%S")
 save_string = f'out_iter_{niter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_{now_string}.pt'
-torch.save((net, obs_model, ELBO_hist, list_theta, list_parent_loc_scale), save_string)
+torch.save((net, ELBO_hist, list_theta, list_parent_loc_scale), save_string)
 
 #Release some CUDA memory and load .pt files.
 #torch.cuda.empty_cache()
