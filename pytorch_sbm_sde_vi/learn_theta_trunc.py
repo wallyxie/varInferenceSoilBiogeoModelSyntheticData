@@ -31,7 +31,7 @@ if torch.cuda.is_available():
 torch.set_printoptions(precision = 8)
 
 #Neural SDE parameters
-dt_flow = 0.5 #Increased from 0.1 to reduce memory.
+dt_flow = 0.2 #Increased from 0.1 to reduce memory.
 t = 200 #2000. #In hours.
 n = int(t / dt_flow) + 1
 t_span = np.linspace(0, t, n)
@@ -44,10 +44,10 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-niter = 100000
+niter = 90000
 piter = 0
 pretrain_lr = 1e-3 #Norm regularization learning rate
-train_lr = 2e-5 #ELBO learning rate
+train_lr = 2.5e-5 #ELBO learning rate
 batch_size = 11 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
 eval_batch_size = 11
 obs_error_scale = 0.1 #Observation (y) standard deviation.
@@ -103,14 +103,20 @@ net, obs_model, ELBO_hist, list_theta, list_parent_loc_scale = train(active_devi
 #Save net and ELBO files.
 now = datetime.now()
 now_string = 'trunc_' + now.strftime('%Y_%m_%d_%H_%M_%S')
-
-save_string = f'out_iter_{niter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_{now_string}.pt'
-torch.save((net, ELBO_hist, list_theta, list_parent_loc_scale), save_string)
+save_string = f'_iter_{niter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_{now_string}.pt'
+net_save_string = 'net' + save_string
+ELBO_save_string = 'ELBO' + save_string
+theta_lists_save_string = 'theta_lists' + save_string
+#torch.save((net, ELBO_hist, list_theta, list_parent_loc_scale), save_string)
+torch.save(net, net_save_string)
+torch.save(ELBO_hist, ELBO_save_string)
+torch.save((list_theta, list_parent_loc_scale), theta_lists_save_string)
 
 #Release some CUDA memory and load .pt files.
-#torch.cuda.empty_cache()
-#net, obs_model, ELBO_hist = torch.load(save_string)
-#net.to(active_device)
+torch.cuda.empty_cache()
+net = torch.load(net_save_string)
+net.to(active_device)
+ELBO_hist = torch.load(ELBO_save_string)
 
 #Plot training posterior results and ELBO history.
 net.eval()
