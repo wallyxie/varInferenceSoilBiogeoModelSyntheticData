@@ -106,8 +106,8 @@ class MeanFieldTruncNorm(nn.Module):
             upper_bounds.append(upper)            
 
         self.means = nn.Parameter(torch.Tensor(means).to(DEVICE))
-        #self.sds = nn.Parameter(torch.Tensor(sds).to(DEVICE))
-        self.sds = torch.Tensor(sds).to(DEVICE)
+        self.sds = nn.Parameter(torch.Tensor(sds).to(DEVICE))
+        #self.sds = torch.Tensor(sds).to(DEVICE)
         self.lowers = torch.Tensor(lower_bounds).to(DEVICE)
         self.uppers = torch.Tensor(upper_bounds).to(DEVICE)
         
@@ -117,7 +117,7 @@ class MeanFieldTruncNorm(nn.Module):
     def forward(self, N = 10): #N should be assigned batch size in `train` function from training.py.
         #Update posterior.
         parent_loc = self.means
-        parent_scale = LowerBound.apply(self.sds, 1e-5)
+        parent_scale = LowerBound.apply(self.sds, 1e-6)
         q_dist = TruncatedNormal(loc = parent_loc, scale = parent_scale, a = self.lowers, b = self.uppers)
         #Sample theta ~ q(theta).
         samples = q_dist.rsample([N])
