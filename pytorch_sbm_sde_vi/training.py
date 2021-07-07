@@ -156,7 +156,7 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
 
                 ELBO.backward()
                 if LEARN_THETA:
-                    torch.nn.utils.clip_grad_norm_(ELBO_params, 3.0)
+                    torch.nn.utils.clip_grad_norm_(ELBO_params, 5.0)
                 else:
                     torch.nn.utils.clip_grad_norm_(net.parameters(), 3.0)
                 ELBO_optimizer.step()
