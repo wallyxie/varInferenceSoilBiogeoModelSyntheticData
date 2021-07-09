@@ -31,13 +31,10 @@ def calc_log_lik(C_PATH, T_SPAN_TENSOR, DT, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR,
 
 def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LAYERS,
           STATE_DIM, OBS_CSV_STR, OBS_ERROR_SCALE, PRIOR_SCALE_FACTOR, T, DT, N, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF,
-          DRIFT_DIFFUSION, INIT_PRIOR, PARAM_PRIOR_MEANS_DICT,
+          DRIFT_DIFFUSION, INIT_PRIOR, PRIOR_DICT,
           LEARN_THETA = False, LR_DECAY = 0.9, DECAY_STEP_SIZE = 1000, PRINT_EVERY = 10):
     if PRETRAIN_ITER >= NITER:
         raise ValueError('PRETRAIN_ITER must be < NITER.')
-
-    #Convert prior means dictionary values to tensor.
-    prior_means_tensor = torch.tensor([v for v, _, _ in PARAM_PRIOR_MEANS_DICT.values()]).to(DEVICE)
 
     #Read in data to obtain y and establish observation model.
     obs_times, obs_means_noCO2, obs_error = csv_to_obs_df(OBS_CSV_STR, STATE_DIM, T, OBS_ERROR_SCALE) #csv_to_obs_df function in obs_and_flow module
@@ -48,12 +45,21 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
     net = SDEFlow(DEVICE, obs_model, STATE_DIM, T, DT, N, num_layers = NUM_LAYERS).to(DEVICE)
     
     if LEARN_THETA:
-        priors = D.normal.Normal(prior_means_tensor, prior_means_tensor * PRIOR_SCALE_FACTOR)
+        #Convert prior means dictionary values to tensor.
+        #prior_means_tensor = torch.tensor([v for v, _, _ in PRIOR_DICT.values()]).to(DEVICE)
+
+        # Ensure consistent order b/w prior p and variational posterior q
+        param_names = list(PRIOR_DICT.keys())
+
+        # Define prior
+        #priors = D.normal.Normal(prior_means_tensor, prior_means_tensor * PRIOR_SCALE_FACTOR)
+        priors = BoundedNormal(DEVICE, param_names, PRIOR_DICT)
+
         # Initialize posterior q(theta) using its prior p(theta)
-        q_theta = MeanField(DEVICE, PARAM_PRIOR_MEANS_DICT, PRIOR_SCALE_FACTOR)
+        q_theta = MeanField(DEVICE, param_names, PRIOR_DICT)
     else:
         #Establish initial dictionary of theta means in tensor form.
-        theta_dict = {k: torch.tensor(v).to(DEVICE).expand(BATCH_SIZE) for k, (v, _, _) in PARAM_PRIOR_MEANS_DICT.items()}
+        theta_dict = {k: torch.tensor(v).to(DEVICE).expand(BATCH_SIZE) for k, (v, _, _) in PRIOR_DICT.items()}
         q_theta = None
 
     #Record loss throughout training
@@ -70,7 +76,7 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
     else:
         ELBO_optimizer = optim.Adam(net.parameters(), lr = ELBO_LR)
 
-    #C0 = ANALYTICAL_STEADY_STATE_INIT(I_S_TENSOR[0, 0, 0].item(), I_D_TENSOR[0, 0, 0].item(), PARAM_PRIOR_MEANS_DICT) #Calculate deterministic initial conditions.
+    #C0 = ANALYTICAL_STEADY_STATE_INIT(I_S_TENSOR[0, 0, 0].item(), I_D_TENSOR[0, 0, 0].item(), PRIOR_DICT) #Calculate deterministic initial conditions.
     #C0 = C0[(None,) * 2].repeat(BATCH_SIZE, 1, 1).to(DEVICE) #Assign initial conditions to C_PATH.
     
     #Training loop
@@ -117,10 +123,10 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
 
                 if LEARN_THETA:
                     theta_dict, theta, log_q_theta = q_theta(BATCH_SIZE)
-                    print('\ntheta_dict = ', theta_dict)
+                    #print('\ntheta_dict = ', theta_dict)
                     log_p_theta = priors.log_prob(theta).sum(-1)
                 else:
-                    log_q_theta, log_p_theta = torch.zeros(2).to(DEVICE)                    
+                    log_q_theta, log_p_theta = torch.zeros(2).to(DEVICE)
 
                 log_lik, drift, diffusion_sqrt = calc_log_lik(C_PATH, T_SPAN_TENSOR.to(DEVICE), DT, I_S_TENSOR.to(DEVICE), I_D_TENSOR.to(DEVICE),
                                        TEMP_TENSOR, TEMP_REF, DRIFT_DIFFUSION, INIT_PRIOR, theta_dict)
@@ -131,14 +137,17 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
                 ELBO_losses.append(ELBO.item())
 
                 if (it + 1) % PRINT_EVERY == 0:
-                    print('log_prob.mean() =', log_prob.mean())
-                    print('log_lik.mean() =', log_lik.mean())
-                    print('obs_model(C_PATH, theta_dict) =', obs_model(C_PATH, theta_dict))                    
+                    #print('log_prob.mean() =', log_prob.mean())
+                    #print('log_lik.mean() =', log_lik.mean())
+                    #print('obs_model(C_PATH, theta_dict) =', obs_model(C_PATH, theta_dict))                    
                     #print('drift = ', drift)
                     #print('diffusion_sqrt = ', diffusion_sqrt)                    
                     print(f'Moving average ELBO loss at {it + 1} iterations is: {sum(ELBO_losses[-10:]) / len(ELBO_losses[-10:])}. Best ELBO loss value is: {best_loss_ELBO}.')
                     print('\nC_PATH mean =', C_PATH.mean(-2))
                     print('\nC_PATH =', C_PATH)
+
+                    if LEARN_THETA:
+                        print('\ntheta_dict = ', {key: theta_dict[key].mean() for key in param_names})
 
                 ELBO.backward()
                 if LEARN_THETA:
