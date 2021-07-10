@@ -34,10 +34,9 @@ def calc_log_lik(C_PATH, T_SPAN_TENSOR, DT, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR,
     return ll, drift, diffusion_sqrt
 
 def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LAYERS,
-          STATE_DIM, OBS_CSV_STR, OBS_ERROR_SCALE, PRIOR_SCALE_FACTOR, T, DT, N, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF,
-          DRIFT_DIFFUSION, INIT_PRIOR, PARAM_PRIORS_DETAILS_DICT,
-          LEARN_THETA = False, LR_DECAY = 0.95, DECAY_STEP_SIZE = 5000, PRINT_EVERY = 10):
-
+          STATE_DIM, OBS_CSV_STR, OBS_ERROR_SCALE, T, DT, N, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF,
+          DRIFT_DIFFUSION, INIT_PRIOR, PRIOR_DICT,
+          LEARN_THETA = False, LR_DECAY = 0.9, DECAY_STEP_SIZE = 1000, PRINT_EVERY = 10):
     if PRETRAIN_ITER >= NITER:
         raise ValueError('PRETRAIN_ITER must be < NITER.')
 
@@ -54,12 +53,19 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
     net = SDEFlow(DEVICE, obs_model, STATE_DIM, T, DT, N, num_layers = NUM_LAYERS).to(DEVICE)
     
     if LEARN_THETA:
+        # Ensure consistent order b/w prior p and variational posterior q
+        param_names = list(PRIOR_DICT.keys())
+
+        # Define prior
         priors = TruncatedNormal(loc = prior_means_tensor, scale = prior_sds_tensor, a = prior_lowers_tensor, b = prior_uppers_tensor)
+        #priors = BoundedNormal(DEVICE, param_names, PRIOR_DICT)
+
         # Initialize posterior q(theta) using its prior p(theta)
         q_theta = MeanFieldTruncNorm(DEVICE, PARAM_PRIORS_DETAILS_DICT) 
+        #q_theta = MeanField(DEVICE, param_names, PRIOR_DICT)
     else:
         #Establish initial dictionary of theta means in tensor form.
-        theta_dict = {k: torch.tensor(v).to(DEVICE).expand(BATCH_SIZE) for k, (v, _, _, _) in PARAM_PRIORS_DETAILS_DICT.items()}
+        theta_dict = {k: torch.tensor(v).to(DEVICE).expand(BATCH_SIZE) for k, (v, _, _) in PRIOR_DICT.items()}
         q_theta = None
 
     #Record loss throughout training
@@ -75,9 +81,6 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
         ELBO_optimizer = optim.Adam(ELBO_params, lr = ELBO_LR)
     else:
         ELBO_optimizer = optim.Adam(net.parameters(), lr = ELBO_LR)
-
-    #C0 = ANALYTICAL_STEADY_STATE_INIT(I_S_TENSOR[0, 0, 0].item(), I_D_TENSOR[0, 0, 0].item(), PARAM_PRIORS_DETAILS_DICT) #Calculate deterministic initial conditions.
-    #C0 = C0[(None,) * 2].repeat(BATCH_SIZE, 1, 1).to(DEVICE) #Assign initial conditions to C_PATH.
     
     #Training loop
     with tqdm(total = NITER, desc = f'Train Diffusion', position = -1) as tq:
@@ -127,12 +130,13 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
                 parent_loc_scale_dict = None #Initiate parent_loc_scale_dict variable for printing in PRINT_EVERY loop.
 
                 if LEARN_THETA:
+                    #theta_dict, theta, log_q_theta = q_theta(BATCH_SIZE)
                     theta_dict, theta, log_q_theta, parent_loc_scale_dict = q_theta(BATCH_SIZE)
                     log_p_theta = priors.log_prob(theta).sum(-1)
                     list_theta.append(theta_dict)
                     list_parent_loc_scale.append(parent_loc_scale_dict)
                 else:
-                    log_q_theta, log_p_theta = torch.zeros(2).to(DEVICE)                    
+                    log_q_theta, log_p_theta = torch.zeros(2).to(DEVICE)
 
                 log_lik, drift, diffusion_sqrt = calc_log_lik(C_PATH, T_SPAN_TENSOR.to(DEVICE), DT, I_S_TENSOR.to(DEVICE), I_D_TENSOR.to(DEVICE),
                                        TEMP_TENSOR, TEMP_REF, DRIFT_DIFFUSION, INIT_PRIOR, theta_dict)
@@ -153,6 +157,9 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
                     print(f'\nMoving average ELBO loss at {it + 1} iterations is: {sum(ELBO_losses[-10:]) / len(ELBO_losses[-10:])}. Best ELBO loss value is: {best_loss_ELBO}.')
                     print('\nC_PATH mean =', C_PATH.mean(-2))
                     print('\nC_PATH =', C_PATH)
+
+                    if LEARN_THETA:
+                        print('\ntheta_dict = ', {key: theta_dict[key].mean() for key in param_names})
 
                 ELBO.backward()
                 if LEARN_THETA:

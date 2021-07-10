@@ -42,11 +42,11 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-niter = 2000
+niter = 5000
 piter = 0
 pretrain_lr = 1e-2 #Norm regularization learning rate
-train_lr = 5e-4 #ELBO learning rate
-batch_size = 10 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
+train_lr = 1e-4 #ELBO learning rate
+batch_size = 5 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
 eval_batch_size = 10
 obs_error_scale = 0.1 #Observation (y) standard deviation.
 prior_scale_factor = 0.1 #Proportion of prior standard deviation to prior means.
@@ -74,6 +74,11 @@ c_MBC = 0.0005, 0, 1
 
 SCON_C_params_dict = {'u_M': u_M, 'a_SD': a_SD, 'a_DS': a_DS, 'a_M': a_M, 'a_MSC': a_MSC, 'k_S_ref': k_S_ref, 'k_D_ref': k_D_ref, 'k_M_ref': k_M_ref, 'Ea_S': Ea_S, 'Ea_D': Ea_D, 'Ea_M': Ea_M, 'c_SOC': c_SOC, 'c_DOC': c_DOC, 'c_MBC': c_MBC}
 
+# Add standard deviations, which for now is defined as mean * prior_scale_factor
+SCON_C_priors_dict = {}
+for key, (mean, lower, upper) in SCON_C_params_dict.items():
+	SCON_C_priors_dict[key] = (mean, mean * prior_scale_factor, lower, upper)
+
 #Initial condition prior means
 x0_SCON = [65, 0.4, 2.5]
 x0_SCON_tensor = torch.tensor(x0_SCON).to(active_device)
@@ -95,10 +100,10 @@ torch.save(obs_model, 'obs_model.pt')
 
 #Call training loop function for SCON-C.
 net, obs_model, ELBO_hist = train(active_device, pretrain_lr, train_lr, niter, piter, batch_size, num_layers,
-          state_dim_SCON, 'y_from_x_t_5000_dt_0-01.csv', obs_error_scale, prior_scale_factor, t, dt_flow, n, 
-          t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
-          drift_diffusion_SCON_C, x0_prior_SCON, SCON_C_params_dict,
-          LEARN_THETA = learn_theta, LR_DECAY = 1.0, DECAY_STEP_SIZE = 10000, PRINT_EVERY = 1)
+        state_dim_SCON, 'y_from_x_t_5000_dt_0-01.csv', obs_error_scale, t, dt_flow, n, 
+        t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
+        drift_diffusion_SCON_C, x0_prior_SCON, SCON_C_priors_dict,
+        LEARN_THETA = learn_theta, LR_DECAY = 0.5, DECAY_STEP_SIZE = 10000, PRINT_EVERY = 500)
 
 #Save net and ELBO files.
 now = datetime.now()

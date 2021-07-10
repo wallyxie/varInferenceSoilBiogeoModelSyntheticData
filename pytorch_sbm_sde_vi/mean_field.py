@@ -13,6 +13,36 @@ It accepts priors stored in a dictionary with parameter value names as the key a
 Posterior samples and log_q_theta are output.
 '''
 
+def logit(x, lower=0, upper=1):
+    return torch.logit((x - lower) / (upper - lower))
+
+class BoundedNormal:
+    def __init__(self, device, param_names, prior_dict):
+        means = []
+        sds = []
+        upper_bounds = []
+        lower_bounds = []
+        for key in param_names:
+            value, sd, lower, upper = prior_dict[key]
+            means.append(value)
+            sds.append(sd)
+            upper_bounds.append(upper)
+            lower_bounds.append(lower)
+
+        self.lower = torch.tensor(lower_bounds).to(device)
+        self.upper = torch.tensor(upper_bounds).to(device)
+        self.base = D.normal.Normal(self.logit(torch.tensor(means).to(device)),
+                                    torch.tensor(sds).to(device))
+
+    def logit(self, x):
+        return logit(x, lower=self.lower, upper=self.upper)
+        #torch.logit((x - self.lower) / (self.upper - self.lower))
+
+    def log_prob(self, x):
+        y = self.logit(x)
+        jac = (self.upper - self.lower)/((x-self.lower)*(self.upper-x))
+        return self.base.log_prob(y) + torch.log(jac)
+
 class BoundedSigmoid(nn.Module):
 
     def __init__(self, upper, lower):
@@ -38,29 +68,34 @@ class BoundedSigmoid(nn.Module):
         return torch.log(ildj)
 
 class MeanField(nn.Module):
-
-    def __init__(self, device, init_params, sdev_scale_factor):
+    def __init__(self, device, param_names, init_dict):
         super().__init__()
 
         #Use param dict to intialise the means for the mean-field approximations.
         # init_params: name -> (init_value, lower, upper)
-        keys = []
         means = []
+        sds = []
         upper_bounds = []
         lower_bounds = []
-        for key, (value, lower, upper) in init_params.items():
-            keys.append(key)
+        for key in param_names:
+            value, sd, lower, upper = init_dict[key]
             means.append(value)
+            sds.append(sd)
             upper_bounds.append(upper)
             lower_bounds.append(lower)
 
-        self.means = nn.Parameter(torch.Tensor(means).to(device))
-        self.sds = nn.Parameter(self.means * sdev_scale_factor)
-        self.sigmoid = BoundedSigmoid(torch.tensor(upper_bounds).to(device),
-                                      torch.tensor(lower_bounds).to(device))
+        lower_bounds = torch.tensor(lower_bounds).to(device)
+        upper_bounds = torch.tensor(upper_bounds).to(device)
+        logit_means = logit(torch.tensor(means).to(device),
+                            lower=lower_bounds, upper=upper_bounds)
+        sds = torch.tensor(sds).to(device)
+        
+        self.means = nn.Parameter(logit_means)
+        self.sds = nn.Parameter(sds)
+        self.sigmoid = BoundedSigmoid(upper_bounds, lower_bounds)
         
         #Save keys for forward output.
-        self.keys = keys
+        self.keys = param_names
 
     def forward(self, n = 10):
         #Update posterior.
