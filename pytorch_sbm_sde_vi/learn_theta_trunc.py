@@ -32,7 +32,7 @@ torch.set_printoptions(precision = 8)
 
 #Neural SDE parameters
 dt_flow = 0.5 #Increased from 0.1 to reduce memory.
-t = 2000 #2000. #In hours.
+t = 1000 #2000. #In hours.
 n = int(t / dt_flow) + 1
 t_span = np.linspace(0, t, n)
 t_span_tensor = torch.reshape(torch.Tensor(t_span), [1, n, 1]).to(active_device) #T_span needs to be converted to tensor object. Additionally, facilitates conversion of I_S and I_D to tensor objects.
@@ -44,10 +44,10 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-niter = 2000000
+niter = 1500000
 piter = 0
 pretrain_lr = 1e-3 #Norm regularization learning rate
-train_lr = 1.5e-6 #ELBO learning rate
+train_lr = 1.6e-6 #ELBO learning rate
 batch_size = 10 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
 eval_batch_size = 10
 obs_error_scale = 0.1 #Observation (y) standard deviation.
