@@ -1,13 +1,17 @@
+import math
+
+from tqdm import tqdm
+
 from obs_and_flow import *
 from mean_field import *
+
 import torch
 from torch.autograd import Function
 from torch import nn
 import torch.distributions as D
 import torch.nn.functional as F
 import torch.optim as optim
-import math
-from tqdm import tqdm
+from TruncatedNormal import *
 
 '''
 This module containins the `calc_log_lik` and `training` functions for pre-training and ELBO training of the soil biogeochemical model SDE systems.
@@ -30,11 +34,15 @@ def calc_log_lik(C_PATH, T_SPAN_TENSOR, DT, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR,
     return ll, drift, diffusion_sqrt
 
 def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LAYERS,
-          STATE_DIM, OBS_CSV_STR, OBS_ERROR_SCALE, PRIOR_SCALE_FACTOR, T, DT, N, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF,
+          STATE_DIM, OBS_CSV_STR, OBS_ERROR_SCALE, T, DT, N, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF,
           DRIFT_DIFFUSION, INIT_PRIOR, PRIOR_DICT,
           LEARN_THETA = False, LR_DECAY = 0.9, DECAY_STEP_SIZE = 1000, PRINT_EVERY = 10):
     if PRETRAIN_ITER >= NITER:
         raise ValueError('PRETRAIN_ITER must be < NITER.')
+
+    #Convert prior details dictionary values to tensors.
+    prior_means_list, prior_sds_list, prior_lowers_list, prior_uppers_list = list(zip(*PARAM_PRIORS_DETAILS_DICT.values())) #Unzip prior distribution details from dictionary values into individual lists.
+    prior_means_tensor, prior_sds_tensor, prior_lowers_tensor, prior_uppers_tensor = torch.tensor([prior_means_list, prior_sds_list, prior_lowers_list, prior_uppers_list]).to(DEVICE) #Ensure conversion of lists into tensors.
 
     #Read in data to obtain y and establish observation model.
     obs_times, obs_means_noCO2, obs_error = csv_to_obs_df(OBS_CSV_STR, STATE_DIM, T, OBS_ERROR_SCALE) #csv_to_obs_df function in obs_and_flow module
@@ -45,18 +53,16 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
     net = SDEFlow(DEVICE, obs_model, STATE_DIM, T, DT, N, num_layers = NUM_LAYERS).to(DEVICE)
     
     if LEARN_THETA:
-        #Convert prior means dictionary values to tensor.
-        #prior_means_tensor = torch.tensor([v for v, _, _ in PRIOR_DICT.values()]).to(DEVICE)
-
         # Ensure consistent order b/w prior p and variational posterior q
         param_names = list(PRIOR_DICT.keys())
 
         # Define prior
-        #priors = D.normal.Normal(prior_means_tensor, prior_means_tensor * PRIOR_SCALE_FACTOR)
-        priors = BoundedNormal(DEVICE, param_names, PRIOR_DICT)
+        priors = TruncatedNormal(loc = prior_means_tensor, scale = prior_sds_tensor, a = prior_lowers_tensor, b = prior_uppers_tensor)
+        #priors = BoundedNormal(DEVICE, param_names, PRIOR_DICT)
 
         # Initialize posterior q(theta) using its prior p(theta)
-        q_theta = MeanField(DEVICE, param_names, PRIOR_DICT)
+        q_theta = MeanFieldTruncNorm(DEVICE, PARAM_PRIORS_DETAILS_DICT) 
+        #q_theta = MeanField(DEVICE, param_names, PRIOR_DICT)
     else:
         #Establish initial dictionary of theta means in tensor form.
         theta_dict = {k: torch.tensor(v).to(DEVICE).expand(BATCH_SIZE) for k, (v, _, _) in PRIOR_DICT.items()}
@@ -75,9 +81,6 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
         ELBO_optimizer = optim.Adam(ELBO_params, lr = ELBO_LR)
     else:
         ELBO_optimizer = optim.Adam(net.parameters(), lr = ELBO_LR)
-
-    #C0 = ANALYTICAL_STEADY_STATE_INIT(I_S_TENSOR[0, 0, 0].item(), I_D_TENSOR[0, 0, 0].item(), PRIOR_DICT) #Calculate deterministic initial conditions.
-    #C0 = C0[(None,) * 2].repeat(BATCH_SIZE, 1, 1).to(DEVICE) #Assign initial conditions to C_PATH.
     
     #Training loop
     with tqdm(total = NITER, desc = f'Train Diffusion', position = -1) as tq:
@@ -119,12 +122,19 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
                 #x_0 = C_PATH[:, 0, :]
                 #x_0_prior = D.normal.Normal(loc = x_0, scale = x_0 * OBS_ERROR_SCALE)
                 #log p(y_0 | x_0, theta)
-                #log_p_y_0 = x_0_prior.log_prob(obs_model.mu[:, 0]).sum(-1)  
+                #log_p_y_0 = x_0_prior.log_prob(obs_model.mu[:, 0]).sum(-1)
+
+                list_theta = []
+                list_parent_loc_scale = []
+                theta_dict = None #Initiate theta_dict variable for printing in PRINT_EVERY loop.
+                parent_loc_scale_dict = None #Initiate parent_loc_scale_dict variable for printing in PRINT_EVERY loop.
 
                 if LEARN_THETA:
-                    theta_dict, theta, log_q_theta = q_theta(BATCH_SIZE)
-                    #print('\ntheta_dict = ', theta_dict)
+                    #theta_dict, theta, log_q_theta = q_theta(BATCH_SIZE)
+                    theta_dict, theta, log_q_theta, parent_loc_scale_dict = q_theta(BATCH_SIZE)
                     log_p_theta = priors.log_prob(theta).sum(-1)
+                    list_theta.append(theta_dict)
+                    list_parent_loc_scale.append(parent_loc_scale_dict)
                 else:
                     log_q_theta, log_p_theta = torch.zeros(2).to(DEVICE)
 
@@ -141,8 +151,10 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
                     #print('log_lik.mean() =', log_lik.mean())
                     #print('obs_model(C_PATH, theta_dict) =', obs_model(C_PATH, theta_dict))                    
                     #print('drift = ', drift)
-                    #print('diffusion_sqrt = ', diffusion_sqrt)                    
-                    print(f'Moving average ELBO loss at {it + 1} iterations is: {sum(ELBO_losses[-10:]) / len(ELBO_losses[-10:])}. Best ELBO loss value is: {best_loss_ELBO}.')
+                    #print('diffusion_sqrt = ', diffusion_sqrt)
+                    print('\ntheta_dict = ', theta_dict)
+                    print('\nparent_loc_scale_dict = ', parent_loc_scale_dict)
+                    print(f'\nMoving average ELBO loss at {it + 1} iterations is: {sum(ELBO_losses[-10:]) / len(ELBO_losses[-10:])}. Best ELBO loss value is: {best_loss_ELBO}.')
                     print('\nC_PATH mean =', C_PATH.mean(-2))
                     print('\nC_PATH =', C_PATH)
 
@@ -151,7 +163,7 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
 
                 ELBO.backward()
                 if LEARN_THETA:
-                    torch.nn.utils.clip_grad_norm_(ELBO_params, 3.0)
+                    torch.nn.utils.clip_grad_norm_(ELBO_params, 5.0)
                 else:
                     torch.nn.utils.clip_grad_norm_(net.parameters(), 3.0)
                 ELBO_optimizer.step()
@@ -161,4 +173,4 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
 
             tq.update()
             
-    return net, obs_model, ELBO_losses
+    return net, obs_model, ELBO_losses, list_theta, list_parent_loc_scale
