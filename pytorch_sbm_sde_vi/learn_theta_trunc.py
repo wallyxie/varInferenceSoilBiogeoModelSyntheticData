@@ -104,10 +104,12 @@ now = datetime.now()
 now_string = 'trunc_' + now.strftime('%Y_%m_%d_%H_%M_%S')
 save_string = f'_iter_{niter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_{now_string}.pt'
 net_save_string = 'net' + save_string
+obs_model_save_string = 'obs_model' + save_string
 ELBO_save_string = 'ELBO' + save_string
 theta_lists_save_string = 'theta_lists' + save_string
 #torch.save((net, ELBO_hist, list_theta, list_parent_loc_scale), save_string)
 torch.save(net, net_save_string)
+torch.save(obs_model, obs_model_save_string) 
 torch.save(ELBO_hist, ELBO_save_string)
 torch.save((list_theta, list_parent_loc_scale), theta_lists_save_string)
 
@@ -115,6 +117,8 @@ torch.save((list_theta, list_parent_loc_scale), theta_lists_save_string)
 torch.cuda.empty_cache()
 net = torch.load(net_save_string)
 net.to(active_device)
+obs_model = torch.load(obs_model_save_string)
+obs_model.to(active_device)
 ELBO_hist = torch.load(ELBO_save_string)
 
 #Plot training posterior results and ELBO history.
