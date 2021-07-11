@@ -158,8 +158,8 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
                     print('\nC_PATH =', C_PATH)
 
                     if LEARN_THETA:
-                        print('\ntheta_dict = ', {key: theta_dict[key].mean() for key in param_names})
-                        print('\nparent_loc_scale_dict = ', parent_loc_scale_dict)
+                        print('\ntheta_dict means: ', {key: theta_dict[key].mean() for key in param_names})
+                        print('\nparent_loc_scale_dict: ', parent_loc_scale_dict)
 
                 ELBO.backward()
                 if LEARN_THETA:
