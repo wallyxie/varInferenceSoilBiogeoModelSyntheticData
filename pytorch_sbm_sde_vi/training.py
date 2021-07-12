@@ -51,7 +51,7 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
     
     if LEARN_THETA:
         # Ensure consistent order b/w prior p and variational posterior q
-        param_names = list(PARAM_PRIORS_DETAILS_DICT.keys())
+        param_names = list(PRIOR_DICT.keys())
 
         #Convert prior details dictionary values to tensors.
         prior_list = list(zip(*(PRIOR_DICT[k] for k in param_names))) #Unzip prior distribution details from dictionary values into individual lists.
@@ -66,7 +66,7 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
         #q_theta = MeanField(DEVICE, param_names, PRIOR_DICT)
     else:
         #Establish initial dictionary of theta means in tensor form.
-        theta_dict = {k: torch.tensor(v).to(DEVICE).expand(BATCH_SIZE) for k, (v, _, _) in PARAM_PRIORS_DETAILS_DICT.items()}
+        theta_dict = {k: torch.tensor(v).to(DEVICE).expand(BATCH_SIZE) for k, (v, _, _) in PRIOR_DICT.items()}
         q_theta = None
 
     #Record loss throughout training
