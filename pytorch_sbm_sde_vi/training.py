@@ -4,7 +4,6 @@ from tqdm import tqdm
 
 from obs_and_flow import *
 from mean_field import *
-from mean_field_tmp import *
 
 import torch
 from torch.autograd import Function
@@ -50,14 +49,17 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
     net = SDEFlow(DEVICE, obs_model, STATE_DIM, T, DT, N, num_layers = NUM_LAYERS).to(DEVICE)
     
     if LEARN_THETA:
-        # Ensure consistent order b/w prior p and variational posterior q
+        #Ensure consistent order b/w prior p and variational posterior q
         param_names = list(PRIOR_DICT.keys())
 
         #Convert prior details dictionary values to tensors.
         prior_list = list(zip(*(PRIOR_DICT[k] for k in param_names))) #Unzip prior distribution details from dictionary values into individual lists.
         prior_means_tensor, prior_sds_tensor, prior_lowers_tensor, prior_uppers_tensor = torch.tensor(prior_list).to(DEVICE) #Ensure conversion of lists into tensors.
 
-        # Define prior
+        #Define prior
+        dist_class_dict = {'TruncatedNormal': TruncatedNormal, 'RescaledLogitNormal': RescaledLogitNormal} #Retrieve desired distribution class based on string.
+        THETA_DIST = dist_class_dict[THETA_DIST]
+
         priors = THETA_DIST(loc = prior_means_tensor, scale = prior_sds_tensor, a = prior_lowers_tensor, b = prior_uppers_tensor)
         #priors = BoundedNormal(DEVICE, param_names, PRIOR_DICT)
 
@@ -131,14 +133,15 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
                 parent_loc_scale_dict = None #Initiate parent_loc_scale_dict variable for printing in PRINT_EVERY loop.
 
                 if LEARN_THETA:
-                    theta_dict, theta, log_q_theta = q_theta(BATCH_SIZE)
+                    theta_dict, theta, log_q_theta, parent_loc_scale_dict = q_theta(BATCH_SIZE)
                     #theta_dict1, theta1, log_q_theta1 = q_theta1(BATCH_SIZE)
                     
                     log_p_theta = priors.log_prob(theta).sum(-1)
                     #log_p_theta1 = priors.log_prob(theta1).sum(-1)
                     #print(it, log_q_theta, log_p_theta)
                     #list_theta.append(theta_dict)
-                    #list_parent_loc_scale.append(parent_loc_scale_dict)
+                    list_parent_loc_scale.append(parent_loc_scale_dict)
+
                 else:
                     log_q_theta, log_p_theta = torch.zeros(2).to(DEVICE)
 
@@ -176,4 +179,4 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
 
             tq.update()
             
-    return net, q_theta, obs_model, ELBO_losses #, list_parent_loc_scale
+    return net, q_theta, obs_model, ELBO_losses, list_parent_loc_scale

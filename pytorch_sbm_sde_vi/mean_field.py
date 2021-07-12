@@ -1,9 +1,9 @@
-from obs_and_flow import LowerBound
-
 import torch
 from torch import nn
 from obs_and_flow import LowerBound
 import torch.distributions as D
+from TruncatedNormal import *
+from LogitNormal import *
 from torch.autograd import Function
 
 '''
@@ -22,9 +22,8 @@ class MeanField(nn.Module):
 
     def __init__(self, DEVICE, PARAM_NAMES, INIT_DICT, DIST_CLASS):
         super().__init__()
-
-        # Use param dict to intialise the means for the mean-field approximations.
-        # init_params: name -> (parent mean, parent sd, true lower, true upper)
+        #Use param dict to intialise the means for the mean-field approximations.
+        #init_params: name -> (parent mean, parent sd, true lower, true upper)
         means = []
         sds = []
         lower_bounds = []        
@@ -42,11 +41,11 @@ class MeanField(nn.Module):
         self.lowers = torch.Tensor(lower_bounds).to(DEVICE)
         self.uppers = torch.Tensor(upper_bounds).to(DEVICE)
         
-        # Save keys for forward output.
+        #Save keys for forward output.
         self.keys = PARAM_NAMES
 
     def forward(self, N = 10): # N should be assigned batch size in `train` function from training.py.
-        # Update posterior.
+        #Update posterior.
         parent_loc = self.means
         parent_scale = LowerBound.apply(self.sds, 1e-6)
         q_dist = self.dist(parent_loc, parent_scale, a = self.lowers, b = self.uppers)
@@ -67,4 +66,4 @@ class MeanField(nn.Module):
             dict_parent_loc_scale[f'{key}'] = loc_scale
         
         # Return samples in dictionary and tensor format.
-        return dict_out, samples, log_q_theta #, dict_parent_loc_scale
+        return dict_out, samples, log_q_theta, dict_parent_loc_scale

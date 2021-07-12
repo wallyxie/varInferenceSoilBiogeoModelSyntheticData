@@ -54,7 +54,7 @@ eval_batch_size = 10
 obs_error_scale = 0.1 #Observation (y) standard deviation.
 prior_scale_factor = 0.1 #Proportion of prior standard deviation to prior means.
 num_layers = 5 #5 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
-theta_dist = 'TruncatedNormal' #String needs to be exact name of the distribution class. Other option is 'RescaledLogitNormal'.
+theta_dist = 'RescaledLogitNormal' #String needs to be exact name of the distribution class. Other option is 'RescaledLogitNormal'.
 
 #SCON theta truncated normal distribution parameter details in order of mean, lower, and upper. Distribution sdev assumed to be some proportion of the mean. 
 u_M_details = torch.Tensor([0.001, 0.001 * prior_scale_factor, 0, 0.01])
@@ -103,7 +103,7 @@ net, q_theta, obs_model, ELBO_hist, list_parent_loc_scale = train(active_device,
 
 #Save net and ELBO files.
 now = datetime.now()
-now_string = 'trunc_' + now.strftime('%Y_%m_%d_%H_%M_%S')
+now_string = 'logit_' + now.strftime('%Y_%m_%d_%H_%M_%S')
 save_string = f'_iter_{niter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_{now_string}.pt'
 net_save_string = 'net' + save_string
 q_theta_save_string = 'q_theta' + save_string
