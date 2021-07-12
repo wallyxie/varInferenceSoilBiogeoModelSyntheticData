@@ -8,6 +8,8 @@ import torch.distributions as D
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.autograd import Function
+from TruncatedNormal import *
+from LogitNormal import *
 
 import numpy as np
 import pandas as pd
@@ -52,6 +54,7 @@ obs_error_scale = 0.1 #Observation (y) standard deviation.
 prior_scale_factor = 0.1 #Proportion of prior standard deviation to prior means.
 num_layers = 5 #5 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
 learn_theta = True
+theta_dist = RescaledLogitNormal
 
 #SBM prior means
 #System parameters from deterministic CON model
@@ -77,7 +80,9 @@ SCON_C_params_dict = {'u_M': u_M, 'a_SD': a_SD, 'a_DS': a_DS, 'a_M': a_M, 'a_MSC
 # Add standard deviations, which for now is defined as mean * prior_scale_factor
 SCON_C_priors_dict = {}
 for key, (mean, lower, upper) in SCON_C_params_dict.items():
-	SCON_C_priors_dict[key] = (mean, mean * prior_scale_factor, lower, upper)
+    if theta_dist == RescaledLogitNormal:
+        logit_mean = logit(torch.tensor(mean), torch.tensor(lower), torch.tensor(upper))
+    SCON_C_priors_dict[key] = (logit_mean, mean * prior_scale_factor, lower, upper)
 
 #Initial condition prior means
 x0_SCON = [65, 0.4, 2.5]
@@ -99,17 +104,17 @@ obs_model = ObsModel(active_device, TIMES = obs_times, DT = dt_flow, MU = obs_me
 torch.save(obs_model, 'obs_model.pt')
 
 #Call training loop function for SCON-C.
-net, obs_model, ELBO_hist = train(active_device, pretrain_lr, train_lr, niter, piter, batch_size, num_layers,
+net, q_theta, obs_model, ELBO_hist = train(active_device, pretrain_lr, train_lr, niter, piter, batch_size, num_layers,
         state_dim_SCON, 'y_from_x_t_5000_dt_0-01.csv', obs_error_scale, t, dt_flow, n, 
         t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
-        drift_diffusion_SCON_C, x0_prior_SCON, SCON_C_priors_dict,
+        drift_diffusion_SCON_C, x0_prior_SCON, SCON_C_priors_dict, theta_dist,
         LEARN_THETA = learn_theta, LR_DECAY = 0.5, DECAY_STEP_SIZE = 10000, PRINT_EVERY = 500)
 
 #Save net and ELBO files.
 now = datetime.now()
 now_string = now.strftime("%Y_%m_%d_%H_%M_%S")
 save_string = f'out_iter_{niter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_{now_string}.pt'
-torch.save((net, obs_model, ELBO_hist), save_string)
+torch.save((net, q_theta, obs_model, ELBO_hist), save_string)
 
 #Release some CUDA memory and load .pt files.
 #torch.cuda.empty_cache()

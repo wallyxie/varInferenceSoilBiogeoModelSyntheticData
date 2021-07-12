@@ -4,6 +4,7 @@ from tqdm import tqdm
 
 from obs_and_flow import *
 from mean_field import *
+from mean_field_tmp import *
 
 import torch
 from torch.autograd import Function
@@ -11,7 +12,6 @@ from torch import nn
 import torch.distributions as D
 import torch.nn.functional as F
 import torch.optim as optim
-from TruncatedNormal import *
 
 '''
 This module containins the `calc_log_lik` and `training` functions for pre-training and ELBO training of the soil biogeochemical model SDE systems.
@@ -35,14 +35,10 @@ def calc_log_lik(C_PATH, T_SPAN_TENSOR, DT, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR,
 
 def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LAYERS,
           STATE_DIM, OBS_CSV_STR, OBS_ERROR_SCALE, T, DT, N, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF,
-          DRIFT_DIFFUSION, INIT_PRIOR, PRIOR_DICT,
+          DRIFT_DIFFUSION, INIT_PRIOR, PRIOR_DICT, THETA_DIST = None,
           LEARN_THETA = False, LR_DECAY = 0.9, DECAY_STEP_SIZE = 1000, PRINT_EVERY = 10):
     if PRETRAIN_ITER >= NITER:
         raise ValueError('PRETRAIN_ITER must be < NITER.')
-
-    #Convert prior details dictionary values to tensors.
-    prior_means_list, prior_sds_list, prior_lowers_list, prior_uppers_list = list(zip(*PARAM_PRIORS_DETAILS_DICT.values())) #Unzip prior distribution details from dictionary values into individual lists.
-    prior_means_tensor, prior_sds_tensor, prior_lowers_tensor, prior_uppers_tensor = torch.tensor([prior_means_list, prior_sds_list, prior_lowers_list, prior_uppers_list]).to(DEVICE) #Ensure conversion of lists into tensors.
 
     #Read in data to obtain y and establish observation model.
     obs_times, obs_means_noCO2, obs_error = csv_to_obs_df(OBS_CSV_STR, STATE_DIM, T, OBS_ERROR_SCALE) #csv_to_obs_df function in obs_and_flow module
@@ -56,13 +52,17 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
         # Ensure consistent order b/w prior p and variational posterior q
         param_names = list(PRIOR_DICT.keys())
 
+        #Convert prior details dictionary values to tensors.
+        prior_list = list(zip(*(PRIOR_DICT[k] for k in param_names))) #Unzip prior distribution details from dictionary values into individual lists.
+        prior_means_tensor, prior_sds_tensor, prior_lowers_tensor, prior_uppers_tensor = torch.tensor(prior_list).to(DEVICE) #Ensure conversion of lists into tensors.
+
         # Define prior
-        priors = TruncatedNormal(loc = prior_means_tensor, scale = prior_sds_tensor, a = prior_lowers_tensor, b = prior_uppers_tensor)
-        #priors = BoundedNormal(DEVICE, param_names, PRIOR_DICT)
+        priors = THETA_DIST(loc = prior_means_tensor, scale = prior_sds_tensor, a = prior_lowers_tensor, b = prior_uppers_tensor)
+        #priors1 = BoundedNormal(DEVICE, param_names, PRIOR_DICT)
 
         # Initialize posterior q(theta) using its prior p(theta)
-        q_theta = MeanFieldTruncNorm(DEVICE, PARAM_PRIORS_DETAILS_DICT) 
-        #q_theta = MeanField(DEVICE, param_names, PRIOR_DICT)
+        q_theta = MeanField(DEVICE, param_names, PRIOR_DICT, THETA_DIST)
+        #q_theta1 = MeanFieldTmp(DEVICE, param_names, PRIOR_DICT)
     else:
         #Establish initial dictionary of theta means in tensor form.
         theta_dict = {k: torch.tensor(v).to(DEVICE).expand(BATCH_SIZE) for k, (v, _, _) in PRIOR_DICT.items()}
@@ -130,11 +130,14 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
                 parent_loc_scale_dict = None #Initiate parent_loc_scale_dict variable for printing in PRINT_EVERY loop.
 
                 if LEARN_THETA:
-                    #theta_dict, theta, log_q_theta = q_theta(BATCH_SIZE)
-                    theta_dict, theta, log_q_theta, parent_loc_scale_dict = q_theta(BATCH_SIZE)
+                    theta_dict, theta, log_q_theta = q_theta(BATCH_SIZE)
+                    #theta_dict1, theta1, log_q_theta1 = q_theta1(BATCH_SIZE)
+                    
                     log_p_theta = priors.log_prob(theta).sum(-1)
-                    list_theta.append(theta_dict)
-                    list_parent_loc_scale.append(parent_loc_scale_dict)
+                    #log_p_theta1 = priors.log_prob(theta1).sum(-1)
+                    #print(it, log_q_theta, log_p_theta)
+                    #list_theta.append(theta_dict)
+                    #list_parent_loc_scale.append(parent_loc_scale_dict)
                 else:
                     log_q_theta, log_p_theta = torch.zeros(2).to(DEVICE)
 
@@ -173,4 +176,4 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
 
             tq.update()
             
-    return net, obs_model, ELBO_losses, list_theta, list_parent_loc_scale
+    return net, q_theta, obs_model, ELBO_losses #, list_parent_loc_scale
