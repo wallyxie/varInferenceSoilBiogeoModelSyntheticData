@@ -4,7 +4,6 @@ from tqdm import tqdm
 
 from obs_and_flow import *
 from mean_field import *
-from mean_field_tmp import *
 
 import torch
 from torch.autograd import Function
