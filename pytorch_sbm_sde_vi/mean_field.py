@@ -22,11 +22,8 @@ class MeanField(nn.Module):
 
     def __init__(self, DEVICE, PARAM_NAMES, INIT_DICT, DIST_CLASS):
         super().__init__()
-
-        dist_class_dict = {'TruncatedNormal': TruncatedNormal, 'RescaledLogitNormal': RescaledLogitNormal}
-
-        # Use param dict to intialise the means for the mean-field approximations.
-        # init_params: name -> (parent mean, parent sd, true lower, true upper)
+        #Use param dict to intialise the means for the mean-field approximations.
+        #init_params: name -> (parent mean, parent sd, true lower, true upper)
         means = []
         sds = []
         lower_bounds = []        
@@ -38,17 +35,17 @@ class MeanField(nn.Module):
             upper_bounds.append(upper)
             lower_bounds.append(lower)          
 
-        self.dist = dist_class_dict[DIST_CLASS]
+        self.dist = DIST_CLASS
         self.means = nn.Parameter(torch.Tensor(means).to(DEVICE))
         self.sds = nn.Parameter(torch.Tensor(sds).to(DEVICE))
         self.lowers = torch.Tensor(lower_bounds).to(DEVICE)
         self.uppers = torch.Tensor(upper_bounds).to(DEVICE)
         
-        # Save keys for forward output.
+        #Save keys for forward output.
         self.keys = PARAM_NAMES
 
     def forward(self, N = 10): # N should be assigned batch size in `train` function from training.py.
-        # Update posterior.
+        #Update posterior.
         parent_loc = self.means
         parent_scale = LowerBound.apply(self.sds, 1e-6)
         q_dist = self.dist(parent_loc, parent_scale, a = self.lowers, b = self.uppers)
