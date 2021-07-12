@@ -65,4 +65,4 @@ class MeanField(nn.Module):
             dict_parent_loc_scale[f'{key}'] = loc_scale
         
         # Return samples in dictionary and tensor format.
-        return dict_out, samples, log_q_theta #, dict_parent_loc_scale
+        return dict_out, samples, log_q_theta, dict_parent_loc_scale

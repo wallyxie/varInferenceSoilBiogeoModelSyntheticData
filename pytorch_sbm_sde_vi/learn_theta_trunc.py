@@ -9,6 +9,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.autograd import Function
 from TruncatedNormal import *
+from LogitNormal import *
 
 import numpy as np
 import pandas as pd
@@ -53,6 +54,7 @@ eval_batch_size = 12
 obs_error_scale = 0.1 #Observation (y) standard deviation.
 prior_scale_factor = 0.1 #Proportion of prior standard deviation to prior means.
 num_layers = 5 #5 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
+theta_dist = TruncatedNormal #Not a string. Needs to be exact name of the distribution class.
 
 #SCON theta truncated normal distribution parameter details in order of mean, lower, and upper. Distribution sdev assumed to be some proportion of the mean. 
 u_M_details = torch.Tensor([0.001, 0.001 * prior_scale_factor, 0, 0.01])
@@ -93,10 +95,10 @@ obs_times, obs_means_noCO2, obs_error = csv_to_obs_df('trunc_sample_y_from_x_t_2
 obs_model = ObsModel(active_device, TIMES = obs_times, DT = dt_flow, MU = obs_means_noCO2, SCALE = obs_error).to(active_device) 
 
 #Call training loop function for SCON-C.
-net, obs_model, ELBO_hist, list_theta, list_parent_loc_scale = train(active_device, pretrain_lr, train_lr, niter, piter, batch_size, num_layers,
+net, q_theta, obs_model, ELBO_hist, list_parent_loc_scale = train(active_device, pretrain_lr, train_lr, niter, piter, batch_size, num_layers,
           state_dim_SCON, 'trunc_sample_y_from_x_t_2000_dt_0-02.csv', obs_error_scale, t, dt_flow, n, 
           t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
-          drift_diffusion_SCON_C, x0_prior_SCON, SCON_C_priors_details,
+          drift_diffusion_SCON_C, x0_prior_SCON, SCON_C_priors_details, theta_dist,
           LEARN_THETA = True, LR_DECAY = 0.999, DECAY_STEP_SIZE = 200000, PRINT_EVERY = 50)
 
 #Save net and ELBO files.
@@ -104,14 +106,15 @@ now = datetime.now()
 now_string = 'trunc_' + now.strftime('%Y_%m_%d_%H_%M_%S')
 save_string = f'_iter_{niter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_{now_string}.pt'
 net_save_string = 'net' + save_string
+q_theta_save_string = 'q_theta' + save_string
 obs_model_save_string = 'obs_model' + save_string
 ELBO_save_string = 'ELBO' + save_string
-theta_lists_save_string = 'theta_lists' + save_string
-#torch.save((net, ELBO_hist, list_theta, list_parent_loc_scale), save_string)
+list_parent_loc_scale_save_string = 'parent_loc_scale_trajectory' + save_string
 torch.save(net, net_save_string)
+torch.save(q_theta, q_theta_save_string)
 torch.save(obs_model, obs_model_save_string) 
 torch.save(ELBO_hist, ELBO_save_string)
-torch.save((list_theta, list_parent_loc_scale), theta_lists_save_string)
+torch.save(list_parent_loc_scale, list_parent_loc_scale_save_string)
 
 #Release some CUDA memory and load .pt files.
 torch.cuda.empty_cache()
