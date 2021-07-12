@@ -49,14 +49,17 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
     net = SDEFlow(DEVICE, obs_model, STATE_DIM, T, DT, N, num_layers = NUM_LAYERS).to(DEVICE)
     
     if LEARN_THETA:
-        # Ensure consistent order b/w prior p and variational posterior q
+        #Ensure consistent order b/w prior p and variational posterior q
         param_names = list(PRIOR_DICT.keys())
 
         #Convert prior details dictionary values to tensors.
         prior_list = list(zip(*(PRIOR_DICT[k] for k in param_names))) #Unzip prior distribution details from dictionary values into individual lists.
         prior_means_tensor, prior_sds_tensor, prior_lowers_tensor, prior_uppers_tensor = torch.tensor(prior_list).to(DEVICE) #Ensure conversion of lists into tensors.
 
-        # Define prior
+        #Define prior
+        dist_class_dict = {'TruncatedNormal': TruncatedNormal, 'RescaledLogitNormal': RescaledLogitNormal} #Retrieve desired distribution class based on string.
+        THETA_DIST = dist_class_dict[THETA_DIST]
+
         priors = THETA_DIST(loc = prior_means_tensor, scale = prior_sds_tensor, a = prior_lowers_tensor, b = prior_uppers_tensor)
         #priors = BoundedNormal(DEVICE, param_names, PRIOR_DICT)
 
