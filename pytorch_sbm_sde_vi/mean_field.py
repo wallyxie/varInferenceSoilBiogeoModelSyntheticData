@@ -1,5 +1,3 @@
-from obs_and_flow import LowerBound
-
 import torch
 from torch import nn
 from obs_and_flow import LowerBound
