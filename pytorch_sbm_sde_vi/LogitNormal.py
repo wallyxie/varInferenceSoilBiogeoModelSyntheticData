@@ -5,7 +5,8 @@ import torch.distributions as D
 from torch.distributions.utils import broadcast_all
 
 def logit(x, lower=0, upper=1):
-    return torch.logit((x - lower) / (upper - lower))
+    rescaled_x = (x - lower) / (upper - lower)
+    return torch.log(rescaled_x) - torch.log1p(-rescaled_x)
 
 class RescaledLogitNormal:
     def __init__(self, loc=0, scale=1, a=0, b=1):
