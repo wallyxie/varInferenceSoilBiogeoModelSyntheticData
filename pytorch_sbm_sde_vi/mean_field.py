@@ -2,6 +2,8 @@ import torch
 from torch import nn
 from obs_and_flow import LowerBound
 import torch.distributions as D
+from TruncatedNormal import *
+from LogitNormal import *
 from torch.autograd import Function
 
 '''
@@ -21,6 +23,8 @@ class MeanField(nn.Module):
     def __init__(self, DEVICE, PARAM_NAMES, INIT_DICT, DIST_CLASS):
         super().__init__()
 
+        dist_class_dict = {'TruncatedNormal': TruncatedNormal, 'RescaledLogitNormal': RescaledLogitNormal}
+
         # Use param dict to intialise the means for the mean-field approximations.
         # init_params: name -> (parent mean, parent sd, true lower, true upper)
         means = []
@@ -34,7 +38,7 @@ class MeanField(nn.Module):
             upper_bounds.append(upper)
             lower_bounds.append(lower)          
 
-        self.dist = DIST_CLASS
+        self.dist = dist_class_dict[DIST_CLASS]
         self.means = nn.Parameter(torch.Tensor(means).to(DEVICE))
         self.sds = nn.Parameter(torch.Tensor(sds).to(DEVICE))
         self.lowers = torch.Tensor(lower_bounds).to(DEVICE)
