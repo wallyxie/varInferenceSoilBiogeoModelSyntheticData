@@ -32,8 +32,8 @@ if torch.cuda.is_available():
 torch.set_printoptions(precision = 8)
 
 #Neural SDE parameters
-dt_flow = 0.2 #Increased from 0.1 to reduce memory.
-t = 50 #2000. #In hours.
+dt_flow = 0.05 #Increased from 0.1 to reduce memory.
+t = 40 #2000. #In hours.
 n = int(t / dt_flow) + 1
 t_span = np.linspace(0, t, n)
 t_span_tensor = torch.reshape(torch.Tensor(t_span), [1, n, 1]).to(active_device) #T_span needs to be converted to tensor object. Additionally, facilitates conversion of I_S and I_D to tensor objects.
@@ -45,7 +45,7 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-niter = 100000
+niter = 50000
 piter = 0
 pretrain_lr = 1e-3 #Norm regularization learning rate
 train_lr = 1e-5 #ELBO learning rate
