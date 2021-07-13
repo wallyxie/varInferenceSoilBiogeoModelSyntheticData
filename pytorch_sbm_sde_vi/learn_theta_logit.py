@@ -56,7 +56,7 @@ prior_scale_factor = 0.1 #Proportion of prior standard deviation to prior means.
 num_layers = 5 #5 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
 theta_dist = 'RescaledLogitNormal' #String needs to be exact name of the distribution class. Other option is 'RescaledLogitNormal'.
 
-#SCON theta truncated normal distribution parameter details in order of mean, lower, and upper. Distribution sdev assumed to be some proportion of the mean. 
+#SCON theta RescaledLogitNormal distribution parameter details in order of mean, lower, and upper. Distribution sdev assumed to be some proportion of the mean. 
 u_M_details = torch.Tensor([0.001, 0.001 * prior_scale_factor, 0, 0.01])
 a_SD_details = torch.Tensor([0.5, 0.5 * prior_scale_factor, 0, 1])
 a_DS_details = torch.Tensor([0.5, 0.5 * prior_scale_factor, 0, 1])
