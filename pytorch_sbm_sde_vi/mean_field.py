@@ -23,7 +23,7 @@ class MeanField(nn.Module):
     mean, sdev, upper bound, and lower bound.
     '''
 
-    def __init__(self, DEVICE, PARAM_NAMES, INIT_DICT, DIST_CLASS):
+    def __init__(self, DEVICE, PARAM_NAMES, PRIOR_DIST_DETAILS_DICT, DIST_CLASS):
         super().__init__()
         #Use param dict to intialise the means for the mean-field approximations.
         #init_params: name -> (parent mean, parent sd, true lower, true upper)
@@ -32,7 +32,7 @@ class MeanField(nn.Module):
         lower_bounds = []        
         upper_bounds = []
         for key in PARAM_NAMES:
-            mean, sd, lower, upper = INIT_DICT[key]
+            mean, sd, lower, upper = PRIOR_DIST_DETAILS_DICT[key]
             means.append(mean)
             sds.append(sd)
             upper_bounds.append(upper)

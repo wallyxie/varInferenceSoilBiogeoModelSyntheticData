@@ -36,7 +36,7 @@ def calc_log_lik(C_PATH, T_SPAN_TENSOR, DT, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR,
 
 def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LAYERS,
           STATE_DIM, OBS_CSV_STR, OBS_ERROR_SCALE, T, DT, N, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF,
-          DRIFT_DIFFUSION, INIT_PRIOR, PRIOR_DICT, THETA_DIST = None,
+          DRIFT_DIFFUSION, INIT_PRIOR, PRIOR_DIST_DETAILS_DICT, THETA_DIST = None,
           LEARN_THETA = False, LR_DECAY = 0.9, DECAY_STEP_SIZE = 1000, PRINT_EVERY = 10):
 
     if PRETRAIN_ITER >= NITER:
@@ -52,10 +52,10 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
     
     if LEARN_THETA:
         #Ensure consistent order b/w prior p and variational posterior q
-        param_names = list(PRIOR_DICT.keys())
+        param_names = list(PRIOR_DIST_DETAILS_DICT.keys())
 
         #Convert prior details dictionary values to tensors.
-        prior_list = list(zip(*(PRIOR_DICT[k] for k in param_names))) #Unzip prior distribution details from dictionary values into individual lists.
+        prior_list = list(zip(*(PRIOR_DIST_DETAILS_DICT[k] for k in param_names))) #Unzip prior distribution details from dictionary values into individual lists.
         prior_means_tensor, prior_sds_tensor, prior_lowers_tensor, prior_uppers_tensor = torch.tensor(prior_list).to(DEVICE) #Ensure conversion of lists into tensors.
 
         #Define prior
@@ -63,14 +63,14 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
         THETA_DIST = dist_class_dict[THETA_DIST]
 
         priors = THETA_DIST(loc = prior_means_tensor, scale = prior_sds_tensor, a = prior_lowers_tensor, b = prior_uppers_tensor)
-        #priors = BoundedNormal(DEVICE, param_names, PRIOR_DICT)
+        #priors = BoundedNormal(DEVICE, param_names, PRIOR_DIST_DETAILS_DICT)
 
         # Initialize posterior q(theta) using its prior p(theta)
-        q_theta = MeanField(DEVICE, param_names, PRIOR_DICT, THETA_DIST)
-        #q_theta = MeanField(DEVICE, param_names, PRIOR_DICT)
+        q_theta = MeanField(DEVICE, param_names, PRIOR_DIST_DETAILS_DICT, THETA_DIST)
+        #q_theta = MeanField(DEVICE, param_names, PRIOR_DIST_DETAILS_DICT)
     else:
         #Establish initial dictionary of theta means in tensor form.
-        theta_dict = {k: torch.tensor(v).to(DEVICE).expand(BATCH_SIZE) for k, (v, _, _) in PRIOR_DICT.items()}
+        theta_dict = {k: torch.tensor(v).to(DEVICE).expand(BATCH_SIZE) for k, (v, _, _) in PRIOR_DIST_DETAILS_DICT.items()}
         q_theta = None
 
     #Record loss throughout training
