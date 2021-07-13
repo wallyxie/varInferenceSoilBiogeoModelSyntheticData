@@ -33,7 +33,7 @@ torch.set_printoptions(precision = 8)
 
 #Neural SDE parameters
 dt_flow = 1.0 #Increased from 0.1 to reduce memory.
-t = 1000 #2000. #In hours.
+t = 500 #2000. #In hours.
 n = int(t / dt_flow) + 1
 t_span = np.linspace(0, t, n)
 t_span_tensor = torch.reshape(torch.Tensor(t_span), [1, n, 1]).to(active_device) #T_span needs to be converted to tensor object. Additionally, facilitates conversion of I_S and I_D to tensor objects.
@@ -57,17 +57,17 @@ num_layers = 5 #5 - number needed to fit UCI HPC3 RAM requirements with 16 GB RA
 theta_dist = 'TruncatedNormal' #String needs to be exact name of the distribution class. Other option is 'RescaledLogitNormal'.
 
 #SCON theta truncated normal distribution parameter details in order of mean, lower, and upper. Distribution sdev assumed to be some proportion of the mean. 
-u_M_details = torch.Tensor([0.002, 0.002 * prior_scale_factor, 0, 0.1])
-a_SD_details = torch.Tensor([0.5, 0.5 * prior_scale_factor, 0, 1])
-a_DS_details = torch.Tensor([0.5, 0.5 * prior_scale_factor, 0, 1])
-a_M_details = torch.Tensor([0.5, 0.5 * prior_scale_factor, 0, 1])
-a_MSC_details = torch.Tensor([0.5, 0.5 * prior_scale_factor, 0, 1])
-k_S_ref_details = torch.Tensor([0.0005, 0.0005 * prior_scale_factor, 0, 0.1])
-k_D_ref_details = torch.Tensor([0.0008, 0.0008 * prior_scale_factor, 0, 0.1])
-k_M_ref_details = torch.Tensor([0.0006, 0.0006 * prior_scale_factor, 0, 0.1])
-Ea_S_details = torch.Tensor([55, 55 * prior_scale_factor, 20, 120])
-Ea_D_details = torch.Tensor([48, 48 * prior_scale_factor, 20, 120])
-Ea_M_details = torch.Tensor([48, 48 * prior_scale_factor, 20, 120])
+u_M_details = torch.Tensor([0.002, 0.002 * prior_scale_factor, 0, 0.1]).to(active_device)
+a_SD_details = torch.Tensor([0.5, 0.5 * prior_scale_factor, 0, 1]).to(active_device)
+a_DS_details = torch.Tensor([0.5, 0.5 * prior_scale_factor, 0, 1]).to(active_device)
+a_M_details = torch.Tensor([0.5, 0.5 * prior_scale_factor, 0, 1]).to(active_device)
+a_MSC_details = torch.Tensor([0.5, 0.5 * prior_scale_factor, 0, 1]).to(active_device)
+k_S_ref_details = torch.Tensor([0.0005, 0.0005 * prior_scale_factor, 0, 0.1]).to(active_device)
+k_D_ref_details = torch.Tensor([0.0008, 0.0008 * prior_scale_factor, 0, 0.1]).to(active_device)
+k_M_ref_details = torch.Tensor([0.0006, 0.0006 * prior_scale_factor, 0, 0.1]).to(active_device)
+Ea_S_details = torch.Tensor([55, 55 * prior_scale_factor, 20, 120]).to(active_device)
+Ea_D_details = torch.Tensor([48, 48 * prior_scale_factor, 20, 120]).to(active_device)
+Ea_M_details = torch.Tensor([48, 48 * prior_scale_factor, 20, 120]).to(active_device)
 
 #SCON-C diffusion matrix parameter detailsribution s
 c_SOC_details = torch.Tensor([0.05, 0.05 * prior_scale_factor, 0, 1.])
