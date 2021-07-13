@@ -1,6 +1,11 @@
+#Python-related imports
 import math, sys
 from tqdm import tqdm
 from datetime import datetime
+import numpy as np
+import pandas as pd
+import matplotlib
+import matplotlib.pyplot as plt
 
 #Torch-related imports
 import torch
@@ -10,11 +15,6 @@ import torch.optim as optim
 from torch.autograd import Function
 from TruncatedNormal import *
 from LogitNormal import *
-
-import numpy as np
-import pandas as pd
-import matplotlib
-import matplotlib.pyplot as plt
 
 #Model-specific imports
 from SBM_SDE_tensor import *
@@ -33,7 +33,7 @@ torch.set_printoptions(precision = 8)
 
 #Neural SDE parameters
 dt_flow = 1.0 #Increased from 0.1 to reduce memory.
-t = 1000 #2000. #In hours.
+t = 500 #2000. #In hours.
 n = int(t / dt_flow) + 1
 t_span = np.linspace(0, t, n)
 t_span_tensor = torch.reshape(torch.Tensor(t_span), [1, n, 1]).to(active_device) #T_span needs to be converted to tensor object. Additionally, facilitates conversion of I_S and I_D to tensor objects.
@@ -45,7 +45,7 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-niter = 1000000
+niter = 500000
 piter = 0
 pretrain_lr = 1e-3 #Norm regularization learning rate
 train_lr = 1e-5 #ELBO learning rate
@@ -57,22 +57,22 @@ num_layers = 5 #5 - number needed to fit UCI HPC3 RAM requirements with 16 GB RA
 theta_dist = 'TruncatedNormal' #String needs to be exact name of the distribution class. Other option is 'RescaledLogitNormal'.
 
 #SCON theta truncated normal distribution parameter details in order of mean, lower, and upper. Distribution sdev assumed to be some proportion of the mean. 
-u_M_details = torch.Tensor([0.001, 0.001 * prior_scale_factor, 0, 0.01])
-a_SD_details = torch.Tensor([0.5, 0.5 * prior_scale_factor, 0, 1])
-a_DS_details = torch.Tensor([0.5, 0.5 * prior_scale_factor, 0, 1])
-a_M_details = torch.Tensor([0.5, 0.5 * prior_scale_factor, 0, 1])
-a_MSC_details = torch.Tensor([0.5, 0.5 * prior_scale_factor, 0, 1])
-k_S_ref_details = torch.Tensor([0.0002, 0.0002 * prior_scale_factor, 0, 0.001])
-k_D_ref_details = torch.Tensor([0.0008, 0.0008 * prior_scale_factor, 0, 0.001])
-k_M_ref_details = torch.Tensor([0.0003, 0.0003 * prior_scale_factor, 0, 0.001])
-Ea_S_details = torch.Tensor([55, 55 * prior_scale_factor, 20, 120])
-Ea_D_details = torch.Tensor([48, 48 * prior_scale_factor, 20, 120])
-Ea_M_details = torch.Tensor([48, 48 * prior_scale_factor, 20, 120])
+u_M_details = torch.Tensor([0.002, 0.002 * prior_scale_factor, 0, 0.1]).to(active_device)
+a_SD_details = torch.Tensor([0.5, 0.5 * prior_scale_factor, 0, 1]).to(active_device)
+a_DS_details = torch.Tensor([0.5, 0.5 * prior_scale_factor, 0, 1]).to(active_device)
+a_M_details = torch.Tensor([0.5, 0.5 * prior_scale_factor, 0, 1]).to(active_device)
+a_MSC_details = torch.Tensor([0.5, 0.5 * prior_scale_factor, 0, 1]).to(active_device)
+k_S_ref_details = torch.Tensor([0.0005, 0.0005 * prior_scale_factor, 0, 0.1]).to(active_device)
+k_D_ref_details = torch.Tensor([0.0008, 0.0008 * prior_scale_factor, 0, 0.1]).to(active_device)
+k_M_ref_details = torch.Tensor([0.0006, 0.0006 * prior_scale_factor, 0, 0.1]).to(active_device)
+Ea_S_details = torch.Tensor([55, 55 * prior_scale_factor, 20, 120]).to(active_device)
+Ea_D_details = torch.Tensor([48, 48 * prior_scale_factor, 20, 120]).to(active_device)
+Ea_M_details = torch.Tensor([48, 48 * prior_scale_factor, 20, 120]).to(active_device)
 
-#SCON-C diffusion matrix parameter distribution s
-c_SOC_details = torch.Tensor([0.05, 0.05 * prior_scale_factor, 0, 0.1])
-c_DOC_details = torch.Tensor([0.001, 0.001 * prior_scale_factor, 0, 0.01])
-c_MBC_details = torch.Tensor([0.001, 0.001 * prior_scale_factor, 0, 0.01])
+#SCON-C diffusion matrix parameter detailsribution s
+c_SOC_details = torch.Tensor([0.05, 0.05 * prior_scale_factor, 0, 1.])
+c_DOC_details = torch.Tensor([0.001, 0.001 * prior_scale_factor, 0, 1.])
+c_MBC_details = torch.Tensor([0.001, 0.001 * prior_scale_factor, 0, 1.])
 
 SCON_C_priors_details = {'u_M': u_M_details, 'a_SD': a_SD_details, 'a_DS': a_DS_details, 'a_M': a_M_details, 'a_MSC': a_MSC_details, 'k_S_ref': k_S_ref_details, 'k_D_ref': k_D_ref_details, 'k_M_ref': k_M_ref_details, 'Ea_S': Ea_S_details, 'Ea_D': Ea_D_details, 'Ea_M': Ea_M_details, 'c_SOC': c_SOC_details, 'c_DOC': c_DOC_details, 'c_MBC': c_MBC_details}
 
@@ -91,12 +91,12 @@ i_s_tensor = i_s(t_span_tensor).to(active_device) #Exogenous SOC input function
 i_d_tensor = i_d(t_span_tensor).to(active_device) #Exogenous DOC input function
 
 #Generate observation model.
-obs_times, obs_means_noCO2, obs_error = csv_to_obs_df('trunc_sample_y_from_x_t_2000_dt_0-02.csv', state_dim_SCON, t, obs_error_scale)
+obs_times, obs_means_noCO2, obs_error = csv_to_obs_df('trunc_sample_y_from_x_t_1000_dt_0-01.csv', state_dim_SCON, t, obs_error_scale)
 obs_model = ObsModel(active_device, TIMES = obs_times, DT = dt_flow, MU = obs_means_noCO2, SCALE = obs_error).to(active_device) 
 
 #Call training loop function for SCON-C.
-net, q_theta, obs_model, ELBO_hist, list_parent_loc_scale = train(active_device, pretrain_lr, train_lr, niter, piter, batch_size, num_layers,
-          state_dim_SCON, 'trunc_sample_y_from_x_t_2000_dt_0-02.csv', obs_error_scale, t, dt_flow, n, 
+net, q_theta, obs_model, ELBO_hist, list_parent_loc_scale, list_real_loc_scale = train(active_device, pretrain_lr, train_lr, niter, piter, batch_size, num_layers,
+          state_dim_SCON, 'trunc_sample_y_from_x_t_1000_dt_0-01.csv', obs_error_scale, t, dt_flow, n, 
           t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
           drift_diffusion_SCON_C, x0_prior_SCON, SCON_C_priors_details, theta_dist,
           LEARN_THETA = True, LR_DECAY = 0.999, DECAY_STEP_SIZE = 200000, PRINT_EVERY = 50)
@@ -110,11 +110,14 @@ q_theta_save_string = 'q_theta' + save_string
 obs_model_save_string = 'obs_model' + save_string
 ELBO_save_string = 'ELBO' + save_string
 list_parent_loc_scale_save_string = 'parent_loc_scale_trajectory' + save_string
+list_real_loc_scale_save_string = 'real_loc_scale_trajectory' + save_string
+
 torch.save(net, net_save_string)
 torch.save(q_theta, q_theta_save_string)
 torch.save(obs_model, obs_model_save_string) 
 torch.save(ELBO_hist, ELBO_save_string)
 torch.save(list_parent_loc_scale, list_parent_loc_scale_save_string)
+torch.save(list_real_loc_scale, list_real_loc_scale_save_string)
 
 #Release some CUDA memory and load .pt files.
 torch.cuda.empty_cache()

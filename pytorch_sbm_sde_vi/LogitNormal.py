@@ -22,7 +22,7 @@ class RescaledLogitNormal:
         lower, upper = self.sigmoid.lower, self.sigmoid.upper
         return logit(x, lower, upper)
 
-    def rsample(self, shape):
+    def rsample(self, shape = torch.Size()):
         logit_x = self.base.rsample(shape)
         x = self.sigmoid(logit_x)
         return x
