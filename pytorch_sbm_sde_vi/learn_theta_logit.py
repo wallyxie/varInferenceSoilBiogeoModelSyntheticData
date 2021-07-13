@@ -72,7 +72,7 @@ Ea_M_details = torch.Tensor([logit(torch.tensor(48).to(active_device), torch.ten
 #SCON-C diffusion matrix parameter distribution s
 c_SOC_details = torch.Tensor([logit(torch.tensor(0.05).to(active_device), torch.tensor(0).to(active_device), torch.tensor(1.).to(active_device)), 0.05 * prior_scale_factor, 0, 1.]).to(active_device)
 c_DOC_details = torch.Tensor([logit(torch.tensor(0.001).to(active_device), torch.tensor(0).to(active_device), torch.tensor(1.).to(active_device)), 0.001 * prior_scale_factor, 0, 1.]).to(active_device)
-c_MBC_details = torch.Tensor([logit(torch.tensor(0.00]).to(active_device), torch.tensor(0).to(active_device), torch.tensor(1.).to(active_device)), 0.001 * prior_scale_factor, 0, 1.]).to(active_device)
+c_MBC_details = torch.Tensor([logit(torch.tensor(0.001).to(active_device), torch.tensor(0).to(active_device), torch.tensor(1.).to(active_device)), 0.001 * prior_scale_factor, 0, 1.]).to(active_device)
 
 SCON_C_priors_details = {'u_M': u_M_details, 'a_SD': a_SD_details, 'a_DS': a_DS_details, 'a_M': a_M_details, 'a_MSC': a_MSC_details, 'k_S_ref': k_S_ref_details, 'k_D_ref': k_D_ref_details, 'k_M_ref': k_M_ref_details, 'Ea_S': Ea_S_details, 'Ea_D': Ea_D_details, 'Ea_M': Ea_M_details, 'c_SOC': c_SOC_details, 'c_DOC': c_DOC_details, 'c_MBC': c_MBC_details}
 
