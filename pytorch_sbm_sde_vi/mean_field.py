@@ -52,8 +52,6 @@ class MeanField(nn.Module):
         parent_loc = self.means
         parent_scale = LowerBound.apply(self.sds, 1e-6)
         q_dist = self.dist(parent_loc, parent_scale, a = self.lowers, b = self.uppers)
-        real_loc = q_dist._mean
-        real_scale = torch.sqrt(q_dist._variance)
 
         # Sample theta ~ q(theta).
         samples = q_dist.rsample([N])
@@ -67,9 +65,19 @@ class MeanField(nn.Module):
             dict_out[f'{key}'] = sample.squeeze(1) #Each sample is of shape [n].
         
         dict_parent_loc_scale = {} #Define dictionary to store parent parameter normal distribution means and standard deviations.
-        dict_real_loc_scale = {} #Define dictionary to store real parameter normal distribution means and standard deviations. 
-        for key, loc_scale, real_loc_scale in zip(self.keys, torch.split(torch.stack([parent_loc, parent_scale], 1), 1, 0), torch.split(torch.stack([real_loc, real_scale], 1), 1, 0)):
-            dict_parent_loc_scale[f'{key}'] = loc_scale
-            dict_real_loc_scale[f'{key}'] = real_loc_scale
-        # Return samples in dictionary and tensor format.
-        return dict_out, samples, log_q_theta, dict_parent_loc_scale, dict_real_loc_scale
+
+        if self.dist == TruncatedNormal:
+            dict_real_loc_scale = {} #Define dictionary to store real parameter normal distribution means and standard deviations for TruncatedNormal distribution.
+            real_loc = q_dist._mean
+            real_scale = torch.sqrt(q_dist._variance)
+            for key, loc_scale, real_loc_scale in zip(self.keys, torch.split(torch.stack([parent_loc, parent_scale], 1), 1, 0), torch.split(torch.stack([real_loc, real_scale], 1), 1, 0)):
+                dict_parent_loc_scale[f'{key}'] = loc_scale
+                dict_real_loc_scale[f'{key}'] = real_loc_scale
+            #Return samples in dictionary and tensor format.                                
+            return dict_out, samples, log_q_theta, dict_parent_loc_scale, dict_real_loc_scale
+
+        elif self.dist == RescaledLogitNormal:
+            for key, loc_scale in zip(self.keys, torch.split(torch.stack([parent_loc, parent_scale], 1), 1, 0)):
+                dict_parent_loc_scale[f'{key}'] = loc_scale
+            #Return samples in dictionary and tensor format.                
+            return dict_out, samples, log_q_theta, dict_parent_loc_scale        

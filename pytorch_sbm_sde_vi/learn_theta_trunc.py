@@ -32,7 +32,7 @@ if torch.cuda.is_available():
 torch.set_printoptions(precision = 8)
 
 #Neural SDE parameters
-dt_flow = 0.2 #Increased from 0.1 to reduce memory.
+dt_flow = 0.5 #Increased from 0.1 to reduce memory.
 t = 80 #2000. #In hours.
 n = int(t / dt_flow) + 1
 t_span = np.linspace(0, t, n)
@@ -45,7 +45,7 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-niter = 1000000
+niter = 100000
 piter = 0
 pretrain_lr = 1e-3 #Norm regularization learning rate
 train_lr = 1e-5 #ELBO learning rate
