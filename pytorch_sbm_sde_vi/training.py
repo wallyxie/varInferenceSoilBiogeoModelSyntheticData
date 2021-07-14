@@ -137,9 +137,11 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
                 real_loc_scale_dict = None #Initiate real_loc_scale_dict variable for loop operations.
 
                 if LEARN_THETA:
-                    theta_dict, theta, log_q_theta, parent_loc_scale_dict, real_loc_scale_dict = q_theta(BATCH_SIZE)
+                    if THETA_DIST == 'TruncatedNormal':
+                        theta_dict, theta, log_q_theta, parent_loc_scale_dict, real_loc_scale_dict = q_theta(BATCH_SIZE)
+                    elif THETA_DIST == 'RescaledLogitNormal':
+                        theta_dict, theta, log_q_theta, parent_loc_scale_dict = q_theta(BATCH_SIZE)                        
                     #theta_dict1, theta1, log_q_theta1 = q_theta1(BATCH_SIZE)
-                    
                     log_p_theta = priors.log_prob(theta).sum(-1)
                     #log_p_theta1 = priors.log_prob(theta1).sum(-1)
                     #print(it, log_q_theta, log_p_theta)
