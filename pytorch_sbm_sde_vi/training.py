@@ -174,7 +174,9 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
                     if LEARN_THETA:
                         print('\ntheta_dict means: ', {key: theta_dict[key].mean() for key in param_names})
                         print('\nparent_loc_scale_dict: ', parent_loc_scale_dict)
-                        print('\nreal_loc_scale_dict: ', real_loc_scale_dict)
+
+                        if THETA_DIST == TruncatedNormal:
+                            print('\nreal_loc_scale_dict: ', real_loc_scale_dict)
 
                 ELBO.backward()
                 if LEARN_THETA:
