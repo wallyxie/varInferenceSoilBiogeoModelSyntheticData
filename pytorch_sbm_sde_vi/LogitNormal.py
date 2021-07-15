@@ -15,8 +15,15 @@ class RescaledLogitNormal:
         # a, b: lower and upper bounds, respectively
         loc, scale, a, b = broadcast_all(loc, scale, a, b)
         self.sigmoid = RescaledSigmoid(a, b)
-        #print(self.logit(sigmoid_loc))
         self.base = D.normal.Normal(loc, scale)
+
+    @property
+    def mean(self):
+        return self._mean
+
+    @property
+    def variance(self):
+        return self._variance
 
     def logit(self, x):
         lower, upper = self.sigmoid.lower, self.sigmoid.upper
