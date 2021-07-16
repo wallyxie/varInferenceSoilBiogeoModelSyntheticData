@@ -95,12 +95,12 @@ i_s_tensor = i_s(t_span_tensor).to(active_device) #Exogenous SOC input function
 i_d_tensor = i_d(t_span_tensor).to(active_device) #Exogenous DOC input function
 
 #Generate observation model.
-obs_times, obs_means_noCO2, obs_error = csv_to_obs_df('trunc_sample_y_from_x_t_1000_dt_0-01.csv', state_dim_SCON, t, obs_error_scale)
+obs_times, obs_means_noCO2, obs_error = csv_to_obs_df('trunc_sample_y_t_1000_dt_0-01_sd_scale_0-333.csv', state_dim_SCON, t, obs_error_scale)
 obs_model = ObsModel(active_device, TIMES = obs_times, DT = dt_flow, MU = obs_means_noCO2, SCALE = obs_error).to(active_device) 
 
 #Call training loop function for SCON-C.
 net, q_theta, p_theta, obs_model, ELBO_hist, list_parent_loc_scale = train(active_device, pretrain_lr, train_lr, niter, piter, batch_size, num_layers,
-          state_dim_SCON, 'trunc_sample_y_from_x_t_1000_dt_0-01.csv', obs_error_scale, t, dt_flow, n, 
+          state_dim_SCON, 'trunc_sample_y_t_1000_dt_0-01_sd_scale_0-333.csv', obs_error_scale, t, dt_flow, n, 
           t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
           drift_diffusion_SCON_C, x0_prior_SCON, SCON_C_priors_details, theta_dist,
           LEARN_THETA = True, LR_DECAY = 1., DECAY_STEP_SIZE = 200000, PRINT_EVERY = 100)
@@ -137,3 +137,4 @@ net.eval()
 x, _ = net(eval_batch_size)
 plot_elbo(ELBO_hist, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, now_string, xmin = int((niter - piter) * 0.2)) #xmin < (niter - piter).
 plot_states_post(x, obs_model, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, now_string, ymin_list = [0, 0, 0], ymax_list = [100., 12., 12.])
+plot_theta(p_theta, q_theta, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, now_string)
