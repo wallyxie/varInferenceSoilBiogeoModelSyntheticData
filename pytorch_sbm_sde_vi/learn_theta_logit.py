@@ -1,5 +1,5 @@
+#Python-related imports
 import math, sys
-from tqdm import tqdm
 from datetime import datetime
 
 #Torch-related imports
@@ -11,17 +11,21 @@ from torch.autograd import Function
 from TruncatedNormal import *
 from LogitNormal import *
 
+#PyData imports
 import numpy as np
 import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
 
-#Model-specific imports
+#Model-specific module imports
 from SBM_SDE_tensor import *
 from obs_and_flow import *
 from training import *
 from plotting import *
 from mean_field import *
+
+#Other imports
+from tqdm import tqdm
 
 #PyTorch settings
 torch.manual_seed(0)
@@ -33,7 +37,7 @@ torch.set_printoptions(precision = 8)
 
 #Neural SDE parameters
 dt_flow = 1.0 #Increased from 0.1 to reduce memory.
-t = 200 #2000. #In hours.
+t = 1000 #In hours.
 n = int(t / dt_flow) + 1
 t_span = np.linspace(0, t, n)
 t_span_tensor = torch.reshape(torch.Tensor(t_span), [1, n, 1]).to(active_device) #T_span needs to be converted to tensor object. Additionally, facilitates conversion of I_S and I_D to tensor objects.
@@ -45,34 +49,34 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-niter = 2 #5
+niter = 50
 piter = 0
 pretrain_lr = 1e-3 #Norm regularization learning rate
 train_lr = 5e-4 #ELBO learning rate
-batch_size = 15 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
-eval_batch_size = 15
+batch_size = 10 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
+eval_batch_size = 10
 obs_error_scale = 0.1 #Observation (y) standard deviation.
-prior_scale_factor = 0.1 #Proportion of prior standard deviation to prior means.
+prior_scale_factor = 0.333 #Proportion of prior standard deviation to prior means.
 num_layers = 5 #5 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
 theta_dist = 'RescaledLogitNormal' #String needs to be exact name of the distribution class. Options are 'RescaledLogitNormal' or 'TruncatedNormal'.
 
 #SCON theta RescaledLogitNormal prior distribution parameter details in order of mean, lower, and upper. Distribution sdev assumed to be some proportion of the mean. 
-u_M_details = torch.Tensor([logit(torch.tensor(0.002).to(active_device), torch.tensor(0).to(active_device), torch.tensor(0.1).to(active_device)), 0.002 * prior_scale_factor, 0, 0.1]).to(active_device)
-a_SD_details = torch.Tensor([logit(torch.tensor(0.5).to(active_device), torch.tensor(0).to(active_device), torch.tensor(1.).to(active_device)), 0.5 * prior_scale_factor, 0, 1]).to(active_device)
-a_DS_details = torch.Tensor([logit(torch.tensor(0.5).to(active_device), torch.tensor(0).to(active_device), torch.tensor(1.).to(active_device)), 0.5 * prior_scale_factor, 0, 1])
-a_M_details = torch.Tensor([logit(torch.tensor(0.5).to(active_device), torch.tensor(0).to(active_device), torch.tensor(1.).to(active_device)), 0.5 * prior_scale_factor, 0, 1]).to(active_device)
-a_MSC_details = torch.Tensor([logit(torch.tensor(0.5).to(active_device), torch.tensor(0).to(active_device), torch.tensor(1.).to(active_device)), 0.5 * prior_scale_factor, 0, 1]).to(active_device)
-k_S_ref_details = torch.Tensor([logit(torch.tensor(0.0005).to(active_device), torch.tensor(0).to(active_device), torch.tensor(0.1).to(active_device)), 0.0005 * prior_scale_factor, 0, 0.1]).to(active_device)
-k_D_ref_details = torch.Tensor([logit(torch.tensor(0.0008).to(active_device), torch.tensor(0).to(active_device), torch.tensor(0.1).to(active_device)), 0.0008 * prior_scale_factor, 0, 0.1]).to(active_device)
-k_M_ref_details = torch.Tensor([logit(torch.tensor(0.0006).to(active_device), torch.tensor(0).to(active_device), torch.tensor(0.1).to(active_device)), 0.0006 * prior_scale_factor, 0, 0.1]).to(active_device)
-Ea_S_details = torch.Tensor([logit(torch.tensor(55).to(active_device), torch.tensor(20).to(active_device), torch.tensor(120).to(active_device)), 55 * prior_scale_factor, 20, 120]).to(active_device)
-Ea_D_details = torch.Tensor([logit(torch.tensor(48).to(active_device), torch.tensor(20).to(active_device), torch.tensor(120).to(active_device)), 48 * prior_scale_factor, 20, 120]).to(active_device)
-Ea_M_details = torch.Tensor([logit(torch.tensor(48).to(active_device), torch.tensor(20).to(active_device), torch.tensor(120).to(active_device)), 48 * prior_scale_factor, 20, 120]).to(active_device)
+u_M_details = torch.Tensor([logit(torch.tensor([0.0016]), torch.tensor([0]), torch.tensor([1])), 0.0016 * prior_scale_factor, 0, 1]).to(active_device)
+a_SD_details = torch.Tensor([logit(torch.tensor([0.5]), torch.tensor([0]), torch.tensor([1])), 0.5 * prior_scale_factor, 0, 1]).to(active_device)
+a_DS_details = torch.Tensor([logit(torch.tensor([0.5]), torch.tensor([0]), torch.tensor([1])), 0.5 * prior_scale_factor, 0, 1]).to(active_device)
+a_M_details = torch.Tensor([logit(torch.tensor([0.5]), torch.tensor([0]), torch.tensor([1])), 0.5 * prior_scale_factor, 0, 1]).to(active_device)
+a_MSC_details = torch.Tensor([logit(torch.tensor([0.5]), torch.tensor([0]), torch.tensor([1.])), 0.5 * prior_scale_factor, 0, 1]).to(active_device)
+k_S_ref_details = torch.Tensor([logit(torch.tensor([0.0005]), torch.tensor([0]), torch.tensor([1])), 0.0005 * prior_scale_factor, 0, 1]).to(active_device)
+k_D_ref_details = torch.Tensor([logit(torch.tensor([0.0008]), torch.tensor([0]), torch.tensor([1])), 0.0008 * prior_scale_factor, 0, 1]).to(active_device)
+k_M_ref_details = torch.Tensor([logit(torch.tensor([0.0007]), torch.tensor([0]), torch.tensor([1])), 0.0007 * prior_scale_factor, 0, 1]).to(active_device)
+Ea_S_details = torch.Tensor([logit(torch.tensor([55]), torch.tensor([20]), torch.tensor([120])), 55 * prior_scale_factor, 20, 120]).to(active_device)
+Ea_D_details = torch.Tensor([logit(torch.tensor([48]), torch.tensor([20]), torch.tensor([120])), 48 * prior_scale_factor, 20, 120]).to(active_device)
+Ea_M_details = torch.Tensor([logit(torch.tensor([48]), torch.tensor([20]), torch.tensor([120])), 48 * prior_scale_factor, 20, 120]).to(active_device)
 
 #SCON-C diffusion matrix parameter RescaledLogitNormal prior distribution parameter details in order of mean, lower, and upper. 
-c_SOC_details = torch.Tensor([logit(torch.tensor(0.05).to(active_device), torch.tensor(0).to(active_device), torch.tensor(1.).to(active_device)), 0.05 * prior_scale_factor, 0, 1.]).to(active_device)
-c_DOC_details = torch.Tensor([logit(torch.tensor(0.001).to(active_device), torch.tensor(0).to(active_device), torch.tensor(1.).to(active_device)), 0.001 * prior_scale_factor, 0, 1.]).to(active_device)
-c_MBC_details = torch.Tensor([logit(torch.tensor(0.001).to(active_device), torch.tensor(0).to(active_device), torch.tensor(1.).to(active_device)), 0.001 * prior_scale_factor, 0, 1.]).to(active_device)
+c_SOC_details = torch.Tensor([logit(torch.tensor([0.1]), torch.tensor([0]), torch.tensor([1])), 0.05 * prior_scale_factor, 0, 1]).to(active_device)
+c_DOC_details = torch.Tensor([logit(torch.tensor([0.002]), torch.tensor([0]), torch.tensor([1])), 0.002 * prior_scale_factor, 0, 1]).to(active_device)
+c_MBC_details = torch.Tensor([logit(torch.tensor([0.002]), torch.tensor([0]), torch.tensor([1])), 0.002 * prior_scale_factor, 0, 1]).to(active_device)
 
 SCON_C_priors_details = {'u_M': u_M_details, 'a_SD': a_SD_details, 'a_DS': a_DS_details, 'a_M': a_M_details, 'a_MSC': a_MSC_details, 'k_S_ref': k_S_ref_details, 'k_D_ref': k_D_ref_details, 'k_M_ref': k_M_ref_details, 'Ea_S': Ea_S_details, 'Ea_D': Ea_D_details, 'Ea_M': Ea_M_details, 'c_SOC': c_SOC_details, 'c_DOC': c_DOC_details, 'c_MBC': c_MBC_details}
 
@@ -91,18 +95,18 @@ i_s_tensor = i_s(t_span_tensor).to(active_device) #Exogenous SOC input function
 i_d_tensor = i_d(t_span_tensor).to(active_device) #Exogenous DOC input function
 
 #Generate observation model.
-obs_times, obs_means_noCO2, obs_error = csv_to_obs_df('logit_sample_y_from_x_t_1000_dt_0-01.csv', state_dim_SCON, t, obs_error_scale)
+obs_times, obs_means_noCO2, obs_error = csv_to_obs_df('logit_sample_y_t_1000_dt_0-01_sd_scale_0-333.csv', state_dim_SCON, t, obs_error_scale)
 obs_model = ObsModel(active_device, TIMES = obs_times, DT = dt_flow, MU = obs_means_noCO2, SCALE = obs_error).to(active_device) 
 
 #Call training loop function for SCON-C.
-#net, q_theta, obs_model, ELBO_hist, list_parent_loc_scale = train(active_device, pretrain_lr, train_lr, niter, piter, batch_size, num_layers,
+#net, q_theta, obs_model, ELBO_hist, list_parent_parent_loc_scale = train(active_device, pretrain_lr, train_lr, niter, piter, batch_size, num_layers,
 #          state_dim_SCON, 'logit_sample_y_from_x_t_1000_dt_0-01.csv', obs_error_scale, t, dt_flow, n, 
 #          t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
 #          drift_diffusion_SCON_C, x0_prior_SCON, SCON_C_priors_details, theta_dist,
 #          LEARN_THETA = True, LR_DECAY = 1., DECAY_STEP_SIZE = 200000, PRINT_EVERY = 100)
 
-net, q_theta, p_theta, obs_model, ELBO_hist, list_loc_scale, list_mean_sd = train(active_device, pretrain_lr, train_lr, niter, piter, batch_size, num_layers,
-          state_dim_SCON, 'logit_sample_y_from_x_t_1000_dt_0-01.csv', obs_error_scale, t, dt_flow, n, 
+net, q_theta, p_theta, obs_model, ELBO_hist, list_parent_loc_scale = train(active_device, pretrain_lr, train_lr, niter, piter, batch_size, num_layers,
+          state_dim_SCON, 'logit_sample_y_t_1000_dt_0-01_sd_scale_0-333.csv', obs_error_scale, t, dt_flow, n, 
           t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
           drift_diffusion_SCON_C, x0_prior_SCON, SCON_C_priors_details, theta_dist,
           LEARN_THETA = True, LR_DECAY = 1., DECAY_STEP_SIZE = 200000, PRINT_EVERY = 100)
@@ -110,21 +114,21 @@ net, q_theta, p_theta, obs_model, ELBO_hist, list_loc_scale, list_mean_sd = trai
 #Save net and ELBO files.
 now = datetime.now()
 now_string = 'logit_' + now.strftime('%Y_%m_%d_%H_%M_%S')
-save_string = f'_iter_{niter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_{now_string}.pt'
+save_string = f'_iter_{niter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_lr_{train_lr}_{now_string}.pt'
 net_save_string = 'net' + save_string
+net_state_dict_save_string = 'net_state_dict' + save_string
 q_theta_save_string = 'q_theta' + save_string
 p_theta_save_string = 'p_theta' + save_string
 obs_model_save_string = 'obs_model' + save_string
 ELBO_save_string = 'ELBO' + save_string
-list_loc_scale_save_string = 'loc_scale_trajectory' + save_string
-list_mean_sd_save_string = 'mean_sd_trajectory' + save_string
+list_parent_loc_scale_save_string = 'loc_scale_trajectory' + save_string
 torch.save(net, net_save_string)
+torch.save(net.state_dict(), net_state_dict_save_string) #For loading net on CPU.
 torch.save(q_theta, q_theta_save_string)
 torch.save(p_theta, p_theta_save_string)
 torch.save(obs_model, obs_model_save_string) 
 torch.save(ELBO_hist, ELBO_save_string)
-torch.save(list_loc_scale, list_loc_scale_save_string)
-torch.save(list_mean_sd, list_mean_sd_save_string)
+torch.save(list_parent_loc_scale, list_parent_loc_scale_save_string)
 
 #Release some CUDA memory and load .pt files.
 torch.cuda.empty_cache()
@@ -137,6 +141,6 @@ ELBO_hist = torch.load(ELBO_save_string)
 #Plot training posterior results and ELBO history.
 net.eval()
 x, _ = net(eval_batch_size)
-plot_elbo(ELBO_hist, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, now_string, xmin = int((niter - piter) * 0.2)) #xmin < (niter - piter).
-plot_states_post(x, obs_model, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, now_string, ymin_list = [0, 0, 0], ymax_list = [100., 12., 12.])
-plot_theta(p_theta, q_theta, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, now_string)
+plot_elbo(ELBO_hist, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, now_string, xmin = int((niter - piter) * 0.2)) #xmin < (niter - piter).
+plot_states_post(x, obs_model, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, now_string, ymin_list = [0, 0, 0], ymax_list = [100., 12., 12.])
+#plot_theta(p_theta, q_theta, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, now_string)
