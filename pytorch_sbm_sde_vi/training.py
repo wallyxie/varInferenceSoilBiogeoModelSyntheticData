@@ -139,10 +139,11 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
                 real_loc_scale_dict = None #Initiate real_loc_scale_dict variable for loop operations.
 
                 if LEARN_THETA:
-                    if THETA_DIST == TruncatedNormal:
-                        theta_dict, theta, log_q_theta, parent_loc_scale_dict, real_loc_scale_dict = q_theta(BATCH_SIZE)
-                    elif THETA_DIST == RescaledLogitNormal:
-                        theta_dict, theta, log_q_theta, parent_loc_scale_dict = q_theta(BATCH_SIZE)                        
+                    theta_dict, theta, log_q_theta, parent_loc_scale_dict, real_loc_scale_dict = q_theta(BATCH_SIZE)
+                    #if THETA_DIST == TruncatedNormal:
+                    #    theta_dict, theta, log_q_theta, parent_loc_scale_dict, real_loc_scale_dict = q_theta(BATCH_SIZE)
+                    #elif THETA_DIST == RescaledLogitNormal:
+                    #    theta_dict, theta, log_q_theta, parent_loc_scale_dict = q_theta(BATCH_SIZE)                        
                     #theta_dict1, theta1, log_q_theta1 = q_theta1(BATCH_SIZE)
                     log_p_theta = priors.log_prob(theta).sum(-1)
                     #log_p_theta1 = priors.log_prob(theta1).sum(-1)
@@ -174,9 +175,10 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
                     if LEARN_THETA:
                         print('\ntheta_dict means: ', {key: theta_dict[key].mean() for key in param_names})
                         print('\nparent_loc_scale_dict: ', parent_loc_scale_dict)
+                        print('\nreal_loc_scale_dict: ', real_loc_scale_dict)
 
-                        if THETA_DIST == TruncatedNormal:
-                            print('\nreal_loc_scale_dict: ', real_loc_scale_dict)
+                        #if THETA_DIST == TruncatedNormal:
+                        #    print('\nreal_loc_scale_dict: ', real_loc_scale_dict)
 
                 ELBO.backward()
                 if LEARN_THETA:
@@ -190,8 +192,10 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
 
             tq.update()
     
-    if THETA_DIST == TruncatedNormal:
-        return net, q_theta, obs_model, ELBO_losses, list_parent_loc_scale, list_real_loc_scale
+    #if THETA_DIST == TruncatedNormal:
+    #    return net, q_theta, obs_model, ELBO_losses, list_parent_loc_scale, list_real_loc_scale
 
-    elif THETA_DIST == RescaledLogitNormal:
-        return net, q_theta, obs_model, ELBO_losses, list_parent_loc_scale       
+    #elif THETA_DIST == RescaledLogitNormal:
+    #    return net, q_theta, obs_model, ELBO_losses, list_parent_loc_scale
+
+    return net, q_theta, priors, obs_model, ELBO_losses, list_parent_loc_scale, list_real_loc_scale     

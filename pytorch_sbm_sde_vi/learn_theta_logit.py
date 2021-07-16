@@ -33,7 +33,7 @@ torch.set_printoptions(precision = 8)
 
 #Neural SDE parameters
 dt_flow = 1.0 #Increased from 0.1 to reduce memory.
-t = 1000 #2000. #In hours.
+t = 200 #2000. #In hours.
 n = int(t / dt_flow) + 1
 t_span = np.linspace(0, t, n)
 t_span_tensor = torch.reshape(torch.Tensor(t_span), [1, n, 1]).to(active_device) #T_span needs to be converted to tensor object. Additionally, facilitates conversion of I_S and I_D to tensor objects.
@@ -45,7 +45,7 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-niter = 800000
+niter = 2 #5
 piter = 0
 pretrain_lr = 1e-3 #Norm regularization learning rate
 train_lr = 5e-4 #ELBO learning rate
@@ -95,7 +95,13 @@ obs_times, obs_means_noCO2, obs_error = csv_to_obs_df('logit_sample_y_from_x_t_1
 obs_model = ObsModel(active_device, TIMES = obs_times, DT = dt_flow, MU = obs_means_noCO2, SCALE = obs_error).to(active_device) 
 
 #Call training loop function for SCON-C.
-net, q_theta, obs_model, ELBO_hist, list_parent_loc_scale = train(active_device, pretrain_lr, train_lr, niter, piter, batch_size, num_layers,
+#net, q_theta, obs_model, ELBO_hist, list_parent_loc_scale = train(active_device, pretrain_lr, train_lr, niter, piter, batch_size, num_layers,
+#          state_dim_SCON, 'logit_sample_y_from_x_t_1000_dt_0-01.csv', obs_error_scale, t, dt_flow, n, 
+#          t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
+#          drift_diffusion_SCON_C, x0_prior_SCON, SCON_C_priors_details, theta_dist,
+#          LEARN_THETA = True, LR_DECAY = 1., DECAY_STEP_SIZE = 200000, PRINT_EVERY = 100)
+
+net, q_theta, p_theta, obs_model, ELBO_hist, list_loc_scale, list_mean_sd = train(active_device, pretrain_lr, train_lr, niter, piter, batch_size, num_layers,
           state_dim_SCON, 'logit_sample_y_from_x_t_1000_dt_0-01.csv', obs_error_scale, t, dt_flow, n, 
           t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
           drift_diffusion_SCON_C, x0_prior_SCON, SCON_C_priors_details, theta_dist,
@@ -107,14 +113,18 @@ now_string = 'logit_' + now.strftime('%Y_%m_%d_%H_%M_%S')
 save_string = f'_iter_{niter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_{now_string}.pt'
 net_save_string = 'net' + save_string
 q_theta_save_string = 'q_theta' + save_string
+p_theta_save_string = 'p_theta' + save_string
 obs_model_save_string = 'obs_model' + save_string
 ELBO_save_string = 'ELBO' + save_string
-list_parent_loc_scale_save_string = 'parent_loc_scale_trajectory' + save_string
+list_loc_scale_save_string = 'loc_scale_trajectory' + save_string
+list_mean_sd_save_string = 'mean_sd_trajectory' + save_string
 torch.save(net, net_save_string)
 torch.save(q_theta, q_theta_save_string)
+torch.save(p_theta, p_theta_save_string)
 torch.save(obs_model, obs_model_save_string) 
 torch.save(ELBO_hist, ELBO_save_string)
-torch.save(list_parent_loc_scale, list_parent_loc_scale_save_string)
+torch.save(list_loc_scale, list_loc_scale_save_string)
+torch.save(list_mean_sd, list_mean_sd_save_string)
 
 #Release some CUDA memory and load .pt files.
 torch.cuda.empty_cache()
@@ -129,3 +139,4 @@ net.eval()
 x, _ = net(eval_batch_size)
 plot_elbo(ELBO_hist, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, now_string, xmin = int((niter - piter) * 0.2)) #xmin < (niter - piter).
 plot_states_post(x, obs_model, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, now_string, ymin_list = [0, 0, 0], ymax_list = [100., 12., 12.])
+plot_theta(p_theta, q_theta, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, now_string)

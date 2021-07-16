@@ -2,13 +2,19 @@ import torch
 from torch import nn
 from obs_and_flow import LowerBound
 import torch.distributions as D
-from torch.distributions.utils import broadcast_all
+from torch.distributions import Distribution, constraints
+from torch.distributions.utils import broadcast_all, lazy_property
+import numpy as np
 
 def logit(x, lower=0, upper=1):
     rescaled_x = 1.0 * (x - lower) / (upper - lower)
     return torch.log(rescaled_x) - torch.log1p(-rescaled_x)
 
-class RescaledLogitNormal:
+class RescaledLogitNormal(Distribution):
+    arg_constraints = {'loc': constraints.real, 'scale': constraints.positive,
+                       'a': constraints.real, 'b': constraints.real}
+    has_rsample = True
+
     def __init__(self, loc=0, scale=1, a=0, b=1):
         # loc: mean of the normally distributed logit
         # scale: standard deviation of the normally distributed logit
@@ -16,21 +22,32 @@ class RescaledLogitNormal:
         loc, scale, a, b = broadcast_all(loc, scale, a, b)
         self.sigmoid = RescaledSigmoid(a, b)
         self.base = D.normal.Normal(loc, scale)
+        self._event_shape = self.base.event_shape
 
-    @property
+    @constraints.dependent_property
+    def support(self):
+        return constraints.interval(self.a, self.b)
+
+    @lazy_property
     def mean(self):
-        return self._mean
+        return self.approx_moment(1)
 
-    @property
+    @lazy_property
     def variance(self):
-        return self._variance
+        return self.approx_moment(2) - self.mean**2
+
+    def approx_moment(self, d=1, num_partitions=100, eps=1e-6):
+        lower, upper = self.sigmoid.lower + eps, self.sigmoid.upper - eps
+        x = torch.from_numpy(np.linspace(lower, upper, num_partitions)) # (num_partitions, event_shape)
+        y = x**d * torch.exp(self.log_prob(x))
+        return torch.trapz(y, x, dim=0)
 
     def logit(self, x):
         lower, upper = self.sigmoid.lower, self.sigmoid.upper
         return logit(x, lower, upper)
 
-    def rsample(self, shape = torch.Size()):
-        logit_x = self.base.rsample(shape)
+    def rsample(self, sample_shape=torch.Size([])):
+        logit_x = self.base.rsample(sample_shape)
         x = self.sigmoid(logit_x)
         return x
 

@@ -2,10 +2,6 @@
 import math, sys
 from tqdm import tqdm
 from datetime import datetime
-import numpy as np
-import pandas as pd
-import matplotlib
-import matplotlib.pyplot as plt
 
 #Torch-related imports
 import torch
@@ -15,6 +11,11 @@ import torch.optim as optim
 from torch.autograd import Function
 from TruncatedNormal import *
 from LogitNormal import *
+
+import numpy as np
+import pandas as pd
+import matplotlib
+import matplotlib.pyplot as plt
 
 #Model-specific imports
 from SBM_SDE_tensor import *
@@ -45,7 +46,7 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-niter = 800000
+niter = 2 #800000
 piter = 0
 pretrain_lr = 1e-3 #Norm regularization learning rate
 train_lr = 5e-4 #ELBO learning rate
@@ -95,7 +96,7 @@ obs_times, obs_means_noCO2, obs_error = csv_to_obs_df('trunc_sample_y_from_x_t_1
 obs_model = ObsModel(active_device, TIMES = obs_times, DT = dt_flow, MU = obs_means_noCO2, SCALE = obs_error).to(active_device) 
 
 #Call training loop function for SCON-C.
-net, q_theta, obs_model, ELBO_hist, list_parent_loc_scale, list_real_loc_scale = train(active_device, pretrain_lr, train_lr, niter, piter, batch_size, num_layers,
+net, q_theta, p_theta, obs_model, ELBO_hist, list_parent_loc_scale, list_real_loc_scale = train(active_device, pretrain_lr, train_lr, niter, piter, batch_size, num_layers,
           state_dim_SCON, 'trunc_sample_y_from_x_t_1000_dt_0-01.csv', obs_error_scale, t, dt_flow, n, 
           t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
           drift_diffusion_SCON_C, x0_prior_SCON, SCON_C_priors_details, theta_dist,
@@ -107,6 +108,7 @@ now_string = 'trunc_' + now.strftime('%Y_%m_%d_%H_%M_%S')
 save_string = f'_iter_{niter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_{now_string}.pt'
 net_save_string = 'net' + save_string
 q_theta_save_string = 'q_theta' + save_string
+p_theta_save_string = 'p_theta' + save_string
 obs_model_save_string = 'obs_model' + save_string
 ELBO_save_string = 'ELBO' + save_string
 list_parent_loc_scale_save_string = 'parent_loc_scale_trajectory' + save_string
@@ -114,6 +116,7 @@ list_real_loc_scale_save_string = 'real_loc_scale_trajectory' + save_string
 
 torch.save(net, net_save_string)
 torch.save(q_theta, q_theta_save_string)
+torch.save(p_theta, p_theta_save_string)
 torch.save(obs_model, obs_model_save_string) 
 torch.save(ELBO_hist, ELBO_save_string)
 torch.save(list_parent_loc_scale, list_parent_loc_scale_save_string)
