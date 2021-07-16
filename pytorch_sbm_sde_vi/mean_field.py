@@ -19,8 +19,15 @@ class MeanField(nn.Module):
 
     '''
     Class for mean-field variational inference of SBM SDE parameters.
-    Takes dictionary of parameter distribution information in order of
-    mean, sdev, upper bound, and lower bound.
+    Takes dictionary of parameter distribution information in order of mean, sdev, upper bound, and lower bound.
+
+    The forward method returns dict_out, samples, log_q_theta, dict_parent_loc_scale.
+    dict_out: dictionary of theta samples corresponding to their parameter keys for debugging and printing.
+    samples: tensor of the theta values themselves for inference use.
+    log_q_theta: log probability of the theta values corresponding to the variational distribution.
+    dict_parent_loc_scale: dictionary of the values of the parent loc and scale distribution parameters.
+
+    Formerly, the forward method returned dict_mean_sd, a dictionary of the values of the transformed distribution means and standard deviations, but calculation of the distribution mean and standard deviation was computationally wasteful to compute at every iteration and simpler for the TruncatedNormal distribution class than RescaledLogitNormal. The means and standard deviations can be computed from dict_parent_loc_scale.
     '''
 
     def __init__(self, DEVICE, PARAM_NAMES, PRIOR_DIST_DETAILS_DICT, DIST_CLASS):
@@ -65,15 +72,18 @@ class MeanField(nn.Module):
             dict_out[f'{key}'] = sample.squeeze(1) #Each sample is of shape [n].
         
         dict_parent_loc_scale = {} #Define dictionary to store parent parameter normal distribution means and standard deviations.
-        dict_mean_sd = {} #Define dictionary to store real parameter normal distribution means and standard deviations for TruncatedNormal distribution.
+        #dict_mean_sd = {} #Define dictionary to store real parameter normal distribution means and standard deviations for TruncatedNormal distribution.
         real_loc = q_dist.mean #q_dist._mean
         real_scale = q_dist.stddev #torch.sqrt(q_dist._variance)
-        for key, parent_loc_scale, mean_sd in zip(self.keys, torch.split(torch.stack([parent_loc, parent_scale], 1), 1, 0), torch.split(torch.stack([real_loc, real_scale], 1), 1, 0)):
+        # for key, parent_loc_scale, mean_sd in zip(self.keys, torch.split(torch.stack([parent_loc, parent_scale], 1), 1, 0), torch.split(torch.stack([real_loc, real_scale], 1), 1, 0)):
+        #     dict_parent_loc_scale[f'{key}'] = parent_loc_scale
+        #     dict_mean_sd[f'{key}'] = mean_sd
+        for key, parent_loc_scale in zip(self.keys, torch.split(torch.stack([parent_loc, parent_scale], 1), 1, 0)):
             dict_parent_loc_scale[f'{key}'] = parent_loc_scale
-            dict_mean_sd[f'{key}'] = mean_sd
         
         #Return samples in dictionary and tensor format.                                
-        return dict_out, samples, log_q_theta, dict_parent_loc_scale, dict_mean_sd
+        #return dict_out, samples, log_q_theta, dict_parent_loc_scale, dict_mean_sd
+        return dict_out, samples, log_q_theta, dict_parent_loc_scale
 
         #if self.dist == TruncatedNormal:
         #    dict_mean_sd = {} #Define dictionary to store real parameter normal distribution means and standard deviations for TruncatedNormal distribution.

@@ -99,13 +99,12 @@ obs_times, obs_means_noCO2, obs_error = csv_to_obs_df('trunc_sample_y_from_x_t_1
 obs_model = ObsModel(active_device, TIMES = obs_times, DT = dt_flow, MU = obs_means_noCO2, SCALE = obs_error).to(active_device) 
 
 #Call training loop function for SCON-C.
-net, q_theta, p_theta, obs_model, ELBO_hist, list_loc_scale, list_mean_sd = train(active_device, pretrain_lr, train_lr, niter, piter, batch_size, num_layers,
+net, q_theta, p_theta, obs_model, ELBO_hist, list_parent_loc_scale = train(active_device, pretrain_lr, train_lr, niter, piter, batch_size, num_layers,
           state_dim_SCON, 'trunc_sample_y_from_x_t_1000_dt_0-01.csv', obs_error_scale, t, dt_flow, n, 
           t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
           drift_diffusion_SCON_C, x0_prior_SCON, SCON_C_priors_details, theta_dist,
           LEARN_THETA = True, LR_DECAY = 1., DECAY_STEP_SIZE = 200000, PRINT_EVERY = 100)
 
-#Save net and ELBO files.
 #Save net and ELBO files.
 now = datetime.now()
 now_string = 'logit_' + now.strftime('%Y_%m_%d_%H_%M_%S')
@@ -115,15 +114,13 @@ q_theta_save_string = 'q_theta' + save_string
 p_theta_save_string = 'p_theta' + save_string
 obs_model_save_string = 'obs_model' + save_string
 ELBO_save_string = 'ELBO' + save_string
-list_loc_scale_save_string = 'loc_scale_trajectory' + save_string
-list_mean_sd_save_string = 'mean_sd_trajectory' + save_string
+list_parent_loc_scale_save_string = 'loc_scale_trajectory' + save_string
 torch.save(net, net_save_string)
 torch.save(q_theta, q_theta_save_string)
 torch.save(p_theta, p_theta_save_string)
 torch.save(obs_model, obs_model_save_string) 
 torch.save(ELBO_hist, ELBO_save_string)
-torch.save(list_loc_scale, list_loc_scale_save_string)
-torch.save(list_mean_sd, list_mean_sd_save_string)
+torch.save(list_parent_loc_scale, list_parent_loc_scale_save_string)
 
 #Release some CUDA memory and load .pt files.
 torch.cuda.empty_cache()
