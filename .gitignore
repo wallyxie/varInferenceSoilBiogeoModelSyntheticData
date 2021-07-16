@@ -7,6 +7,4 @@ results/
 *.sh
 *checkpoint
 *.sub
-*.png
-*.pt
 pytorch_sbm_sde_vi/SBM_SDE_gen_y_test.ipynb
