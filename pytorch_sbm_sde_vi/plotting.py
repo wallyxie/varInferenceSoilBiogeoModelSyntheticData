@@ -53,7 +53,7 @@ def plot_theta(p_theta, q_theta, niter, piter, t, dt, batch_size, eval_batch_siz
     
     # Compute prior and posterior densities at points x
     num_pts = 1000
-    x = torch.linspace(start = lower, end = upper, steps = num_pts)
+    x = torch.from_numpy(np.linspace(lower, upper, num_pts))
     pdf_prior = torch.exp(q_dist.log_prob(x)).detach()
     pdf_post = torch.exp(p_dist.log_prob(x)).detach()
     
