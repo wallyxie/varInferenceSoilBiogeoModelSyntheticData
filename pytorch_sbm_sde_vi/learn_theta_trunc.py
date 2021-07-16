@@ -1,6 +1,5 @@
 #Python-related imports
 import math, sys
-from tqdm import tqdm
 from datetime import datetime
 
 #Torch-related imports
@@ -12,17 +11,21 @@ from torch.autograd import Function
 from TruncatedNormal import *
 from LogitNormal import *
 
+#PyData imports
 import numpy as np
 import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
 
-#Model-specific imports
+#Model-specific module imports
 from SBM_SDE_tensor import *
 from obs_and_flow import *
 from training import *
 from plotting import *
 from mean_field import *
+
+#Other imports
+from tqdm import tqdm
 
 #PyTorch settings
 torch.manual_seed(0)
