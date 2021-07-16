@@ -56,27 +56,27 @@ train_lr = 5e-4 #ELBO learning rate
 batch_size = 10 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
 eval_batch_size = 10
 obs_error_scale = 0.1 #Observation (y) standard deviation.
-prior_scale_factor = 0.1 #Proportion of prior standard deviation to prior means.
+prior_scale_factor = 0.333 #Proportion of prior standard deviation to prior means.
 num_layers = 5 #5 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
 theta_dist = 'RescaledLogitNormal' #String needs to be exact name of the distribution class. Options are 'RescaledLogitNormal' or 'TruncatedNormal'.
 
 #SCON theta RescaledLogitNormal prior distribution parameter details in order of mean, lower, and upper. Distribution sdev assumed to be some proportion of the mean. 
-u_M_details = torch.Tensor([logit(torch.tensor(0.002).to(active_device), torch.tensor(0).to(active_device), torch.tensor(0.1).to(active_device)), 0.002 * prior_scale_factor, 0, 0.1]).to(active_device)
-a_SD_details = torch.Tensor([logit(torch.tensor(0.5).to(active_device), torch.tensor(0).to(active_device), torch.tensor(1.).to(active_device)), 0.5 * prior_scale_factor, 0, 1]).to(active_device)
-a_DS_details = torch.Tensor([logit(torch.tensor(0.5).to(active_device), torch.tensor(0).to(active_device), torch.tensor(1.).to(active_device)), 0.5 * prior_scale_factor, 0, 1])
-a_M_details = torch.Tensor([logit(torch.tensor(0.5).to(active_device), torch.tensor(0).to(active_device), torch.tensor(1.).to(active_device)), 0.5 * prior_scale_factor, 0, 1]).to(active_device)
-a_MSC_details = torch.Tensor([logit(torch.tensor(0.5).to(active_device), torch.tensor(0).to(active_device), torch.tensor(1.).to(active_device)), 0.5 * prior_scale_factor, 0, 1]).to(active_device)
-k_S_ref_details = torch.Tensor([logit(torch.tensor(0.0005).to(active_device), torch.tensor(0).to(active_device), torch.tensor(0.1).to(active_device)), 0.0005 * prior_scale_factor, 0, 0.1]).to(active_device)
-k_D_ref_details = torch.Tensor([logit(torch.tensor(0.0008).to(active_device), torch.tensor(0).to(active_device), torch.tensor(0.1).to(active_device)), 0.0008 * prior_scale_factor, 0, 0.1]).to(active_device)
-k_M_ref_details = torch.Tensor([logit(torch.tensor(0.0006).to(active_device), torch.tensor(0).to(active_device), torch.tensor(0.1).to(active_device)), 0.0006 * prior_scale_factor, 0, 0.1]).to(active_device)
-Ea_S_details = torch.Tensor([logit(torch.tensor(55).to(active_device), torch.tensor(20).to(active_device), torch.tensor(120).to(active_device)), 55 * prior_scale_factor, 20, 120]).to(active_device)
-Ea_D_details = torch.Tensor([logit(torch.tensor(48).to(active_device), torch.tensor(20).to(active_device), torch.tensor(120).to(active_device)), 48 * prior_scale_factor, 20, 120]).to(active_device)
-Ea_M_details = torch.Tensor([logit(torch.tensor(48).to(active_device), torch.tensor(20).to(active_device), torch.tensor(120).to(active_device)), 48 * prior_scale_factor, 20, 120]).to(active_device)
+u_M_dist = torch.Tensor([logit(torch.tensor([0.0016]), torch.tensor([0]), torch.tensor([1])), 0.0016 * prior_scale_factor, 0, 1]).to(active_device)
+a_SD_dist = torch.Tensor([logit(torch.tensor([0.5]), torch.tensor([0]), torch.tensor([1])), 0.5 * prior_scale_factor, 0, 1]).to(active_device)
+a_DS_dist = torch.Tensor([logit(torch.tensor([0.5]), torch.tensor([0]), torch.tensor([1])), 0.5 * prior_scale_factor, 0, 1]).to(active_device)
+a_M_dist = torch.Tensor([logit(torch.tensor([0.5]), torch.tensor([0]), torch.tensor([1])), 0.5 * prior_scale_factor, 0, 1]).to(active_device)
+a_MSC_dist = torch.Tensor([logit(torch.tensor([0.5]), torch.tensor([0]), torch.tensor([1.])), 0.5 * prior_scale_factor, 0, 1]).to(active_device)
+k_S_ref_dist = torch.Tensor([logit(torch.tensor([0.0005]), torch.tensor([0]), torch.tensor([1])), 0.0005 * prior_scale_factor, 0, 1]).to(active_device)
+k_D_ref_dist = torch.Tensor([logit(torch.tensor([0.0008]), torch.tensor([0]), torch.tensor([1])), 0.0008 * prior_scale_factor, 0, 1]).to(active_device)
+k_M_ref_dist = torch.Tensor([logit(torch.tensor([0.0007]), torch.tensor([0]), torch.tensor([1])), 0.0007 * prior_scale_factor, 0, 1]).to(active_device)
+Ea_S_dist = torch.Tensor([logit(torch.tensor([55]), torch.tensor([20]), torch.tensor([120])), 55 * prior_scale_factor, 20, 120]).to(active_device)
+Ea_D_dist = torch.Tensor([logit(torch.tensor([48]), torch.tensor([20]), torch.tensor([120])), 48 * prior_scale_factor, 20, 120]).to(active_device)
+Ea_M_dist = torch.Tensor([logit(torch.tensor([48]), torch.tensor([20]), torch.tensor([120])), 48 * prior_scale_factor, 20, 120]).to(active_device)
 
 #SCON-C diffusion matrix parameter RescaledLogitNormal prior distribution parameter details in order of mean, lower, and upper. 
-c_SOC_details = torch.Tensor([logit(torch.tensor(0.05).to(active_device), torch.tensor(0).to(active_device), torch.tensor(1.).to(active_device)), 0.05 * prior_scale_factor, 0, 1.]).to(active_device)
-c_DOC_details = torch.Tensor([logit(torch.tensor(0.001).to(active_device), torch.tensor(0).to(active_device), torch.tensor(1.).to(active_device)), 0.001 * prior_scale_factor, 0, 1.]).to(active_device)
-c_MBC_details = torch.Tensor([logit(torch.tensor(0.001).to(active_device), torch.tensor(0).to(active_device), torch.tensor(1.).to(active_device)), 0.001 * prior_scale_factor, 0, 1.]).to(active_device)
+c_SOC_dist = torch.Tensor([logit(torch.tensor([0.1]), torch.tensor([0]), torch.tensor([1])), 0.05 * prior_scale_factor, 0, 1]).to(active_device)
+c_DOC_dist = torch.Tensor([logit(torch.tensor([0.002]), torch.tensor([0]), torch.tensor([1])), 0.002 * prior_scale_factor, 0, 1]).to(active_device)
+c_MBC_dist = torch.Tensor([logit(torch.tensor([0.002]), torch.tensor([0]), torch.tensor([1])), 0.002 * prior_scale_factor, 0, 1]).to(active_device)
 
 SCON_C_priors_details = {'u_M': u_M_details, 'a_SD': a_SD_details, 'a_DS': a_DS_details, 'a_M': a_M_details, 'a_MSC': a_MSC_details, 'k_S_ref': k_S_ref_details, 'k_D_ref': k_D_ref_details, 'k_M_ref': k_M_ref_details, 'Ea_S': Ea_S_details, 'Ea_D': Ea_D_details, 'Ea_M': Ea_M_details, 'c_SOC': c_SOC_details, 'c_DOC': c_DOC_details, 'c_MBC': c_MBC_details}
 
@@ -95,7 +95,7 @@ i_s_tensor = i_s(t_span_tensor).to(active_device) #Exogenous SOC input function
 i_d_tensor = i_d(t_span_tensor).to(active_device) #Exogenous DOC input function
 
 #Generate observation model.
-obs_times, obs_means_noCO2, obs_error = csv_to_obs_df('logit_sample_y_from_x_t_1000_dt_0-01.csv', state_dim_SCON, t, obs_error_scale)
+obs_times, obs_means_noCO2, obs_error = csv_to_obs_df('logit_sample_y_t_1000_dt_0-01_sd_scale_0-333.csv', state_dim_SCON, t, obs_error_scale)
 obs_model = ObsModel(active_device, TIMES = obs_times, DT = dt_flow, MU = obs_means_noCO2, SCALE = obs_error).to(active_device) 
 
 #Call training loop function for SCON-C.
@@ -106,7 +106,7 @@ obs_model = ObsModel(active_device, TIMES = obs_times, DT = dt_flow, MU = obs_me
 #          LEARN_THETA = True, LR_DECAY = 1., DECAY_STEP_SIZE = 200000, PRINT_EVERY = 100)
 
 net, q_theta, p_theta, obs_model, ELBO_hist, list_parent_loc_scale = train(active_device, pretrain_lr, train_lr, niter, piter, batch_size, num_layers,
-          state_dim_SCON, 'logit_sample_y_from_x_t_1000_dt_0-01.csv', obs_error_scale, t, dt_flow, n, 
+          state_dim_SCON, 'logit_sample_y_t_1000_dt_0-01_sd_scale_0-333.csv', obs_error_scale, t, dt_flow, n, 
           t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
           drift_diffusion_SCON_C, x0_prior_SCON, SCON_C_priors_details, theta_dist,
           LEARN_THETA = True, LR_DECAY = 1., DECAY_STEP_SIZE = 200000, PRINT_EVERY = 100)
