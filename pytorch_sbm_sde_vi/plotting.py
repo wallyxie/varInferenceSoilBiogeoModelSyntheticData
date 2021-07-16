@@ -46,7 +46,7 @@ def plot_theta(p_theta, q_theta, niter, piter, t, dt, batch_size, eval_batch_siz
 
     # Posterior distribution object
     loc = q_theta.means
-    scale = torch.maximum(q_theta.sds, torch.tensor(1e-6))
+    scale = torch.max(q_theta.sds, torch.tensor(1e-6))
     lower = q_theta.lowers
     upper = q_theta.uppers
     q_dist = q_theta.dist(loc, scale, a = lower, b = upper)
