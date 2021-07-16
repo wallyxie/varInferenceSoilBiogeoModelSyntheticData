@@ -143,4 +143,4 @@ net.eval()
 x, _ = net(eval_batch_size)
 plot_elbo(ELBO_hist, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, now_string, xmin = int((niter - piter) * 0.2)) #xmin < (niter - piter).
 plot_states_post(x, obs_model, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, now_string, ymin_list = [0, 0, 0], ymax_list = [100., 12., 12.])
-plot_theta(p_theta, q_theta, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, now_string)
+#plot_theta(p_theta, q_theta, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, now_string)
