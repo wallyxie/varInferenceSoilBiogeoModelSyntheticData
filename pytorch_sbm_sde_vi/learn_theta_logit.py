@@ -114,7 +114,7 @@ net, q_theta, p_theta, obs_model, ELBO_hist, list_parent_loc_scale = train(activ
 #Save net and ELBO files.
 now = datetime.now()
 now_string = 'logit_' + now.strftime('%Y_%m_%d_%H_%M_%S')
-save_string = f'iter_{niter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_lr_{train_lr}_{now_string}.pt'
+save_string = f'_iter_{niter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_lr_{train_lr}_{now_string}.pt'
 net_save_string = 'net' + save_string
 net_state_dict_save_string = 'net_state_dict' + save_string
 q_theta_save_string = 'q_theta' + save_string
