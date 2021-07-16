@@ -37,7 +37,7 @@ torch.set_printoptions(precision = 8)
 
 #Neural SDE parameters
 dt_flow = 1.0 #Increased from 0.1 to reduce memory.
-t = 1000 #In hours.
+t = 50 #In hours.
 n = int(t / dt_flow) + 1
 t_span = np.linspace(0, t, n)
 t_span_tensor = torch.reshape(torch.Tensor(t_span), [1, n, 1]).to(active_device) #T_span needs to be converted to tensor object. Additionally, facilitates conversion of I_S and I_D to tensor objects.
@@ -116,12 +116,14 @@ now = datetime.now()
 now_string = 'logit_' + now.strftime('%Y_%m_%d_%H_%M_%S')
 save_string = f'_iter_{niter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_{now_string}.pt'
 net_save_string = 'net' + save_string
+net_state_dict_save_string = 'net_state_dict' + save_string
 q_theta_save_string = 'q_theta' + save_string
 p_theta_save_string = 'p_theta' + save_string
 obs_model_save_string = 'obs_model' + save_string
 ELBO_save_string = 'ELBO' + save_string
 list_parent_loc_scale_save_string = 'loc_scale_trajectory' + save_string
 torch.save(net, net_save_string)
+torch.save(net.state_dict(), net_state_dict_save_string) #For loading net on CPU.
 torch.save(q_theta, q_theta_save_string)
 torch.save(p_theta, p_theta_save_string)
 torch.save(obs_model, obs_model_save_string) 

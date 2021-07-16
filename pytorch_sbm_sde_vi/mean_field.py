@@ -73,8 +73,8 @@ class MeanField(nn.Module):
         
         dict_parent_loc_scale = {} #Define dictionary to store parent parameter normal distribution means and standard deviations.
         #dict_mean_sd = {} #Define dictionary to store real parameter normal distribution means and standard deviations for TruncatedNormal distribution.
-        real_loc = q_dist.mean #q_dist._mean
-        real_scale = q_dist.stddev #torch.sqrt(q_dist._variance)
+        #real_loc = q_dist.mean #q_dist._mean
+        #real_scale = q_dist.stddev #torch.sqrt(q_dist._variance)
         # for key, parent_loc_scale, mean_sd in zip(self.keys, torch.split(torch.stack([parent_loc, parent_scale], 1), 1, 0), torch.split(torch.stack([real_loc, real_scale], 1), 1, 0)):
         #     dict_parent_loc_scale[f'{key}'] = parent_loc_scale
         #     dict_mean_sd[f'{key}'] = mean_sd
