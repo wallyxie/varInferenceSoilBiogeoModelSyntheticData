@@ -37,7 +37,7 @@ torch.set_printoptions(precision = 8)
 
 #Neural SDE parameters
 dt_flow = 1.0 #Increased from 0.1 to reduce memory.
-t = 50 #In hours.
+t = 1000 #In hours.
 n = int(t / dt_flow) + 1
 t_span = np.linspace(0, t, n)
 t_span_tensor = torch.reshape(torch.Tensor(t_span), [1, n, 1]).to(active_device) #T_span needs to be converted to tensor object. Additionally, facilitates conversion of I_S and I_D to tensor objects.
@@ -49,7 +49,7 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-niter = 10000
+niter = 500
 piter = 0
 pretrain_lr = 1e-3 #Norm regularization learning rate
 train_lr = 5e-4 #ELBO learning rate
@@ -107,8 +107,8 @@ net, q_theta, p_theta, obs_model, ELBO_hist, list_parent_loc_scale = train(activ
 
 #Save net and ELBO files.
 now = datetime.now()
-now_string = 'logit_' + now.strftime('%Y_%m_%d_%H_%M_%S')
-save_string = f'_iter_{niter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_{now_string}.pt'
+now_string = 'trunc_' + now.strftime('%Y_%m_%d_%H_%M_%S')
+save_string = f'iter_{niter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_lr_{train_lr}_{now_string}.pt'
 net_save_string = 'net' + save_string
 net_state_dict_save_string = 'net_state_dict' + save_string
 q_theta_save_string = 'q_theta' + save_string
