@@ -15,18 +15,14 @@ class RescaledLogitNormal(Distribution):
                        'a': constraints.real, 'b': constraints.real}
     has_rsample = True
 
-    def __init__(self, loc=0, scale=1, a=0, b=1, validate_args=None):
+    def __init__(self, loc=0, scale=1, a=0, b=1):
         # loc: mean of the normally distributed logit
         # scale: standard deviation of the normally distributed logit
         # a, b: lower and upper bounds, respectively
         loc, scale, a, b = broadcast_all(loc, scale, a, b)
         self.sigmoid = RescaledSigmoid(a, b)
         self.base = D.normal.Normal(loc, scale)
-        self.loc = self.base.loc
-        self.scale = self.base.scale
-        self.a = self.sigmoid.lower
-        self.b = self.sigmoid.upper
-        super().__init__(self.base.batch_shape, validate_args=validate_args)
+        self._event_shape = self.base.event_shape
 
     @constraints.dependent_property
     def support(self):
