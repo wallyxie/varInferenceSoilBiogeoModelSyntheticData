@@ -105,11 +105,12 @@ obs_model = ObsModel(active_device, TIMES = obs_times, DT = dt_flow, MU = obs_me
 #          drift_diffusion_SCON_C, x0_prior_SCON, SCON_C_priors_details, theta_dist,
 #          LEARN_THETA = True, LR_DECAY = 1., DECAY_STEP_SIZE = 200000, PRINT_EVERY = 100)
 
-net, q_theta, p_theta, obs_model, ELBO_hist, list_parent_loc_scale = train(active_device, pretrain_lr, train_lr, niter, piter, batch_size, num_layers,
-          state_dim_SCON, 'logit_sample_y_t_1000_dt_0-01_sd_scale_0-333.csv', obs_error_scale, t, dt_flow, n, 
-          t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
-          drift_diffusion_SCON_C, x0_prior_SCON, SCON_C_priors_details, theta_dist,
-          LEARN_THETA = True, LR_DECAY = 1., DECAY_STEP_SIZE = 200000, PRINT_EVERY = 100)
+net, q_theta, p_theta, obs_model, ELBO_hist, list_parent_loc_scale = train(
+        active_device, pretrain_lr, train_lr, niter, piter, batch_size, num_layers,
+        state_dim_SCON, 'logit_sample_y_t_1000_dt_0-01_sd_scale_0-333.csv', obs_error_scale, t, dt_flow, n, 
+        t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
+        drift_diffusion_SCON_C, x0_prior_SCON, SCON_C_priors_details, theta_dist,
+        LEARN_THETA = True, LR_DECAY = 1., DECAY_STEP_SIZE = 200000, PRINT_EVERY = 100)
 
 #Save net and ELBO files.
 now = datetime.now()
@@ -143,4 +144,4 @@ net.eval()
 x, _ = net(eval_batch_size)
 plot_elbo(ELBO_hist, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, now_string, xmin = int((niter - piter) * 0.2)) #xmin < (niter - piter).
 plot_states_post(x, obs_model, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, now_string, ymin_list = [0, 0, 0], ymax_list = [100., 12., 12.])
-#plot_theta(p_theta, q_theta, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, now_string)
+plot_theta(p_theta, q_theta, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, now_string)
