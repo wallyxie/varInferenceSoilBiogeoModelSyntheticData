@@ -6,7 +6,7 @@ import torch
 import numpy as np
 
 def plot_elbo(elbo_hist, niter, piter, t, dt, batch_size, eval_batch_size, num_layers, train_lr, now_string, xmin = 0, ymax = None, yscale = 'linear'):
-    iters = torch.arange(xmin + 1, len(elbo_hist) + 1).cpu().detach().numpy()
+    iters = torch.arange(xmin + 1, len(elbo_hist) + 1).detach().cpu().numpy()
     plt.plot(iters, elbo_hist[xmin:])
     plt.ylim((None, ymax))
     plt.yscale(yscale)
@@ -19,12 +19,12 @@ def plot_states_post(x, obs_model, niter, piter, t, dt, batch_size, eval_batch_s
     state_list = ['SOC', 'DOC', 'MBC', 'EEC']   
     fig, axs = plt.subplots(state_dim)
 
-    obs_model.mu = obs_model.mu.cpu().detach().numpy()
-    obs_model.scale = obs_model.scale.cpu().detach().numpy()
+    obs_model.mu = obs_model.mu.detach().cpu().numpy()
+    obs_model.scale = obs_model.scale.detach().cpu().numpy()
 
     for i in range(state_dim):
-        q_mean, q_std = x[:, :, i].mean(0).cpu().detach().numpy(), x[:, :, i].std(0).cpu().detach().numpy()
-        hours = torch.arange(0, t + dt, dt).cpu().detach().numpy()
+        q_mean, q_std = x[:, :, i].mean(0).detach().cpu().numpy(), x[:, :, i].std(0).detach().cpu().numpy()
+        hours = torch.arange(0, t + dt, dt).detach().cpu().numpy()
         axs[i].plot(obs_model.times, obs_model.mu[i, :], linestyle = 'None', marker = '.', label = 'Observed')
         axs[i].fill_between(obs_model.times, obs_model.mu[i, :] - 2 * obs_model.scale[:, i], obs_model.mu[i, :] + 2 * obs_model.scale[:, i], alpha = 0.4, label = 'Observation $\\mu \pm 2\sigma_y$')
         axs[i].plot(hours, q_mean, label = 'Posterior mean')
@@ -84,8 +84,8 @@ def plot_theta(p_theta, q_theta, niter, piter, t, dt, batch_size, eval_batch_siz
     for i, row in enumerate(axes):
         for j, ax in enumerate(row):
             if param_index < 14:
-                ax.plot(x[int(prior_first_one_indices[param_index]): int(prior_last_one_indices[param_index]), param_index], pdf_prior[int(prior_first_one_indices[param_index]): int(prior_last_one_indices[param_index]), param_index], label='Prior $p(\\theta)$')
-                ax.plot(x[int(post_first_one_indices[param_index]): int(post_last_one_indices[param_index]), param_index], pdf_post[int(post_first_one_indices[param_index]): int(post_last_one_indices[param_index]), param_index], label='Approximate posterior $q(\\theta)$')
+                ax.plot(x[int(prior_first_one_indices[param_index]): int(prior_last_one_indices[param_index]), param_index].detach().cpu().numpy(), pdf_prior[int(prior_first_one_indices[param_index]): int(prior_last_one_indices[param_index]), param_index].detach().cpu().numpy(), label='Prior $p(\\theta)$')
+                ax.plot(x[int(post_first_one_indices[param_index]): int(post_last_one_indices[param_index]), param_index].detach().cpu().numpy(), pdf_post[int(post_first_one_indices[param_index]): int(post_last_one_indices[param_index]), param_index].detach().cpu().numpy(), label='Approximate posterior $q(\\theta)$')
                 ax.set_xlabel(q_theta.keys[param_index])
                 ax.set_ylabel('density')
             elif param_index == 14:
