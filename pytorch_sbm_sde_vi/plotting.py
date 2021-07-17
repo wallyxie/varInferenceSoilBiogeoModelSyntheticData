@@ -59,19 +59,19 @@ def plot_theta(p_theta, q_theta, niter, piter, t, dt, batch_size, eval_batch_siz
     pdf_prior = torch.exp(q_dist.log_prob(x)).detach()
     pdf_post = torch.exp(p_dist.log_prob(x)).detach()
 
-    #Find appropriate plotting range of x based on pdf density concentration (where .log_prob > 1 for prior and post).    
+    #Find appropriate plotting range of x based on pdf density concentration (where pdf > 1 for prior and post).    
     prior_first_one_indices = torch.zeros(loc.size(0))
     prior_last_one_indices = torch.zeros(loc.size(0))
     post_first_one_indices = torch.zeros(loc.size(0))
     post_last_one_indices = torch.zeros(loc.size(0))
     for param_index in range(0, loc.size(0)):
-        prior_geq_ones = pdf_prior[:, param_index] >= 1 #Get range of .log_prob values >= 1.
+        prior_geq_ones = pdf_prior[:, param_index] >= 1 #Find pdf values >= 1 in prior.
         prior_cumsum = prior_geq_ones.cumsum(axis = -1)
         prior_min_index = prior_cumsum.min(0).indices
         prior_max_index = prior_cumsum.max(0).indices
         prior_first_one_indices[param_index] = prior_min_index
         prior_last_one_indices[param_index] = prior_max_index
-        post_geq_ones = pdf_post[:, param_index] >= 1 #Get range of .log_prob values >= 1.
+        post_geq_ones = pdf_post[:, param_index] >= 1 #Find pdf values >= 1 in posterior.
         post_cumsum = post_geq_ones.cumsum(axis = -1)
         post_min_index = post_cumsum.min(0).indices
         post_max_index = post_cumsum.max(0).indices 
