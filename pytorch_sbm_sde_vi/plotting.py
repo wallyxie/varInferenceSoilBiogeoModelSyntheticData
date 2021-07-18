@@ -65,13 +65,13 @@ def plot_theta(p_theta, q_theta, niter, piter, t, dt, batch_size, eval_batch_siz
     post_first_one_indices = torch.zeros(loc.size(0))
     post_last_one_indices = torch.zeros(loc.size(0))
     for param_index in range(0, loc.size(0)):
-        prior_geq_ones = pdf_prior[:, param_index] >= 0.0001 #Find pdf values >= 1 in prior.
+        prior_geq_ones = pdf_prior[:, param_index] >= 2e-5 #Find pdf values >= 1 in prior.
         prior_cumsum = prior_geq_ones.cumsum(axis = -1) #Cumsum over all true values.
         prior_min_index = prior_cumsum.min(0).indices
         prior_max_index = prior_cumsum.max(0).indices
         prior_first_one_indices[param_index] = prior_min_index
         prior_last_one_indices[param_index] = prior_max_index
-        post_geq_ones = pdf_post[:, param_index] >= 0.0001 #Find pdf values >= 1 in posterior.
+        post_geq_ones = pdf_post[:, param_index] >= 2e-5 #Find pdf values >= 1 in posterior.
         post_cumsum = post_geq_ones.cumsum(axis = -1) #Cumsum over all true values.
         post_min_index = post_cumsum.min(0).indices
         post_max_index = post_cumsum.max(0).indices 
@@ -87,7 +87,7 @@ def plot_theta(p_theta, q_theta, niter, piter, t, dt, batch_size, eval_batch_siz
                 ax.plot(x[int(prior_first_one_indices[param_index]): int(prior_last_one_indices[param_index]), param_index].detach().cpu().numpy(), pdf_prior[int(prior_first_one_indices[param_index]): int(prior_last_one_indices[param_index]), param_index].detach().cpu().numpy(), label='Prior $p(\\theta)$')
                 ax.plot(x[int(post_first_one_indices[param_index]): int(post_last_one_indices[param_index]), param_index].detach().cpu().numpy(), pdf_post[int(post_first_one_indices[param_index]): int(post_last_one_indices[param_index]), param_index].detach().cpu().numpy(), label='Approximate posterior $q(\\theta)$')
                 ax.set_xlabel(q_theta.keys[param_index])
-                ax.set_ylabel('density')
+                ax.set_ylabel('Density')
             elif param_index == 14:
                 handles, labels = axes[0, 0].get_legend_handles_labels()
                 ax.legend(handles, labels, loc='center')
