@@ -65,14 +65,14 @@ def plot_theta(p_theta, q_theta, niter, piter, t, dt, batch_size, eval_batch_siz
     post_first_one_indices = torch.zeros(loc.size(0))
     post_last_one_indices = torch.zeros(loc.size(0))
     for param_index in range(0, loc.size(0)):
-        prior_geq_ones = pdf_prior[:, param_index] >= 1 #Find pdf values >= 1 in prior.
-        prior_cumsum = prior_geq_ones.cumsum(axis = -1)
+        prior_geq_ones = pdf_prior[:, param_index] >= 0.0001 #Find pdf values >= 1 in prior.
+        prior_cumsum = prior_geq_ones.cumsum(axis = -1) #Cumsum over all true values.
         prior_min_index = prior_cumsum.min(0).indices
         prior_max_index = prior_cumsum.max(0).indices
         prior_first_one_indices[param_index] = prior_min_index
         prior_last_one_indices[param_index] = prior_max_index
-        post_geq_ones = pdf_post[:, param_index] >= 1 #Find pdf values >= 1 in posterior.
-        post_cumsum = post_geq_ones.cumsum(axis = -1)
+        post_geq_ones = pdf_post[:, param_index] >= 0.0001 #Find pdf values >= 1 in posterior.
+        post_cumsum = post_geq_ones.cumsum(axis = -1) #Cumsum over all true values.
         post_min_index = post_cumsum.min(0).indices
         post_max_index = post_cumsum.max(0).indices 
         post_first_one_indices[param_index] = post_min_index
