@@ -122,7 +122,7 @@ q_theta_save_string = 'q_theta' + save_string
 p_theta_save_string = 'p_theta' + save_string
 obs_model_save_string = 'obs_model' + save_string
 ELBO_save_string = 'ELBO' + save_string
-list_parent_loc_scale_save_string = 'loc_scale_trajectory' + save_string
+list_parent_loc_scale_save_string = 'parent_loc_scale_trajectory' + save_string
 torch.save(net, net_save_string)
 torch.save(net.state_dict(), net_state_dict_save_string) #For loading net on CPU.
 torch.save(q_theta, q_theta_save_string)
