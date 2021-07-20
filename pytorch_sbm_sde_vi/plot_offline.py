@@ -3,6 +3,8 @@ import torch
 import numpy as np
 from matplotlib import pyplot as plt
 
+plt.rcParams.update({'font.size': 16, 'lines.linewidth': 3, 'lines.markersize': 10})
+
 def plot_theta(p_theta_file, q_theta_file, true_theta_file, fig_file,
                fig_dir='figs', nrows=4, ncols=4, device=torch.device('cpu')):
     # Load prior distribution
@@ -11,17 +13,29 @@ def plot_theta(p_theta_file, q_theta_file, true_theta_file, fig_file,
     # Load posterior distribution
     q_theta = torch.load(q_theta_file, map_location=device)
     loc = q_theta.means
-    scale = torch.maximum(q_theta.sds, torch.tensor(1e-6))
+    scale = torch.max(q_theta.sds, torch.tensor(1e-6))
     lower = q_theta.lowers
     upper = q_theta.uppers
     q_dist = q_theta.dist(loc, scale, a = lower, b = upper)
     
     # Load true theta
     true_theta = torch.load(true_theta_file, map_location=device)
+
+    # Define plot boundaries
+    #print(q_dist, q_dist.loc, q_dist.scale, q_dist.mean, q_dist.stddev)
+    #print(p_dist, p_dist.loc, p_dist.scale, p_dist.mean, p_dist.stddev)
+
+    x0 = torch.min(q_dist.mean - 4*q_dist.stddev, p_dist.mean - 4*p_dist.stddev)
+    x0 = torch.max(x0, lower).detach()
+    #print(x0)
+    
+    x1 = torch.max(q_dist.mean + 4*q_dist.stddev, p_dist.mean + 4*p_dist.stddev)
+    x1 = torch.min(x1, upper).detach()
+    #print(x1)
     
     # Compute prior and posterior densities at points x
     num_pts = 1000
-    x = torch.from_numpy(np.linspace(lower, upper, num_pts))
+    x = torch.from_numpy(np.linspace(x0, x1, num_pts))
     pdf_prior = torch.exp(q_dist.log_prob(x)).detach()
     pdf_post = torch.exp(p_dist.log_prob(x)).detach()
     
@@ -79,14 +93,14 @@ def plot_states(net_file, kf_file, fig_file, fig_dir='figs', num_samples=10,
         hours = torch.arange(0, t + dt, dt)
         
         # Plot net posterior
-        axs[i].plot(hours, net_mean, label = 'SDE flow mean')
+        axs[i].plot(hours, net_mean, label = 'Flow mean')
         axs[i].fill_between(hours, net_mean - 2 * net_sd, net_mean + 2 * net_sd,
-                            alpha = 0.4, label = 'SDE flow $\\mu \pm 2\sigma_x$')
+                            alpha = 0.4, label = 'Flow $\\mu \pm 2\sigma$')
         
         # Plot kf posterior
-        axs[i].plot(hours, kf_mean, label = 'Kalman smoother mean')
+        axs[i].plot(hours, kf_mean, label = 'Kalman mean')
         axs[i].fill_between(hours, kf_mean - 2 * kf_sd, kf_mean + 2 * kf_sd,
-                            alpha = 0.4, label = 'Kalman smoother $\\mu \pm 2\sigma_x$')
+                            alpha = 0.4, label = 'Kalman $\\mu \pm 2\sigma$')
         
         # Plot observations
         axs[i].plot(obs_model.times, obs_model.mu[i, :], linestyle = 'None', marker = '.', label = 'Observed')
