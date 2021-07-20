@@ -1,6 +1,7 @@
 #Python-related imports
 import math, sys
 from datetime import datetime
+import os.path
 
 #Torch-related imports
 import torch
@@ -95,7 +96,8 @@ i_s_tensor = i_s(t_span_tensor).to(active_device) #Exogenous SOC input function
 i_d_tensor = i_d(t_span_tensor).to(active_device) #Exogenous DOC input function
 
 #Generate observation model.
-obs_times, obs_means_noCO2, obs_error = csv_to_obs_df('SCON_C_logit_sample_y_t_1000_dt_0-005_sd_scale_0-333.csv', state_dim_SCON, t, obs_error_scale)
+csv_data_path = os.path.join('generated_data/', 'SCON_C_logit_sample_y_t_1000_dt_0-005_sd_scale_0-333.csv')
+obs_times, obs_means_noCO2, obs_error = csv_to_obs_df(csv_data_path, state_dim_SCON, t, obs_error_scale)
 obs_model = ObsModel(active_device, TIMES = obs_times, DT = dt_flow, MU = obs_means_noCO2, SCALE = obs_error).to(active_device) 
 
 #Call training loop function for SCON-C.
@@ -107,22 +109,23 @@ obs_model = ObsModel(active_device, TIMES = obs_times, DT = dt_flow, MU = obs_me
 
 net, q_theta, p_theta, obs_model, ELBO_hist, list_parent_loc_scale = train(
         active_device, pretrain_lr, train_lr, niter, piter, batch_size, num_layers,
-        state_dim_SCON, 'SCON_C_logit_sample_y_t_1000_dt_0-005_sd_scale_0-333.csv', obs_error_scale, t, dt_flow, n, 
+        state_dim_SCON, csv_data_path, obs_error_scale, t, dt_flow, n, 
         t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
         drift_diffusion_SCON_C, x0_prior_SCON, SCON_C_priors_details, theta_dist,
         LEARN_THETA = True, LR_DECAY = 1., DECAY_STEP_SIZE = 200000, PRINT_EVERY = 100)
 
 #Save net and ELBO files.
 now = datetime.now()
-now_string = 'logit_' + now.strftime('%Y_%m_%d_%H_%M_%S')
+now_string = 'SCON_C_logit_' + now.strftime('%Y_%m_%d_%H_%M_%S')
 save_string = f'_iter_{niter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_lr_{train_lr}_sd_scale_{prior_scale_factor}_{now_string}.pt'
-net_save_string = 'net' + save_string
-net_state_dict_save_string = 'net_state_dict' + save_string
-q_theta_save_string = 'q_theta' + save_string
-p_theta_save_string = 'p_theta' + save_string
-obs_model_save_string = 'obs_model' + save_string
-ELBO_save_string = 'ELBO' + save_string
-list_parent_loc_scale_save_string = 'parent_loc_scale_trajectory' + save_string
+outputs_folder = 'training_pt_outputs/'
+net_save_string = os.path.join(outputs_folder, 'net' + save_string)
+net_state_dict_save_string = os.path.join(outputs_folder,'net_state_dict' + save_string)
+q_theta_save_string = os.path.join(outputs_folder, 'q_theta' + save_string)
+p_theta_save_string = os.path.join(outputs_folder, 'p_theta' + save_string)
+obs_model_save_string = os.path.join(outputs_folder, 'obs_model' + save_string)
+ELBO_save_string = os.path.join(outputs_folder, 'ELBO' + save_string)
+list_parent_loc_scale_save_string = os.path.join(outputs_folder, 'parent_loc_scale_trajectory' + save_string)
 torch.save(net, net_save_string)
 torch.save(net.state_dict(), net_state_dict_save_string) #For loading net on CPU.
 torch.save(q_theta, q_theta_save_string)
@@ -142,6 +145,7 @@ ELBO_hist = torch.load(ELBO_save_string)
 #Plot training posterior results and ELBO history.
 net.eval()
 x, _ = net(eval_batch_size)
-plot_elbo(ELBO_hist, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, now_string, xmin = int((niter - piter) * 0.2)) #xmin < (niter - piter).
-plot_states_post(x, obs_model, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, now_string, ymin_list = [0, 0, 0], ymax_list = [100., 8., 10.])
-plot_theta(p_theta, q_theta, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, now_string)
+plots_folder = 'training_plots/'
+plot_elbo(ELBO_hist, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, xmin = int((niter - piter) * 0.2)) #xmin < (niter - piter).
+plot_states_post(x, obs_model, state_dim_SCON, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, ymin_list = [0, 0, 0], ymax_list = [100., 8., 10.])
+plot_theta(p_theta, q_theta, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string)

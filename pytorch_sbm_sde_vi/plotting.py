@@ -1,11 +1,15 @@
+#Python-related imports
+import os.path
+
+#PyData imports
+import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 
 #Torch-related imports
 import torch
-import numpy as np
 
-def plot_elbo(elbo_hist, niter, piter, t, dt, batch_size, eval_batch_size, num_layers, train_lr, sd_scale, now_string, xmin = 0, ymax = None, yscale = 'linear'):
+def plot_elbo(elbo_hist, niter, piter, t, dt, batch_size, eval_batch_size, num_layers, train_lr, sd_scale, plots_folder, now_string, xmin = 0, ymax = None, yscale = 'linear'):
     iters = torch.arange(xmin + 1, len(elbo_hist) + 1).detach().cpu().numpy()
     plt.plot(iters, elbo_hist[xmin:])
     plt.ylim((None, ymax))
@@ -13,9 +17,9 @@ def plot_elbo(elbo_hist, niter, piter, t, dt, batch_size, eval_batch_size, num_l
     plt.ylabel('ELBO')
     plt.xlabel('Iteration')
     plt.title(f'ELBO history after {xmin} iterations')
-    plt.savefig(f'ELBO_iter_{niter}_piter_{piter}_t_{t}_dt_{dt}_batch_{batch_size}_samples_{eval_batch_size}_layers_{num_layers}_lr_{train_lr}_sd_scale_{sd_scale}_{now_string}.png', dpi = 300)
+    plt.savefig(os.path.join(plots_folder, f'ELBO_iter_{niter}_piter_{piter}_t_{t}_dt_{dt}_batch_{batch_size}_samples_{eval_batch_size}_layers_{num_layers}_lr_{train_lr}_sd_scale_{sd_scale}_{now_string}.png'), dpi = 300)
     
-def plot_states_post(x, obs_model, niter, piter, t, dt, batch_size, eval_batch_size, num_layers, train_lr, sd_scale, now_string, ymin_list = None, ymax_list = None, state_dim = 3):
+def plot_states_post(x, obs_model, state_dim, niter, piter, t, dt, batch_size, eval_batch_size, num_layers, train_lr, sd_scale, plots_folder, now_string, ymin_list = None, ymax_list = None):
     state_list = ['SOC', 'DOC', 'MBC', 'EEC']   
     fig, axs = plt.subplots(state_dim)
 
@@ -37,9 +41,9 @@ def plot_states_post(x, obs_model, niter, piter, t, dt, batch_size, eval_batch_s
         axs[i].set_ylim([ymin, ymax])
         #plt.title(f'Approximate posterior $q(x|\\theta, y)$\nNumber of samples = {eval_batch_size}\nTimestep = {dt}\nIterations = {niter}')
     plt.xlabel('Hour')
-    fig.savefig(f'net_iter_{niter}_piter_{piter}_t_{t}_dt_{dt}_batch_{batch_size}_samples_{eval_batch_size}_layers_{num_layers}_lr_{train_lr}_sd_scale_{sd_scale}_{now_string}.png', dpi = 300)
+    fig.savefig(os.path.join(plots_folder, f'net_iter_{niter}_piter_{piter}_t_{t}_dt_{dt}_batch_{batch_size}_samples_{eval_batch_size}_layers_{num_layers}_lr_{train_lr}_sd_scale_{sd_scale}_{now_string}.png'), dpi = 300)
 
-def plot_theta(p_theta, q_theta, niter, piter, t, dt, batch_size, eval_batch_size, num_layers, train_lr, sd_scale, now_string,
+def plot_theta(p_theta, q_theta, niter, piter, t, dt, batch_size, eval_batch_size, num_layers, train_lr, sd_scale, plots_folder, now_string,
                nrows=4, ncols=4):
     # Prior distribution object
     p_dist = p_theta
@@ -97,4 +101,4 @@ def plot_theta(p_theta, q_theta, niter, piter, t, dt, batch_size, eval_batch_siz
             param_index += 1
             
     plt.tight_layout()
-    fig.savefig(f'theta_iter_{niter}_piter_{piter}_t_{t}_dt_{dt}_batch_{batch_size}_samples_{eval_batch_size}_layers_{num_layers}_lr_{train_lr}_sd_scale_{sd_scale}_{now_string}.png', dpi = 300)
+    fig.savefig(os.path.join(plots_folder, f'theta_iter_{niter}_piter_{piter}_t_{t}_dt_{dt}_batch_{batch_size}_samples_{eval_batch_size}_layers_{num_layers}_lr_{train_lr}_sd_scale_{sd_scale}_{now_string}.png'), dpi = 300)
