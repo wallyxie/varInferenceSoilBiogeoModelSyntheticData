@@ -36,8 +36,8 @@ def plot_theta(p_theta_file, q_theta_file, true_theta_file, fig_file,
     # Compute prior and posterior densities at points x
     num_pts = 1000
     x = torch.from_numpy(np.linspace(x0, x1, num_pts))
-    pdf_prior = torch.exp(q_dist.log_prob(x)).detach()
-    pdf_post = torch.exp(p_dist.log_prob(x)).detach()
+    pdf_prior = torch.exp(p_dist.log_prob(x)).detach()
+    pdf_post = torch.exp(q_dist.log_prob(x)).detach()
     
     # Plot
     fig, axes = plt.subplots(nrows, ncols, figsize=(15, 15))

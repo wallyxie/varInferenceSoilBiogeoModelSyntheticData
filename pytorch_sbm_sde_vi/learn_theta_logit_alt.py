@@ -62,7 +62,7 @@ num_layers = 5 #5 - number needed to fit UCI HPC3 RAM requirements with 16 GB RA
 theta_dist = 'RescaledLogitNormal' #String needs to be exact name of the distribution class. Options are 'RescaledLogitNormal' or 'TruncatedNormal'.
 
 #Load alternative parameterization of priors
-priors_file = 'generated_data/priors_alt.pt'
+priors_file = 'generated_data/SCON_C_logit_alt_sample_y_t_1000_dt_0-005_sd_scale_0-333_hyperparams.pt'
 SCON_C_priors_details = {k: v.to(active_device) for k, v in torch.load(priors_file).items()}
 
 #Initial condition prior means
@@ -80,7 +80,7 @@ i_s_tensor = i_s(t_span_tensor).to(active_device) #Exogenous SOC input function
 i_d_tensor = i_d(t_span_tensor).to(active_device) #Exogenous DOC input function
 
 #Generate observation model.
-csv_data_path = os.path.join('generated_data/', 'SCON_C_logit_sample_y_t_1000_dt_0-005_sd_scale_0-333.csv')
+csv_data_path = os.path.join('generated_data/', 'SCON_C_logit_alt_sample_y_t_1000_dt_0-005_sd_scale_0-333.csv')
 obs_times, obs_means_noCO2, obs_error = csv_to_obs_df(csv_data_path, state_dim_SCON, t, obs_error_scale)
 obs_model = ObsModel(active_device, TIMES = obs_times, DT = dt_flow, MU = obs_means_noCO2, SCALE = obs_error).to(active_device) 
 
