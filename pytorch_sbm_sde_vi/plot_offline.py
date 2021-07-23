@@ -2,8 +2,9 @@ import os
 import torch
 import numpy as np
 from matplotlib import pyplot as plt
+from matplotlib import cm
 
-plt.rcParams.update({'font.size': 16, 'lines.linewidth': 3, 'lines.markersize': 10})
+plt.rcParams.update({'font.size': 16, 'lines.linewidth': 2, 'lines.markersize': 10})
 
 def plot_theta(p_theta_file, q_theta_file, true_theta_file, fig_file,
                fig_dir='figs', nrows=4, ncols=4, device=torch.device('cpu')):
@@ -66,7 +67,7 @@ def plot_theta(p_theta_file, q_theta_file, true_theta_file, fig_file,
     plt.savefig('/'.join([fig_dir, fig_file]), dpi=300)
 
 def plot_states(net_file, kf_file, fig_file, fig_dir='figs', num_samples=10,
-                ymin_list=None, ymax_list=None, device=torch.device('cpu')):
+                summarize_net=True, ymin_list=None, ymax_list=None, device=torch.device('cpu')):
     # Load net object
     net = torch.load(net_file, map_location=device)
     obs_model, state_dim, t, dt = net.obs_model, net.state_dim, net.t, net.dt
@@ -77,7 +78,7 @@ def plot_states(net_file, kf_file, fig_file, fig_dir='figs', num_samples=10,
     # Draw samples of x
     net.device = device
     net.eval()
-    x, _ = net(num_samples)
+    x = net(num_samples)[0].detach()
     
     # Define figure and axes objects
     state_list = ['SOC', 'DOC', 'MBC', 'EEC']
@@ -88,23 +89,31 @@ def plot_states(net_file, kf_file, fig_file, fig_dir='figs', num_samples=10,
         ymax_list = [None] * state_dim
     
     for i in range(state_dim):
-        net_mean, net_sd = x[:, :, i].mean(0).detach(), x[:, :, i].std(0).detach()
-        kf_mean, kf_sd = kf.mu_smooth[:, i], kf.sigma_smooth[:, i, i].sqrt()
         hours = torch.arange(0, t + dt, dt)
+
+        # Plot observations
+        color = cm.get_cmap('tab10')(2)
+        axs[i].plot(obs_model.times, obs_model.mu[i, :], linestyle = 'None',
+                    marker = '.', label = 'Observed', color=color)
+        #axs[i].fill_between(obs_model.times, obs_model.mu[i, :] - 2 * obs_model.scale[:, i], obs_model.mu[i, :] + 2 * obs_model.scale[:, i], alpha = 0.4, label = 'Observation $\\mu \pm 2\sigma_y$')
         
         # Plot net posterior
-        axs[i].plot(hours, net_mean, label = 'Flow mean')
-        axs[i].fill_between(hours, net_mean - 2 * net_sd, net_mean + 2 * net_sd,
-                            alpha = 0.4, label = 'Flow $\\mu \pm 2\sigma$')
-        
+        color = cm.get_cmap('tab10')(0)
+        if summarize_net:
+            net_mean, net_sd = x[:, :, i].mean(0), x[:, :, i].std(0)
+            axs[i].plot(hours, net_mean, label = 'Flow mean', color=color)
+            axs[i].fill_between(hours, net_mean - 2 * net_sd, net_mean + 2 * net_sd,
+                            alpha = 0.4, label = 'Flow $\\mu \pm 2\sigma$', color=color)
+        else:
+            for j in range(num_samples):
+                axs[i].plot(hours, x[j, :, i], color=color, alpha=0.9)
+
         # Plot kf posterior
-        axs[i].plot(hours, kf_mean, label = 'Kalman mean')
-        axs[i].fill_between(hours, kf_mean - 2 * kf_sd, kf_mean + 2 * kf_sd,
+        color = cm.get_cmap('tab10')(1)
+        kf_mean, kf_sd = kf.mu_smooth[:, i], kf.sigma_smooth[:, i, i].sqrt()
+        axs[i].plot(hours, kf_mean, label = 'Kalman mean', color=color)
+        axs[i].fill_between(hours, kf_mean - 2 * kf_sd, kf_mean + 2 * kf_sd, color=color,
                             alpha = 0.4, label = 'Kalman $\\mu \pm 2\sigma$')
-        
-        # Plot observations
-        axs[i].plot(obs_model.times, obs_model.mu[i, :], linestyle = 'None', marker = '.', label = 'Observed')
-        #axs[i].fill_between(obs_model.times, obs_model.mu[i, :] - 2 * obs_model.scale[:, i], obs_model.mu[i, :] + 2 * obs_model.scale[:, i], alpha = 0.4, label = 'Observation $\\mu \pm 2\sigma_y$')
         
         state = state_list[i]
         axs[i].set_ylabel(state) #plt.setp(axs[i], ylabel = state)
