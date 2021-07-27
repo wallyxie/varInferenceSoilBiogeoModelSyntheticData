@@ -109,7 +109,73 @@ def analytical_steady_state_init_AWB_ECA(SOC_input, DOC_input, SAWB_ECA_params_d
 
 ####################################################
 ##STOCHASTIC DIFFERENTIAL EQUATION MODEL FUNCTIONS##
-#################################################### 
+####################################################
+
+#SCONR-C
+def drift_diffusion_SCONR_C(C_PATH, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF, SCONR_C_params_dict):
+    '''
+    Returns SCONR "constant diffusion parameterization" drift vectors and diffusion matrices.
+    Expected SCONR_C_params_dict = {'u_M': u_M, 'a_SD': a_SD, 'a_DS': a_DS, 'a_MSC': a_MSC, 'k_S_ref': k_S_ref, 'k_D_ref': k_D_ref, 'k_M_ref': k_M_ref, 'Ea_S': Ea_S, 'Ea_D': Ea_D, 'Ea_M': Ea_M, 'c_SOC': c_SOC, 'c_DOC': c_DOC, 'c_MBC': c_MBC}
+    '''
+    state_dim = 3 #SCON has three state variables in SOC, DOC, and MBC.
+    SOC, DOC, MBC =  torch.chunk(C_PATH, state_dim, -1) #Partition SOC, DOC, and MBC values. Split based on final C_PATH dim, which specifies state variables and is also indexed as dim #2 in tensor. 
+    drift = torch.empty_like(C_PATH, device = C_PATH.device) #Initiate tensor with same dims as C_PATH to assign drift.
+    #Decay parameters are forced by temperature changes.
+    k_S = arrhenius_temp_dep(SCONR_C_params_dict['k_S_ref'], TEMP_TENSOR, SCONR_C_params_dict['Ea_S'], TEMP_REF) #Apply vectorized temperature-dependent transformation to k_S_ref.
+    k_D = arrhenius_temp_dep(SCONR_C_params_dict['k_D_ref'], TEMP_TENSOR, SCONR_C_params_dict['Ea_D'], TEMP_REF) #Apply vectorized temperature-dependent transformation to k_D_ref.
+    k_M = arrhenius_temp_dep(SCONR_C_params_dict['k_M_ref'], TEMP_TENSOR, SCONR_C_params_dict['Ea_M'], TEMP_REF) #Apply vectorized temperature-dependent transformation to k_M_ref.
+    #Drift is calculated.
+    drift_SOC = I_S_TENSOR + SCONR_C_params_dict['a_DS'] * k_D * DOC + SCONR_C_params_dict['a_MSC'] * k_M * MBC - k_S * SOC
+    drift_DOC = I_D_TENSOR + SCONR_C_params_dict['a_SD'] * k_S * SOC + (1 - SCONR_C_params_dict['a_MSC']) * k_M * MBC - (SCONR_C_params_dict['u_M'] + k_D) * DOC
+    drift_MBC = SCONR_C_params_dict['u_M'] * DOC - k_M * MBC
+    #CO2 = (k_S * SOC * (1 - SCONR_C_params_dict['a_SD'])) + (k_D * DOC * (1 - SCONR_C_params_dict['a_DS'])) + (k_M * MBC * (1 - SCONR_C_params_dict['a_M'])) 
+    #Assign elements to drift vector.
+    drift[:, :, 0 : 1] = drift_SOC
+    drift[:, :, 1 : 2] = drift_DOC
+    drift[:, :, 2 : 3] = drift_MBC
+    #drift[:, :, 3 : 4] = CO2 #CO2 is not a part of the drift. This is a hack for the explicit algebraic variable situation.
+    #Diffusion matrix is assigned.
+    diffusion_sqrt_single = torch.diag(torch.sqrt(LowerBound.apply(torch.as_tensor([SCONR_C_params_dict['c_SOC'], SCONR_C_params_dict['c_DOC'], SCONR_C_params_dict['c_MBC']]), 1e-8))) #Create single diffusion matrix by diagonalizing constant noise scale parameters.    
+    #diffusion_sqrt_single = torch.diag(torch.sqrt(LowerBound.apply(torch.as_tensor([SCONR_C_params_dict['c_SOC'], SCONR_C_params_dict['c_DOC'], SCONR_C_params_dict['c_MBC'], SCONR_C_params_dict['c_CO2']]), 1e-8))) #Create single diffusion matrix by diagonalizing constant noise scale parameters.
+    diffusion_sqrt = diffusion_sqrt_single.expand(drift.size(0), drift.size(1), state_dim, state_dim) #Expand diffusion matrices across all paths and across discretized time steps.
+    return drift, diffusion_sqrt
+
+#SCONR-SS
+def drift_diffusion_SCONR_SS(C_PATH, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF, SCONR_SS_params_dict):
+    '''
+    Returns SCONR "state scaling diffusion parameterization" drift vectors and diffusion matrices.
+    Expected SCONR_SS_params_dict = {'u_M': u_M, 'a_SD': a_SD, 'a_DS': a_DS, 'a_MSC': a_MSC, 'k_S_ref': k_S_ref, 'k_D_ref': k_D_ref, 'k_M_ref': k_M_ref, 'Ea_S': Ea_S, 'Ea_D': Ea_D, 'Ea_M': Ea_M, 's_SOC': s_SOC, 's_DOC': s_DOC, 's_MBC': s_MBC}
+    '''
+    state_dim = 3 #SCON has three state variables in SOC, DOC, and MBC.
+    SOC, DOC, MBC =  torch.chunk(C_PATH, state_dim, -1) #Partition SOC, DOC, MBC values. Split based on final C_PATH dim, which specifies state variables and is also indexed as dim #2 in tensor. 
+    drift = torch.empty_like(C_PATH, device = C_PATH.device) #Initiate tensor with same dims as C_PATH to assign drift.
+    diffusion_sqrt = torch.zeros([drift.size(0), drift.size(1), state_dim, state_dim], device = drift.device) #Create tensor to assign diffusion matrix elements. Diffusion exists for explicit algebraic variable CO2.
+    #diffusion_sqrt_diag = torch.empty_like(C_PATH, device = C_PATH.device) #Create tensor to assign diffusion matrix elements.
+    #Decay parameters are forced by temperature changes.
+    k_S = arrhenius_temp_dep(SCONR_SS_params_dict['k_S_ref'], TEMP_TENSOR, SCONR_SS_params_dict['Ea_S'], TEMP_REF) #Apply vectorized temperature-dependent transformation to k_S_ref.
+    k_D = arrhenius_temp_dep(SCONR_SS_params_dict['k_D_ref'], TEMP_TENSOR, SCONR_SS_params_dict['Ea_D'], TEMP_REF) #Apply vectorized temperature-dependent transformation to k_D_ref.
+    k_M = arrhenius_temp_dep(SCONR_SS_params_dict['k_M_ref'], TEMP_TENSOR, SCONR_SS_params_dict['Ea_M'], TEMP_REF) #Apply vectorized temperature-dependent transformation to k_M_ref.
+    #Drift is calculated.
+    drift_SOC = I_S_TENSOR + SCONR_SS_params_dict['a_DS'] * k_D * DOC + SCONR_SS_params_dict['a_MSC'] * k_M * MBC - k_S * SOC
+    drift_DOC = I_D_TENSOR + SCONR_SS_params_dict['a_SD'] * k_S * SOC + (1 - SCONR_SS_params_dict['a_MSC']) * k_M * MBC - (SCONR_SS_params_dict['u_M'] + k_D) * DOC
+    drift_MBC = SCONR_SS_params_dict['u_M'] * DOC - k_M * MBC
+    #CO2 = (k_S * SOC * (1 - SCONR_SS_params_dict['a_SD'])) + (k_D * DOC * (1 - SCONR_SS_params_dict['a_DS'])) + (k_M * MBC * (1 - SCONR_SS_params_dict['a_M'])) 
+    #Assign elements to drift vector.
+    drift[:, :, 0 : 1] = drift_SOC
+    drift[:, :, 1 : 2] = drift_DOC
+    drift[:, :, 2 : 3] = drift_MBC
+    #drift[:, :, 3 : 4] = CO2 #CO2 is not a part of the drift. This is a hack for the explicit algebraic variable situation.
+    #Diffusion matrix is assigned.
+    diffusion_sqrt[:, :, 0 : 1, 0] = torch.sqrt(LowerBound.apply(SOC * SCONR_SS_params_dict['s_SOC'], 1e-8)) #SOC diffusion standard deviation
+    diffusion_sqrt[:, :, 1 : 2, 1] = torch.sqrt(LowerBound.apply(DOC * SCONR_SS_params_dict['s_DOC'], 1e-8)) #DOC diffusion standard deviation
+    diffusion_sqrt[:, :, 2 : 3, 2] = torch.sqrt(LowerBound.apply(MBC * SCONR_SS_params_dict['s_MBC'], 1e-8)) #MBC diffusion standard deviation
+    #diffusion_sqrt[:, :, 3 : 4, 3] = torch.sqrt(LowerBound.apply(CO2 * SCONR_SS_params_dict['s_CO2'], 1e-8)) #CO2 diffusion standard deviation
+    #diffusion_sqrt_diag[:, :, 0 : 1] = torch.sqrt(LowerBound.apply(SOC * SCONR_SS_params_dict['s_SOC'], 1e-8)) #SOC diffusion standard deviation
+    #diffusion_sqrt_diag[:, :, 1 : 2] = torch.sqrt(LowerBound.apply(DOC * SCONR_SS_params_dict['s_DOC'], 1e-8)) #DOC diffusion standard deviation
+    #diffusion_sqrt_diag[:, :, 2 : 3] = torch.sqrt(LowerBound.apply(MBC * SCONR_SS_params_dict['s_MBC'], 1e-8)) #MBC diffusion standard deviation
+    #diffusion_sqrt_diag[:, :, 3 : 4] = torch.sqrt(LowerBound.apply(CO2 * SCONR_SS_params_dict['s_CO2'], 1e-8)) #CO2 diffusion standard deviation
+    #diffusion_sqrt = torch.diag_embed(diffusion_sqrt_diag)
+    return drift, diffusion_sqrt
 
 #SCON-C
 def drift_diffusion_SCON_C(C_PATH, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF, SCON_C_params_dict):
