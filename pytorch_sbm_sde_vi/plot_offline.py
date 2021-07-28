@@ -100,9 +100,10 @@ def plot_states(net_file, kf_file, fig_file, fig_dir='figs', num_samples=10,
         # Plot net posterior
         color = cm.get_cmap('tab10')(0)
         if summarize_net:
-            net_mean, net_sd = x[:, :, i].mean(0), x[:, :, i].std(0)
-            axs[i].plot(hours, net_mean, label = 'Flow mean', color=color)
-            axs[i].fill_between(hours, net_mean - 2 * net_sd, net_mean + 2 * net_sd,
+            #net_mean, net_sd = x[:, :, i].mean(0), x[:, :, i].std(0)
+            net_left, net_median, net_right = torch.quantile(x[:, :, i], torch.tensor([0.025, 0.5, 0.975]), dim=0)
+            axs[i].plot(hours, net_median, label = 'Flow mean', color=color)
+            axs[i].fill_between(hours, net_left, net_right,
                             alpha = 0.4, label = 'Flow $\\mu \pm 2\sigma$', color=color)
         else:
             for j in range(num_samples):
