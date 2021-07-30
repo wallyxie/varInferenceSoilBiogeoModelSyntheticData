@@ -50,7 +50,7 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-niter = 550000
+niter = 100
 piter = 0
 pretrain_lr = 1e-3 #Norm regularization learning rate
 train_lr = 5e-4 #ELBO learning rate
@@ -102,7 +102,7 @@ net, q_theta, p_theta, obs_model, ELBO_hist, list_parent_loc_scale = train(
         active_device, pretrain_lr, train_lr, niter, piter, batch_size, num_layers,
         state_dim_SCON, csv_data_path, obs_error_scale, t, dt_flow, n, 
         t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
-        drift_diffusion_SCON_C, x0_prior_SCON, SCON_C_priors_details, theta_dist,
+        drift_diffusion_SCONR_C_fix_k, x0_prior_SCON, SCONR_C_fix_k_priors_details, theta_dist,
         LEARN_THETA = True, LR_DECAY = 0.85, DECAY_STEP_SIZE = 100000, PRINT_EVERY = 100)
 
 #Save net and ELBO files.
@@ -139,4 +139,4 @@ x, _ = net(eval_batch_size)
 plots_folder = 'training_plots/'
 plot_elbo(ELBO_hist, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, xmin = int((niter - piter) * 0.2)) #xmin < (niter - piter).
 plot_states_post(x, obs_model, state_dim_SCON, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, ymin_list = [0, 0, 0], ymax_list = [100., 12., 10.])
-plot_theta(p_theta, q_theta, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string)
+#plot_theta(p_theta, q_theta, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string)

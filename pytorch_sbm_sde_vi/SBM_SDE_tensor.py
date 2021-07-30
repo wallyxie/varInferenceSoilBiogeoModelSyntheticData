@@ -115,7 +115,7 @@ def analytical_steady_state_init_AWB_ECA(SOC_input, DOC_input, SAWB_ECA_params_d
 #################################################### 
 
 #SCONR-C fix k experiment
-def drift_diffusion_SCONR_C(C_PATH, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF, SCONR_C_fix_k_params_dict):
+def drift_diffusion_SCONR_C_fix_k(C_PATH, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF, SCONR_C_fix_k_params_dict):
     '''
     Returns SCONR fix k "constant diffusion parameterization" drift vectors and diffusion matrices.
     Expected SCONR_C_fix_k_params_dict = {'u_M': u_M, 'a_SD': a_SD, 'a_DS': a_DS, 'a_MSC': a_MSC, 'Ea_S': Ea_S, 'Ea_D': Ea_D, 'Ea_M': Ea_M, 'c_SOC': c_SOC, 'c_DOC': c_DOC, 'c_MBC': c_MBC}
