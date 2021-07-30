@@ -30,7 +30,7 @@ class MeanField(nn.Module):
     Formerly, the forward method returned dict_mean_sd, a dictionary of the values of the transformed distribution means and standard deviations, but calculation of the distribution mean and standard deviation was computationally wasteful to compute at every iteration and simpler for the TruncatedNormal distribution class than RescaledLogitNormal. The means and standard deviations can be computed from dict_parent_loc_scale.
     '''
 
-    def __init__(self, DEVICE, PARAM_NAMES, PRIOR_DIST_DETAILS_DICT, DIST_CLASS):
+    def __init__(self, DEVICE, PARAM_NAMES, INIT_DICT, DIST_CLASS, LEARN_COV=False):
         super().__init__()
         #Use param dict to intialise the means for the mean-field approximations.
         #init_params: name -> (parent mean, parent sd, true lower, true upper)
@@ -39,15 +39,19 @@ class MeanField(nn.Module):
         lower_bounds = []        
         upper_bounds = []
         for key in PARAM_NAMES:
-            mean, sd, lower, upper = PRIOR_DIST_DETAILS_DICT[key]
+            mean, sd, lower, upper = INIT_DICT[key]
             means.append(mean)
             sds.append(sd)
             upper_bounds.append(upper)
             lower_bounds.append(lower)          
 
         self.dist = DIST_CLASS
+        self.learn_cov = LEARN_COV
         self.means = nn.Parameter(torch.Tensor(means).to(DEVICE))
-        self.sds = nn.Parameter(torch.Tensor(sds).to(DEVICE))
+        if LEARN_COV:
+            self.sds = nn.Parameter(torch.diag(torch.Tensor(sds)).to(DEVICE))
+        else:
+            self.sds = nn.Parameter(torch.Tensor(sds).to(DEVICE))
         self.lowers = torch.Tensor(lower_bounds).to(DEVICE)
         self.uppers = torch.Tensor(upper_bounds).to(DEVICE)
         
@@ -57,8 +61,12 @@ class MeanField(nn.Module):
     def forward(self, N = 10): # N should be assigned batch size in `train` function from training.py.
         #Update posterior.
         parent_loc = self.means
-        parent_scale = LowerBound.apply(self.sds, 1e-6)
-        q_dist = self.dist(parent_loc, parent_scale, a = self.lowers, b = self.uppers)
+        if self.learn_cov:
+            parent_scale = D.transform_to(self.dist.arg_constraints['scale_tril'])(self.sds)
+            q_dist = self.dist(parent_loc, scale_tril=parent_scale, a = self.lowers, b = self.uppers)
+        else:
+            parent_scale = LowerBound.apply(self.sds, 1e-6)
+            q_dist = self.dist(parent_loc, parent_scale, a = self.lowers, b = self.uppers)
 
         # Sample theta ~ q(theta).
         samples = q_dist.rsample([N])
@@ -78,7 +86,7 @@ class MeanField(nn.Module):
         # for key, parent_loc_scale, mean_sd in zip(self.keys, torch.split(torch.stack([parent_loc, parent_scale], 1), 1, 0), torch.split(torch.stack([real_loc, real_scale], 1), 1, 0)):
         #     dict_parent_loc_scale[f'{key}'] = parent_loc_scale
         #     dict_mean_sd[f'{key}'] = mean_sd
-        for key, parent_loc_scale in zip(self.keys, torch.split(torch.stack([parent_loc, parent_scale], 1), 1, 0)):
+        for key, parent_loc_scale in zip(self.keys, torch.split(torch.stack([parent_loc, torch.diag(parent_scale)], 1), 1, 0)):
             dict_parent_loc_scale[f'{key}'] = parent_loc_scale
         
         #Return samples in dictionary and tensor format.                                
