@@ -65,7 +65,6 @@ theta_dist = 'TruncatedNormal' #String needs to be exact name of the distributio
 u_M_details = torch.Tensor([0.001, 0.001 * prior_scale_factor, 0, 0.1]).to(active_device)
 a_SD_details = torch.Tensor([0.5, 0.5 * prior_scale_factor, 0, 1]).to(active_device)
 a_DS_details = torch.Tensor([0.5, 0.5 * prior_scale_factor, 0, 1]).to(active_device)
-a_M_details = torch.Tensor([0.5, 0.5 * prior_scale_factor, 0, 1]).to(active_device)
 a_MSC_details = torch.Tensor([0.5, 0.5 * prior_scale_factor, 0, 1]).to(active_device)
 Ea_S_details = torch.Tensor([55, 55 * prior_scale_factor, 10, 100]).to(active_device)
 Ea_D_details = torch.Tensor([48, 48 * prior_scale_factor, 10, 100]).to(active_device)
@@ -76,7 +75,7 @@ c_SOC_details = torch.Tensor([0.1, 0.1 * prior_scale_factor, 0, 1]).to(active_de
 c_DOC_details = torch.Tensor([0.002, 0.002 * prior_scale_factor, 0, 0.02]).to(active_device)
 c_MBC_details = torch.Tensor([0.002, 0.002 * prior_scale_factor, 0, 0.02]).to(active_device)
 
-SCONR_C_fix_k_priors_details = {'u_M': u_M_details, 'a_SD': a_SD_details, 'a_DS': a_DS_details, 'a_M': a_M_details, 'a_MSC': a_MSC_details, 'Ea_S': Ea_S_details, 'Ea_D': Ea_D_details, 'Ea_M': Ea_M_details, 'c_SOC': c_SOC_details, 'c_DOC': c_DOC_details, 'c_MBC': c_MBC_details}
+SCONR_C_fix_k_priors_details = {'u_M': u_M_details, 'a_SD': a_SD_details, 'a_DS': a_DS_details, 'a_MSC': a_MSC_details, 'Ea_S': Ea_S_details, 'Ea_D': Ea_D_details, 'Ea_M': Ea_M_details, 'c_SOC': c_SOC_details, 'c_DOC': c_DOC_details, 'c_MBC': c_MBC_details}
 
 #Initial condition prior means
 x0_SCON = [65, 0.4, 2.5]
