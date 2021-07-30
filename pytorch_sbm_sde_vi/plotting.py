@@ -85,20 +85,21 @@ def plot_theta(p_theta, q_theta, niter, piter, t, dt, batch_size, eval_batch_siz
     # Plot
     fig, axes = plt.subplots(nrows, ncols, figsize=(15,15))
     param_index = 0
-    for i, row in enumerate(axes):
-        for j, ax in enumerate(row):
-            if param_index < 14:
-                ax.plot(x[int(prior_first_one_indices[param_index]): int(prior_last_one_indices[param_index]), param_index].detach().cpu().numpy(), pdf_prior[int(prior_first_one_indices[param_index]): int(prior_last_one_indices[param_index]), param_index].detach().cpu().numpy(), label='Prior $p(\\theta)$')
-                ax.plot(x[int(post_first_one_indices[param_index]): int(post_last_one_indices[param_index]), param_index].detach().cpu().numpy(), pdf_post[int(post_first_one_indices[param_index]): int(post_last_one_indices[param_index]), param_index].detach().cpu().numpy(), label='Approximate posterior $q(\\theta)$')
-                ax.set_xlabel(q_theta.keys[param_index])
-                ax.set_ylabel('Density')
-            elif param_index == 14:
-                handles, labels = axes[0, 0].get_legend_handles_labels()
-                ax.legend(handles, labels, loc='center')
-                ax.axis('off')
-            else:
-                fig.delaxes(axes[i, j])
-            param_index += 1
+    while param_index < loc.size(0):
+        for i, row in enumerate(axes):
+            for j, ax in enumerate(row):
+                if param_index < 14:
+                    ax.plot(x[int(prior_first_one_indices[param_index]): int(prior_last_one_indices[param_index]), param_index].detach().cpu().numpy(), pdf_prior[int(prior_first_one_indices[param_index]): int(prior_last_one_indices[param_index]), param_index].detach().cpu().numpy(), label='Prior $p(\\theta)$')
+                    ax.plot(x[int(post_first_one_indices[param_index]): int(post_last_one_indices[param_index]), param_index].detach().cpu().numpy(), pdf_post[int(post_first_one_indices[param_index]): int(post_last_one_indices[param_index]), param_index].detach().cpu().numpy(), label='Approximate posterior $q(\\theta)$')
+                    ax.set_xlabel(q_theta.keys[param_index])
+                    ax.set_ylabel('Density')
+                elif param_index == 14:
+                    handles, labels = axes[0, 0].get_legend_handles_labels()
+                    ax.legend(handles, labels, loc='center')
+                    ax.axis('off')
+                else:
+                    fig.delaxes(axes[i, j])
+                param_index += 1
             
     plt.tight_layout()
     fig.savefig(os.path.join(plots_folder, f'theta_iter_{niter}_piter_{piter}_t_{t}_dt_{dt}_batch_{batch_size}_samples_{eval_batch_size}_layers_{num_layers}_lr_{train_lr}_sd_scale_{sd_scale}_{now_string}.png'), dpi = 300)
