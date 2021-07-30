@@ -50,7 +50,7 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-niter = 100
+niter = 500000
 piter = 0
 pretrain_lr = 1e-3 #Norm regularization learning rate
 train_lr = 5e-4 #ELBO learning rate
@@ -103,7 +103,7 @@ net, q_theta, p_theta, obs_model, ELBO_hist, list_parent_loc_scale = train(
         state_dim_SCON, csv_data_path, obs_error_scale, t, dt_flow, n, 
         t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
         drift_diffusion_SCONR_C_fix_k, x0_prior_SCON, SCONR_C_fix_k_priors_details, theta_dist,
-        LEARN_THETA = True, LR_DECAY = 0.85, DECAY_STEP_SIZE = 100000, PRINT_EVERY = 100)
+        LEARN_THETA = True, LR_DECAY = 0.9, DECAY_STEP_SIZE = 100000, PRINT_EVERY = 100)
 
 #Save net and ELBO files.
 now = datetime.now()
