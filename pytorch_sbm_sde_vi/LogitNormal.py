@@ -91,7 +91,7 @@ class MultivariateLogitNormal(Distribution):
         else:
             self.precision_matrix = self.base.precision_matrix
         
-        print(self.base.batch_shape, self.base.event_shape, validate_args)
+        #print(self.base.batch_shape, self.base.event_shape, validate_args)
         super().__init__(self.base.batch_shape, self.base.event_shape,
                          validate_args=validate_args)
 

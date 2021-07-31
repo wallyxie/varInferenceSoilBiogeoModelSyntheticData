@@ -64,7 +64,7 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
                            'MultivariateLogitNormal': MultivariateLogitNormal}
         THETA_PRIOR_CLASS = dist_class_dict[THETA_DIST]
         THETA_POST_CLASS = dist_class_dict[THETA_POST_DIST] if THETA_POST_DIST else dist_class_dict[THETA_DIST]
-        print('Prior, posterior:', THETA_PRIOR_CLASS, THETA_POST_CLASS)
+        #print('Prior, posterior:', THETA_PRIOR_CLASS, THETA_POST_CLASS)
         
         #Define prior
         priors = THETA_PRIOR_CLASS(loc = prior_means_tensor, scale = prior_sds_tensor, a = prior_lowers_tensor, b = prior_uppers_tensor)
@@ -74,7 +74,7 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
         learn_cov = (THETA_POST_DIST == 'MultivariateLogitNormal')
         if THETA_POST_INIT is None:
             THETA_POST_INIT = PRIOR_DIST_DETAILS_DICT
-        print('learn cov, init post:', learn_cov, THETA_POST_INIT)
+        #print('learn cov, init post:', learn_cov, THETA_POST_INIT)
         q_theta = MeanField(DEVICE, param_names, THETA_POST_INIT, THETA_POST_CLASS, learn_cov)
         #q_theta = MeanField(DEVICE, param_names, PRIOR_DIST_DETAILS_DICT)
     else:

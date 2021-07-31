@@ -62,8 +62,9 @@ class MeanField(nn.Module):
         #Update posterior.
         parent_loc = self.means
         if self.learn_cov:
-            parent_scale = D.transform_to(self.dist.arg_constraints['scale_tril'])(self.sds)
-            q_dist = self.dist(parent_loc, scale_tril=parent_scale, a = self.lowers, b = self.uppers)
+            parent_scale_tril = D.transform_to(self.dist.arg_constraints['scale_tril'])(self.sds)
+            parent_scale = torch.diag(parent_scale_tril)
+            q_dist = self.dist(parent_loc, scale_tril=parent_scale_tril, a = self.lowers, b = self.uppers)
         else:
             parent_scale = LowerBound.apply(self.sds, 1e-6)
             q_dist = self.dist(parent_loc, parent_scale, a = self.lowers, b = self.uppers)
@@ -86,7 +87,7 @@ class MeanField(nn.Module):
         # for key, parent_loc_scale, mean_sd in zip(self.keys, torch.split(torch.stack([parent_loc, parent_scale], 1), 1, 0), torch.split(torch.stack([real_loc, real_scale], 1), 1, 0)):
         #     dict_parent_loc_scale[f'{key}'] = parent_loc_scale
         #     dict_mean_sd[f'{key}'] = mean_sd
-        for key, parent_loc_scale in zip(self.keys, torch.split(torch.stack([parent_loc, torch.diag(parent_scale)], 1), 1, 0)):
+        for key, parent_loc_scale in zip(self.keys, torch.split(torch.stack([parent_loc, parent_scale], 1), 1, 0)):
             dict_parent_loc_scale[f'{key}'] = parent_loc_scale
         
         #Return samples in dictionary and tensor format.                                
