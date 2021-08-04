@@ -54,8 +54,8 @@ niter = 450000
 piter = 0
 pretrain_lr = 1e-3 #Norm regularization learning rate
 train_lr = 5e-4 #ELBO learning rate
-batch_size = 30 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
-eval_batch_size = 30
+batch_size = 32 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
+eval_batch_size = 32
 obs_error_scale = 0.1 #Observation (y) standard deviation.
 prior_scale_factor = 0.333 #Proportion of prior standard deviation to prior means.
 num_layers = 5 #5 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.

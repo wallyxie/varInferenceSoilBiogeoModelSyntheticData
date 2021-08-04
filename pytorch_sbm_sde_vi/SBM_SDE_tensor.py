@@ -124,11 +124,11 @@ def drift_diffusion_SCONR_C_fix_a(C_PATH, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR,
     SOC, DOC, MBC =  torch.chunk(C_PATH, state_dim, -1) #Partition SOC, DOC, and MBC values. Split based on final C_PATH dim, which specifies state variables and is also indexed as dim #2 in tensor. 
     drift = torch.empty_like(C_PATH, device = C_PATH.device) #Initiate tensor with same dims as C_PATH to assign drift.
     #Decay parameters are forced by temperature changes.
-    k_S = arrhenius_temp_dep(SCONR_C_params_dict['k_S_ref'], TEMP_TENSOR, SCONR_C_params_dict['Ea_S'], TEMP_REF) #Apply vectorized temperature-dependent transformation to k_S_ref.
+    k_S = arrhenius_temp_dep(SCONR_C_fix_a_params_dict['k_S_ref'], TEMP_TENSOR, SCONR_C_fix_a_params_dict['Ea_S'], TEMP_REF) #Apply vectorized temperature-dependent transformation to k_S_ref.
     k_S = k_S.permute(2, 1, 0) #Get k_S into appropriate dimensions. 
-    k_D = arrhenius_temp_dep(SCONR_C_params_dict['k_D_ref'], TEMP_TENSOR, SCONR_C_params_dict['Ea_D'], TEMP_REF) #Apply vectorized temperature-dependent transformation to k_D_ref.
+    k_D = arrhenius_temp_dep(SCONR_C_fix_a_params_dict['k_D_ref'], TEMP_TENSOR, SCONR_C_fix_a_params_dict['Ea_D'], TEMP_REF) #Apply vectorized temperature-dependent transformation to k_D_ref.
     k_D = k_D.permute(2, 1, 0) #Get k_D into appropriate dimensions.
-    k_M = arrhenius_temp_dep(SCONR_C_params_dict['k_M_ref'], TEMP_TENSOR, SCONR_C_params_dict['Ea_M'], TEMP_REF) #Apply vectorized temperature-dependent transformation to k_M_ref.
+    k_M = arrhenius_temp_dep(SCONR_C_fix_a_params_dict['k_M_ref'], TEMP_TENSOR, SCONR_C_fix_a_params_dict['Ea_M'], TEMP_REF) #Apply vectorized temperature-dependent transformation to k_M_ref.
     k_M = k_M.permute(2, 1, 0) #Get k_M into appropriate dimensions.
     #Repeat and permute parameter values to match dimension sizes
     SCONR_C_fix_a_params_dict_rep = dict((k, v.repeat(1, T_SPAN_TENSOR.size(1), 1).permute(2, 1, 0)) for k, v in SCONR_C_fix_a_params_dict.items())    
