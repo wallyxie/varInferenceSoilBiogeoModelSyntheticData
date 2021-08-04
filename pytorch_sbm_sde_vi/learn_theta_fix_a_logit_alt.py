@@ -50,7 +50,7 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-niter = 400000
+niter = 450000
 piter = 0
 pretrain_lr = 1e-3 #Norm regularization learning rate
 train_lr = 5e-4 #ELBO learning rate
@@ -63,7 +63,7 @@ theta_dist = 'RescaledLogitNormal' #String needs to be exact name of the distrib
 
 #Load alternative parameterization of priors
 priors_file = 'generated_data/SCONR_C_fix_a_logit_alt_sample_y_t_1000_dt_0-01_sd_scale_0-333_hyperparams.pt'
-SCONR_C_fix_k_priors_details = {k: v.to(active_device) for k, v in torch.load(priors_file).items()}
+SCONR_C_fix_a_priors_details = {k: v.to(active_device) for k, v in torch.load(priors_file).items()}
 
 #Initial condition prior means
 x0_SCON = [65, 0.4, 2.5]
@@ -95,12 +95,12 @@ net, q_theta, p_theta, obs_model, ELBO_hist, list_parent_loc_scale = train(
         active_device, pretrain_lr, train_lr, niter, piter, batch_size, num_layers,
         state_dim_SCON, csv_data_path, obs_error_scale, t, dt_flow, n, 
         t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
-        drift_diffusion_SCONR_C_fix_k, x0_prior_SCON, SCONR_C_fix_k_priors_details, theta_dist,
-        LEARN_THETA = True, LR_DECAY = 0.9, DECAY_STEP_SIZE = 100000, PRINT_EVERY = 100)
+        drift_diffusion_SCONR_C_fix_a, x0_prior_SCON, SCONR_C_fix_a_priors_details, theta_dist,
+        LEARN_THETA = True, LR_DECAY = 0.8, DECAY_STEP_SIZE = 50000, PRINT_EVERY = 100)
 
 #Save net and ELBO files.
 now = datetime.now()
-now_string = 'SCONR_C_fix_k_logit_alt_' + now.strftime('%Y_%m_%d_%H_%M_%S')
+now_string = 'SCONR_C_fix_a_logit_alt_' + now.strftime('%Y_%m_%d_%H_%M_%S')
 save_string = f'_iter_{niter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_lr_{train_lr}_sd_scale_{prior_scale_factor}_{now_string}.pt'
 outputs_folder = 'training_pt_outputs/'
 net_save_string = os.path.join(outputs_folder, 'net' + save_string)
