@@ -7,7 +7,7 @@ from matplotlib import cm
 plt.rcParams.update({'font.size': 16, 'lines.linewidth': 2, 'lines.markersize': 10})
 
 def plot_theta(p_theta_file, q_theta_file, true_theta_file, fig_file,
-               fig_dir='figs', nrows=4, ncols=4, device=torch.device('cpu')):
+               fig_dir='figs', ncols=4, device=torch.device('cpu')):
     # Load prior distribution
     p_dist = torch.load(p_theta_file, map_location=device)
     
@@ -41,18 +41,20 @@ def plot_theta(p_theta_file, q_theta_file, true_theta_file, fig_file,
     pdf_post = torch.exp(q_dist.log_prob(x)).detach()
     
     # Plot
+    num_params = len(loc)
+    nrows = int(num_params / ncols) + 1
     fig, axes = plt.subplots(nrows, ncols, figsize=(15, 15))
     k = 0
     for i, row in enumerate(axes):
         for j, ax in enumerate(row):
-            if k < 14:
+            if k < num_params:
                 key = q_theta.keys[k]
                 ax.plot(x[:, k], pdf_prior[:, k], label='Prior $p(\\theta)$')
                 ax.plot(x[:, k], pdf_post[:, k], label='Approximate posterior $q(\\theta)$')
                 ax.axvline(true_theta[key], color='gray', label='True $\\theta$')
                 ax.set_xlabel(key)
                 ax.set_ylabel('density')
-            elif k == 14:
+            elif k == num_params:
                 handles, labels = axes[0, 0].get_legend_handles_labels()
                 ax.legend(handles, labels, loc='center')
                 ax.axis('off')
