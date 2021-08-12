@@ -50,12 +50,12 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-niter = 390000
+niter = 405000
 piter = 0
 pretrain_lr = 1e-3 #Norm regularization learning rate
 train_lr = 5e-4 #ELBO learning rate
-batch_size = 35 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
-eval_batch_size = 35
+batch_size = 32 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
+eval_batch_size = 32
 obs_error_scale = 0.1 #Observation (y) standard deviation.
 prior_scale_factor = 0.333 #Proportion of prior standard deviation to prior means.
 num_layers = 5 #5 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
@@ -71,7 +71,7 @@ c_SOC_details = torch.Tensor([0.1, 0.1 * prior_scale_factor, 0, 1]).to(active_de
 c_DOC_details = torch.Tensor([0.002, 0.002 * prior_scale_factor, 0, 0.02]).to(active_device)
 c_MBC_details = torch.Tensor([0.002, 0.002 * prior_scale_factor, 0, 0.02]).to(active_device)
 
-SCONR_C_fix_u_M_a_Ea_priors_details = {'u_M': u_M_details, 'k_S_ref': k_S_ref_details, 'k_D_ref': k_D_ref_details, 'k_M_ref': k_M_ref_details, 'c_SOC': c_SOC_details, 'c_DOC': c_DOC_details, 'c_MBC': c_MBC_details}
+SCONR_C_fix_u_M_a_Ea_priors_details = {'k_S_ref': k_S_ref_details, 'k_D_ref': k_D_ref_details, 'k_M_ref': k_M_ref_details, 'c_SOC': c_SOC_details, 'c_DOC': c_DOC_details, 'c_MBC': c_MBC_details}
 
 #Initial condition prior means
 x0_SCON = [65, 0.4, 2.5]
@@ -98,7 +98,7 @@ net, q_theta, p_theta, obs_model, ELBO_hist, list_parent_loc_scale = train(
         state_dim_SCON, csv_data_path, obs_error_scale, t, dt_flow, n, 
         t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
         drift_diffusion_SCONR_C_fix_a_Ea, x0_prior_SCON, SCONR_C_fix_u_M_a_Ea_priors_details, theta_dist,
-        LEARN_THETA = True, LR_DECAY = 0.8, DECAY_STEP_SIZE = 50000, PRINT_EVERY = 100)
+        LEARN_THETA = True, LR_DECAY = 0.85, DECAY_STEP_SIZE = 50000, PRINT_EVERY = 100)
 
 #Save net and ELBO files.
 now = datetime.now()
