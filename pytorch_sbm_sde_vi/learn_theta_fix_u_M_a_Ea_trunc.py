@@ -97,7 +97,7 @@ net, q_theta, p_theta, obs_model, ELBO_hist, list_parent_loc_scale = train(
         active_device, pretrain_lr, train_lr, niter, piter, batch_size, num_layers,
         state_dim_SCON, csv_data_path, obs_error_scale, t, dt_flow, n, 
         t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
-        drift_diffusion_SCONR_C_fix_a_Ea, x0_prior_SCON, SCONR_C_fix_u_M_a_Ea_priors_details, theta_dist,
+        drift_diffusion_SCONR_C_fix_u_M_a_Ea, x0_prior_SCON, SCONR_C_fix_u_M_a_Ea_priors_details, theta_dist,
         LEARN_THETA = True, LR_DECAY = 0.85, DECAY_STEP_SIZE = 50000, PRINT_EVERY = 100)
 
 #Save net and ELBO files.
