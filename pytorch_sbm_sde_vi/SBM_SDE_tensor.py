@@ -143,7 +143,7 @@ def drift_diffusion_SCONR_C_fix_u_M_a_Ea_c(C_PATH, T_SPAN_TENSOR, I_S_TENSOR, I_
     drift[:, :, 2 : 3] = drift_MBC
     #drift[:, :, 3 : 4] = CO2 #CO2 is not a part of the drift. This is a hack for the explicit algebraic variable situation.
     #Diffusion matrix is assigned.
-    diffusion_sqrt_single = torch.diag_embed(torch.sqrt(torch.stack([0.1, 0.002, 0.002], 1))) #Create single diffusion matrix by diagonalizing constant noise scale parameters. 
+    diffusion_sqrt_single = torch.diag_embed(torch.sqrt(torch.stack(torch.Tensor([0.1, 0.002, 0.002]), 1))) #Create single diffusion matrix by diagonalizing constant noise scale parameters. 
     #diffusion_sqrt_single = torch.diag_embed(torch.sqrt(LowerBound.apply(torch.as_tensor([SCONR_C_fix_u_M_a_Ea_c_params_dict['c_SOC'], SCONR_C_fix_u_M_a_Ea_c_params_dict['c_DOC'], SCONR_C_fix_u_M_a_Ea_c_params_dict['c_MBC'], SCONR_C_fix_u_M_a_Ea_c_params_dict['c_CO2']]), 1e-8))) #Create single diffusion matrix by diagonalizing constant noise scale parameters.
     diffusion_sqrt = diffusion_sqrt_single.unsqueeze(1).expand(-1, T_SPAN_TENSOR.size(1), -1, -1) #Expand diffusion matrices across all paths and across discretized time steps.
     return drift, diffusion_sqrt
