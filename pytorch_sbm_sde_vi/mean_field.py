@@ -60,13 +60,13 @@ class MeanField(nn.Module):
 
     def forward(self, N = 10): # N should be assigned batch size in `train` function from training.py.
         #Update posterior.
-        parent_loc = self.means
+        parent_loc = LowerBound.apply(self.means, 1e-6)
         if self.learn_cov:
             parent_scale_tril = D.transform_to(self.dist.arg_constraints['scale_tril'])(self.sds)
             parent_scale = torch.diag(parent_scale_tril) # this is incorrect, but not used in inference
             q_dist = self.dist(parent_loc, scale_tril=parent_scale_tril, a = self.lowers, b = self.uppers)
         else:
-            parent_scale = LowerBound.apply(self.sds, 1e-6)
+            parent_scale = LowerBound.apply(self.sds, 1e-8)
             q_dist = self.dist(parent_loc, parent_scale, a = self.lowers, b = self.uppers)
 
         # Sample theta ~ q(theta).
