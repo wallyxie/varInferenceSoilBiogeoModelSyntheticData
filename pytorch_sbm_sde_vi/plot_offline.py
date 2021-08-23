@@ -3,6 +3,8 @@ import torch
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib import cm
+import torch.distributions as D
+from LogitNormal import *
 
 plt.rcParams.update({'font.size': 16, 'lines.linewidth': 2, 'lines.markersize': 10})
 
@@ -13,11 +15,20 @@ def plot_theta(p_theta_file, q_theta_file, true_theta_file, fig_file,
     
     # Load posterior distribution
     q_theta = torch.load(q_theta_file, map_location=device)
-    loc = q_theta.means
-    scale = torch.max(q_theta.sds, torch.tensor(1e-6))
-    lower = q_theta.lowers
-    upper = q_theta.uppers
-    q_dist = q_theta.dist(loc, scale, a = lower, b = upper)
+    if q_theta.learn_cov:
+        loc = q_theta.means
+        scale_tril = D.transform_to(q_theta.dist.arg_constraints['scale_tril'])(q_theta.sds)
+        cov_mat = scale_tril @ scale_tril.T
+        scale = torch.diag(cov_mat).sqrt()
+        lower = q_theta.lowers
+        upper = q_theta.uppers
+        q_dist = RescaledLogitNormal(loc, scale, a = lower, b = upper) # marginal
+    else:
+        loc = q_theta.means
+        scale = torch.max(q_theta.sds, torch.tensor(1e-6))
+        lower = q_theta.lowers
+        upper = q_theta.uppers
+        q_dist = q_theta.dist(loc, scale, a = lower, b = upper)
     
     # Load true theta
     true_theta = torch.load(true_theta_file, map_location=device)
@@ -68,6 +79,22 @@ def plot_theta(p_theta_file, q_theta_file, true_theta_file, fig_file,
         os.makedirs(fig_dir)
     plt.savefig('/'.join([fig_dir, fig_file]), dpi=300)
 
+    # If covariance is learned, also save the correlation matrix plot
+    if q_theta.learn_cov:
+        # Calculate correlation b/w parameters
+        corr = cov_mat / torch.outer(scale, scale)
+
+        # Plot correlation matrix
+        plt.figure(figsize = (8, 8))
+        plt.imshow(corr.detach(), cmap='coolwarm', vmin=-1, vmax=1)
+        plt.colorbar()
+        plt.xticks(range(num_params), labels=q_theta.keys, rotation='vertical')
+        plt.yticks(range(num_params), labels=q_theta.keys)
+        plt.title('Correlation between parameters')
+
+        # Save to file
+        plt.savefig('/'.join([fig_dir, 'corr_{}'.format(fig_file)]), dpi=300)
+
 def plot_states(net_file, kf_file, fig_file, fig_dir='figs', num_samples=10,
                 summarize_net=True, ymin_list=None, ymax_list=None, device=torch.device('cpu')):
     # Load net object
@@ -106,7 +133,7 @@ def plot_states(net_file, kf_file, fig_file, fig_dir='figs', num_samples=10,
             net_left, net_median, net_right = torch.quantile(x[:, :, i], torch.tensor([0.025, 0.5, 0.975]), dim=0)
             axs[i].plot(hours, net_median, label = 'Flow mean', color=color)
             axs[i].fill_between(hours, net_left, net_right,
-                            alpha = 0.4, label = 'Flow $\\mu \pm 2\sigma$', color=color)
+                            alpha = 0.4, label = 'Flow 2.5-97.5%', color=color)
         else:
             for j in range(num_samples):
                 axs[i].plot(hours, x[j, :, i], color=color, alpha=0.9)
@@ -116,7 +143,7 @@ def plot_states(net_file, kf_file, fig_file, fig_dir='figs', num_samples=10,
         kf_mean, kf_sd = kf.mu_smooth[:, i], kf.sigma_smooth[:, i, i].sqrt()
         axs[i].plot(hours, kf_mean, label = 'Kalman mean', color=color)
         axs[i].fill_between(hours, kf_mean - 2 * kf_sd, kf_mean + 2 * kf_sd, color=color,
-                            alpha = 0.4, label = 'Kalman $\\mu \pm 2\sigma$')
+                            alpha = 0.4, label = 'Kalman 2.5-97.5%')
         
         state = state_list[i]
         axs[i].set_ylabel(state) #plt.setp(axs[i], ylabel = state)

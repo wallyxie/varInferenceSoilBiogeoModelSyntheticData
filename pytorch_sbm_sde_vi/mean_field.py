@@ -63,7 +63,7 @@ class MeanField(nn.Module):
         parent_loc = self.means
         if self.learn_cov:
             parent_scale_tril = D.transform_to(self.dist.arg_constraints['scale_tril'])(self.sds)
-            parent_scale = torch.diag(parent_scale_tril)
+            parent_scale = torch.diag(parent_scale_tril) # this is incorrect, but not used in inference
             q_dist = self.dist(parent_loc, scale_tril=parent_scale_tril, a = self.lowers, b = self.uppers)
         else:
             parent_scale = LowerBound.apply(self.sds, 1e-6)
