@@ -54,7 +54,8 @@ def plot_theta(p_theta_file, q_theta_file, true_theta_file, fig_file,
     # Plot
     num_params = len(loc)
     nrows = int(num_params / ncols) + 1
-    fig, axes = plt.subplots(nrows, ncols, figsize=(15, 15))
+    fig, axes = plt.subplots(nrows, ncols, figsize=(ncols * 4, nrows * 4))
+    axes = np.atleast_2d(axes)
     k = 0
     for i, row in enumerate(axes):
         for j, ax in enumerate(row):
