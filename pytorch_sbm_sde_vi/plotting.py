@@ -85,7 +85,8 @@ def plot_theta(p_theta, q_theta, niter, piter, t, dt, batch_size, eval_batch_siz
     # Plot
     num_params = len(loc)
     nrows = int(num_params / ncols) + 1
-    fig, axes = plt.subplots(nrows, ncols, figsize=(15,15))
+    fig, axes = plt.subplots(nrows, ncols, figsize=(ncols * 4, nrows * 4))
+    axes = np.atleast_2d(axes)
     param_index = 0
     for i, row in enumerate(axes):
         for j, ax in enumerate(row):
