@@ -66,9 +66,47 @@ def i_d(t):
 ##STOCHASTIC DIFFERENTIAL EQUATION MODEL CLASSES##
 ##################################################
 
-class SCON(Function):
+class SBM_SDE:
 
-    def forward
+    def __init__(self):
+        pass
+
+class SCON(SBM_SDE):
+
+    @staticmethod
+    def drift_diffusion(..., diffusion = 'constant'/diffusion = 'state_scaling'):
+
+    @staticmethod
+    def get_CO2(...):
+
+    @staticmethod
+    def get_steady_state(SOC_input, DOC_input, SCON_params_dict):
+        '''
+        Returns a vector of C pool values to initialize an SCON system corresponding to set of parameter values using the analytical steady state equations of the deterministic CON system.
+        Vector elements are in order of S_0, D_0, M_0.
+        Expected SCON_params_dict = {'u_M': u_M, 'a_SD': a_SD, 'a_DS': a_DS, 'a_M': a_M, 'a_MSC': a_MSC, 'k_S_ref': k_S_ref, 'k_D_ref': k_D_ref, 'k_M_ref': k_M_ref, 'Ea_S': Ea_S, 'Ea_D': Ea_D, 'Ea_M': Ea_M, '[cs]_SOC': [cs]_SOC, '[cs]_DOC': [cs]_DOC, '[cs]_MBC': [cs]_MBC}
+        '''
+        D_0 = (DOC_input + SOC_input * SCON_params_dict['a_SD']) / (SCON_params_dict['u_M'] + SCON_params_dict['k_D_ref'] + SCON_params_dict['u_M'] * SCON_params_dict['a_M'] * (SCON_params_dict['a_MSC'] - 1 - SCON_params_dict['a_MSC'] * SCON_params_dict['a_SD']) - SCON_params_dict['a_DS'] * SCON_params_dict['k_D_ref'] * SCON_params_dict['a_SD'])
+        S_0 = (SOC_input + D_0 * (SCON_params_dict['a_DS'] * SCON_params_dict['k_D_ref'] + SCON_params_dict['u_M'] * SCON_params_dict['a_M'] * SCON_params_dict['a_MSC'])) / SCON_params_dict['k_S_ref']
+        M_0 = SCON_params_dict['u_M'] * D_0 / SCON_params_dict['k_M_ref']
+        C_0 = torch.stack([S_0, D_0, M_0], 1)
+        return C_0
+
+class SAWB(SBM_SDE):
+
+    @staticmethod
+    def drift_diffusion(...):
+
+    @staticmethod
+    def get_CO2(...):
+
+class SAWB_ECA(SBM_SDE):
+    
+    @staticmethod
+    def drift_diffusion(...):
+
+    @staticmethod
+    def get_CO2(...):
 
 #SCON-C
 def drift_diffusion_SCON_C(C_PATH, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF, SCON_C_params_dict):

@@ -128,7 +128,7 @@ class ResNetBlockUnMasked(nn.Module):
         x = self.act2(self.bn2(self.conv2(x) + self.conv_skip(residual)))
         return x
 
-class CouplingLayer(nn.Module):
+class AffineLayer(nn.Module):
     
     def __init__(self, cond_inputs, stride, h_cha = 96):
         # cond_inputs = cond_inputs + obs_dim = 1 + obs_dim = 4 by default (w/o CO2)
@@ -240,7 +240,7 @@ class SDEFlow(nn.Module):
         self.cond_inputs = cond_inputs        
         self.num_layers = num_layers
 
-        self.coupling = nn.ModuleList([CouplingLayer(cond_inputs + self.obs_model.obs_dim, 1) for _ in range(num_layers)])
+        self.coupling = nn.ModuleList([AffineLayer(cond_inputs + self.obs_model.obs_dim, 1) for _ in range(num_layers)])
         self.permutation = [PermutationLayer(STATE_DIM) for _ in range(num_layers)]
         self.batch_norm = nn.ModuleList([BatchNormLayer(STATE_DIM * N) for _ in range(num_layers - 1)])
         self.SP = SoftplusLayer()
