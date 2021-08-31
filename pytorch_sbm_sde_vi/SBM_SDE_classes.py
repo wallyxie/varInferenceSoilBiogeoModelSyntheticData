@@ -100,6 +100,9 @@ class SAWB(SBM_SDE):
     @staticmethod
     def get_CO2(...):
 
+    @staticmethod
+    def get_steady_state(SOC_input, DOC_input, SAWB_params_dict):
+
 class SAWB_ECA(SBM_SDE):
     
     @staticmethod
