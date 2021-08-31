@@ -128,7 +128,7 @@ class ResNetBlockUnMasked(nn.Module):
         x = self.act2(self.bn2(self.conv2(x) + self.conv_skip(residual)))
         return x
 
-class CouplingLayer(nn.Module):
+class AffineLayer(nn.Module):
     
     def __init__(self, cond_inputs, stride, h_cha = 96):
         # cond_inputs = cond_inputs + obs_dim = 1 + obs_dim = 4 by default (w/o CO2)
@@ -237,10 +237,10 @@ class SDEFlow(nn.Module):
             self.i_tensor = torch.stack((I_S_TENSOR.reshape(-1), I_D_TENSOR.reshape(-1)))[None, :, :].repeat_interleave(3, -1)
 
         self.base_dist = D.normal.Normal(loc = 0., scale = 1.)
-        self.cond_inputs = cond_inputs
+        self.cond_inputs = cond_inputs        
         self.num_layers = num_layers
 
-        self.coupling = nn.ModuleList([CouplingLayer(cond_inputs + self.obs_model.obs_dim, 1) for _ in range(num_layers)])
+        self.affine = nn.ModuleList([AffineLayer(cond_inputs + self.obs_model.obs_dim, 1) for _ in range(num_layers)])
         self.permutation = [PermutationLayer(STATE_DIM) for _ in range(num_layers)]
         self.batch_norm = nn.ModuleList([BatchNormLayer(STATE_DIM * N) for _ in range(num_layers - 1)])
         self.SP = SoftplusLayer()
@@ -272,7 +272,7 @@ class SDEFlow(nn.Module):
         ildjs = []
         
         for i in range(self.num_layers):
-            eps, cl_ildj = self.coupling[i](self.permutation[i](eps), features) # (batch_size, 1, n * state_dim)
+            eps, cl_ildj = self.affine[i](self.permutation[i](eps), features) # (batch_size, 1, n * state_dim)
             #print('Coupling layer {}'.format(i), eps, cl_ildj)
             if i < (self.num_layers - 1):
                 eps, bn_ildj = self.batch_norm[i](eps) # (batch_size, 1, n * state_dim), (1, 1, n * state_dim)
