@@ -49,9 +49,9 @@ class MeanField(nn.Module):
         self.learn_cov = LEARN_COV
         self.means = nn.Parameter(torch.Tensor(means).to(DEVICE))
         if LEARN_COV:
-            self.sds = nn.Parameter(torch.diag(torch.Tensor(sds)).to(DEVICE))
+            self.sds = nn.Parameter(torch.diag(torch.Tensor(sds)).to(DEVICE)) # (num_params, num_params)
         else:
-            self.sds = nn.Parameter(torch.Tensor(sds).to(DEVICE))
+            self.sds = nn.Parameter(torch.Tensor(sds).to(DEVICE)) # (num_params, )
         self.lowers = torch.Tensor(lower_bounds).to(DEVICE)
         self.uppers = torch.Tensor(upper_bounds).to(DEVICE)
         
@@ -70,10 +70,13 @@ class MeanField(nn.Module):
             q_dist = self.dist(parent_loc, parent_scale, a = self.lowers, b = self.uppers)
 
         # Sample theta ~ q(theta).
-        samples = q_dist.rsample([N])
+        samples = q_dist.rsample([N]) # (N, num_params)
         
         # Evaluate log prob of theta samples.
-        log_q_theta = torch.sum(q_dist.log_prob(samples), -1)
+        if self.learn_cov:
+            log_q_theta = q_dist.log_prob(samples) # (N, )
+        else:
+            log_q_theta = torch.sum(q_dist.log_prob(samples), -1) # (N, )
         
         # Return samples in same dictionary format.
         dict_out = {} #Define dictionary with n samples for each parameter.

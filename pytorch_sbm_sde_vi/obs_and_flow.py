@@ -237,7 +237,7 @@ class SDEFlow(nn.Module):
             self.i_tensor = torch.stack((I_S_TENSOR.reshape(-1), I_D_TENSOR.reshape(-1)))[None, :, :].repeat_interleave(3, -1)
 
         self.base_dist = D.normal.Normal(loc = 0., scale = 1.)
-        self.cond_inputs = cond_inputs        
+        self.cond_inputs = cond_inputs
         self.num_layers = num_layers
 
         self.coupling = nn.ModuleList([CouplingLayer(cond_inputs + self.obs_model.obs_dim, 1) for _ in range(num_layers)])
