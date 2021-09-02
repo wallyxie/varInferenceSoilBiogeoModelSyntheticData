@@ -61,7 +61,7 @@ class MaskedConv1d(nn.Conv1d):
         super(MaskedConv1d, self).__init__(*args, **kwargs)
         assert mask_type in {'A', 'B'}
         self.register_buffer('mask', self.weight.data.clone())
-        _, _, kW = self.weight.size()
+        _, _, kW = self.weight.size() # (out_cha, in_cha, kernel_size)
         self.mask.fill_(1)
         self.mask[:, :, kW // 2 + 1 * (mask_type == 'B'):] = 0
 
