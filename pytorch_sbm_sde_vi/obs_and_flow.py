@@ -61,7 +61,7 @@ class MaskedConv1d(nn.Conv1d):
         super(MaskedConv1d, self).__init__(*args, **kwargs)
         assert mask_type in {'A', 'B'}
         self.register_buffer('mask', self.weight.data.clone())
-        _, _, kW = self.weight.size()
+        _, _, kW = self.weight.size() # (out_cha, in_cha, kernel_size)
         self.mask.fill_(1)
         self.mask[:, :, kW // 2 + 1 * (mask_type == 'B'):] = 0
 
@@ -237,7 +237,7 @@ class SDEFlow(nn.Module):
             self.i_tensor = torch.stack((I_S_TENSOR.reshape(-1), I_D_TENSOR.reshape(-1)))[None, :, :].repeat_interleave(3, -1)
 
         self.base_dist = D.normal.Normal(loc = 0., scale = 1.)
-        self.cond_inputs = cond_inputs
+        self.cond_inputs = cond_inputs        
         self.num_layers = num_layers
 
         self.affine = nn.ModuleList([AffineLayer(cond_inputs + self.obs_model.obs_dim, 1) for _ in range(num_layers)])

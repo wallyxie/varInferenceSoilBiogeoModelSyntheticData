@@ -43,13 +43,17 @@ class MeanField(nn.Module):
             means.append(mean)
             sds.append(sd)
             upper_bounds.append(upper)
-            lower_bounds.append(lower)          
+            lower_bounds.append(lower)
 
         self.dist = DIST_CLASS
         self.learn_cov = LEARN_COV
         self.means = nn.Parameter(torch.Tensor(means).to(DEVICE))
         if LEARN_COV:
-            self.sds = nn.Parameter(torch.diag(torch.Tensor(sds)).to(DEVICE)) # (num_params, num_params)
+            # Since we init post with indep priors, scale_tril = diag(stddev)
+            scale_tril = torch.diag(torch.Tensor(sds)).to(DEVICE)
+            # Map scale_tril to unconstrained space
+            unconstrained_scale_tril = D.transform_to(self.dist.arg_constraints['scale_tril']).inv(scale_tril)
+            self.sds = nn.Parameter(unconstrained_scale_tril) # (num_params, num_params)
         else:
             self.sds = nn.Parameter(torch.Tensor(sds).to(DEVICE)) # (num_params, )
         self.lowers = torch.Tensor(lower_bounds).to(DEVICE)
@@ -60,10 +64,10 @@ class MeanField(nn.Module):
 
     def forward(self, N = 10): # N should be assigned batch size in `train` function from training.py.
         #Update posterior.
-        parent_loc = LowerBound.apply(self.means, 1e-6)
+        parent_loc = self.means
         if self.learn_cov:
             parent_scale_tril = D.transform_to(self.dist.arg_constraints['scale_tril'])(self.sds)
-            parent_scale = torch.diag(parent_scale_tril) # this is incorrect, but not used in inference
+            parent_scale = torch.diag(parent_scale_tril) # this is incorrect unless indep, but not used in inference
             q_dist = self.dist(parent_loc, scale_tril=parent_scale_tril, a = self.lowers, b = self.uppers)
         else:
             parent_scale = LowerBound.apply(self.sds, 1e-8)
