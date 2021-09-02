@@ -43,9 +43,10 @@ def arrhenius_temp_dep(parameter, temp: float, Ea: torch.Tensor, TEMP_REF: float
     decayed_parameter = parameter * torch.exp(-Ea / 0.008314 * (1 / temp - 1 / TEMP_REF))
     return decayed_parameter
 
-def linear_temp_dep(parameter, temp, Q, TEMP_REF):
+def linear_temp_dep(parameter, temp: float, Q: torch.Tensor, TEMP_REF: float) -> torch.Tensor:
     '''
     For a parameter with linear temperature dependence, returns the transformed parameter value.
+    Accepts input parameter as torch.Tensor or Python float type.    
     Q is the slope of the temperature dependence and is a varying parameter.
     Temperatures are in K.
     '''
@@ -56,13 +57,13 @@ def linear_temp_dep(parameter, temp, Q, TEMP_REF):
 ##LITTER INPUT FUNCTIONS##
 ##########################
 
-def i_s(t):
+def i_s(t: torch.Tensor) -> torch.Tensor:
     '''
     This is the endogenous SOC litter input function.
     '''
     return 0.001 + 0.0005 * torch.sin((2 * np.pi / (24 * 365)) * t)
 
-def i_d(t):
+def i_d(t: torch.Tensor) -> torch.Tensor:
     '''
     This is the endogenous DOC litter input function.
     '''
@@ -79,7 +80,12 @@ class SBM_SDE:
 
     def __init__(
             self,
-            C_PATH, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF):
+            C_PATH, 
+            T_SPAN_TENSOR, 
+            I_S_TENSOR, 
+            I_D_TENSOR, 
+            TEMP_TENSOR, 
+            TEMP_REF):
         pass
 
 class SCON(SBM_SDE):
