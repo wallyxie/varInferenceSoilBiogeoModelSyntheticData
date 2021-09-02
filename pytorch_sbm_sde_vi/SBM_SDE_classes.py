@@ -88,7 +88,7 @@ class SCON(SBM_SDE):
     def drift_diffusion(C_PATH, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF, SCONR_C_fix_u_M_a_Ea_c_params_dict, diffusion_type):
 
     @staticmethod
-    def get_CO2(...):
+    def add_CO2(...):
 
 class SAWB(SBM_SDE):
 
@@ -96,7 +96,7 @@ class SAWB(SBM_SDE):
     def drift_diffusion(...):
 
     @staticmethod
-    def get_CO2(...):
+    def add_CO2(...):
 
 class SAWB_ECA(SBM_SDE):
     
@@ -104,4 +104,4 @@ class SAWB_ECA(SBM_SDE):
     def drift_diffusion(...):
 
     @staticmethod
-    def get_CO2(...):
+    def add_CO2(...):
