@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Dict, Tuple, Union
 
 #PyData imports
 import numpy as np
@@ -20,7 +20,9 @@ This script includes the linear and Arrhenius temperature dependence functions t
 The respective analytical steady state estimation functions derived from the deterministic ODE versions of the stochastic SBMs are no longer included in this script, as we are no longer initiating SBMs at steady state before starting simulations.
 '''
 
+DictOfTensors = Dict[str, torch.Tensor]
 Number = Union[int, float]
+TupleOfTensors = Tuple[torch.Tensor, torch.Tensor]
 
 ############################################################
 ##SOIL BIOGEOCHEMICAL MODEL TEMPERATURE RESPONSE FUNCTIONS##
@@ -95,6 +97,7 @@ class SBM_SDE:
         self.i_S = I_S_TENSOR
         self.i_D = I_D_TENSOR,
         self.temps = TEMP_TENSOR
+        self.temp_ref = TEMP_REF
 
 class SCON(SBM_SDE):
     '''
@@ -123,15 +126,16 @@ class SCON(SBM_SDE):
     def drift_diffusion(
             C_PATH: torch.Tensor, 
             self.times: torch.Tensor, 
-            I_S_TENSOR: torch.Tensor, 
-            I_D_TENSOR: torch.Tensor, 
-            TEMP_TENSOR: torch.Tensor, 
-            TEMP_REF: Number, 
-            SCONR_C_fix_u_M_a_Ea_c_params_dict: dict, diffusion_type
-            ):
+            self.i_S: torch.Tensor, 
+            self.i_D: torch.Tensor, 
+            self.temps: torch.Tensor, 
+            self.temp_ref: Number, 
+            SCONR_C_fix_u_M_a_Ea_c_params_dict: DictOfTensors, 
+            diffusion_type: str
+            ) -> TupleOfTensors:
         '''
         Returns SCON drift and diffusion tensors 
-        Expected SCON_params_dict = {'u_M': u_M, 'a_SD': a_SD, 'a_DS': a_DS, 'a_M': a_M, 'a_MSC': a_MSC, 'k_S_ref': k_S_ref, 'k_D_ref': k_D_ref, 'k_M_ref': k_M_ref, 'Ea_S': Ea_S, 'Ea_D': Ea_D, 'Ea_M': Ea_M, 'c_SOC': c_SOC, 'c_DOC': c_DOC, 'c_MBC': c_MBC}
+        Expected SCON_params_dict = {'u_M': u_M, 'a_SD': a_SD, 'a_DS': a_DS, 'a_M': a_M, 'a_MSC': a_MSC, 'k_S_ref': k_S_ref, 'k_D_ref': k_D_ref, 'k_M_ref': k_M_ref, 'Ea_S': Ea_S, 'Ea_D': Ea_D, 'Ea_M': Ea_M, '[cs]_SOC': [cs]_SOC, '[cs]_DOC': [cs]_DOC, '[cs]_MBC': [cs]_MBC}
         '''
         
 
