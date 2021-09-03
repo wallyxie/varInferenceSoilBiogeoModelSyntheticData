@@ -11,12 +11,12 @@ from obs_and_flow import LowerBound
 
 '''
 This script includes the linear and Arrhenius temperature dependence functions to induce temperature-based forcing in differential equation soil biogeochemical models (SBMs). It also includes the SBM SDE classes corresponding to the various parameterizations of the stochastic conventional (SCON), stochastic AWB (SAWB), and stochastic AWB-equilibrium chemistry approximation (SAWB-ECA) for incorporation with normalizing flow "neural stochastic differential equation" solvers. The following SBM SDE system parameterizations are contained in this script:
-    1) SCON constant diffusion (SCON-c)
-    2) SCON state scaling diffusion (SCON-ss)
-    3) SAWB constant diffusion (SAWB-c)
-    4) SAWB state scaling diffusion (SAWB-ss)
-    5) SAWB-ECA constant diffusion (SAWB-ECA-c)
-    6) SAWB-ECA state scaling diffusion (SAWB-ECA-ss)
+    1) SCON constant diffusion (SCON-C)
+    2) SCON state scaling diffusion (SCON-SS)
+    3) SAWB constant diffusion (SAWB-C)
+    4) SAWB state scaling diffusion (SAWB-SS)
+    5) SAWB-ECA constant diffusion (SAWB-ECA-C)
+    6) SAWB-ECA state scaling diffusion (SAWB-ECA-SS)
 The respective analytical steady state estimation functions derived from the deterministic ODE versions of the stochastic SBMs are no longer included in this script, as we are no longer initiating SBMs at steady state before starting simulations.
 '''
 
@@ -102,7 +102,7 @@ class SBM_SDE:
 class SCON(SBM_SDE):
     '''
     Class contains SCON SDE drift (alpha) and diffusion (beta) equations.
-    Constant (c) and state-scaling (ss) diffusion paramterizations are included. diffusion_type must thereby be specified as 'c' or 'ss'. 
+    Constant (C) and state-scaling (SS) diffusion paramterizations are included. diffusion_type must thereby be specified as 'C' or 'SS'. 
     Other diffusion parameterizations are not included.
     '''
     def __init__(
@@ -116,7 +116,7 @@ class SCON(SBM_SDE):
             ):
         super().__init__(T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF)
 
-        if diffusion_type not in {'c', 'ss'}:
+        if diffusion_type not in {'C', 'SS'}:
             raise NotImplementedError('Other diffusion parameterizations aside from constant (c) or state-scaling (ss) have not been implemented.')
 
         self.diffusion_type = diffusion_type
@@ -130,14 +130,31 @@ class SCON(SBM_SDE):
             self.i_D: torch.Tensor, 
             self.temps: torch.Tensor, 
             self.temp_ref: Number, 
-            SCONR_C_fix_u_M_a_Ea_c_params_dict: DictOfTensors, 
+            SCON_fix_u_M_a_Ea_c_params_dict: DictOfTensors, 
             diffusion_type: str
             ) -> TupleOfTensors:
         '''
         Returns SCON drift and diffusion tensors 
         Expected SCON_params_dict = {'u_M': u_M, 'a_SD': a_SD, 'a_DS': a_DS, 'a_M': a_M, 'a_MSC': a_MSC, 'k_S_ref': k_S_ref, 'k_D_ref': k_D_ref, 'k_M_ref': k_M_ref, 'Ea_S': Ea_S, 'Ea_D': Ea_D, 'Ea_M': Ea_M, '[cs]_SOC': [cs]_SOC, '[cs]_DOC': [cs]_DOC, '[cs]_MBC': [cs]_MBC}
         '''
-        
+        #Partition SOC, DOC, MBC values. Split based on final C_PATH dim, which specifies state variables and is also indexed as dim #2 in tensor. 
+        SOC, DOC, MBC =  torch.chunk(C_PATH, state_dim, -1)
+        #Initiate tensor with same dims as C_PATH to assign drift.
+        drift = torch.empty_like(C_PATH, device = C_PATH.device)
+        #Decay parameters are forced by temperature changes.
+        k_S = arrhenius_temp_dep(SCON_params_dict['k_S_ref'], TEMP_TENSOR, SCON_params_dict['Ea_S'], TEMP_REF) #Apply vectorized temperature-dependent transformation to k_S_ref.
+        k_S = k_S.permute(2, 1, 0) #Get k_S into appropriate dimensions. 
+        k_D = arrhenius_temp_dep(SCON_params_dict['k_D_ref'], TEMP_TENSOR, SCON_params_dict['Ea_D'], TEMP_REF) #Apply vectorized temperature-dependent transformation to k_D_ref.
+        k_D = k_D.permute(2, 1, 0) #Get k_D into appropriate dimensions.
+        k_M = arrhenius_temp_dep(SCON_params_dict['k_M_ref'], TEMP_TENSOR, SCON_params_dict['Ea_M'], TEMP_REF) #Apply vectorized temperature-dependent transformation to k_M_ref.
+        k_M = k_M.permute(2, 1, 0) #Get k_M into appropriate dimensions.
+        #Repeat and permute parameter values to match dimension sizes
+        SCON_params_dict_rep = dict((k, v.repeat(1, T_SPAN_TENSOR.size(1), 1).permute(2, 1, 0)) for k, v in SCON_params_dict.items())    
+        #Drift is calculated.
+        drift_SOC = I_S_TENSOR + SCON_params_dict_rep['a_DS'] * k_D * DOC + SCON_params_dict_rep['a_M'] * SCON_params_dict_rep['a_MSC'] * k_M * MBC - k_S * SOC
+        drift_DOC = I_D_TENSOR + SCON_params_dict_rep['a_SD'] * k_S * SOC + SCON_params_dict_rep['a_M'] * (1 - SCON_params_dict_rep['a_MSC']) * k_M * MBC - (SCON_params_dict_rep['u_M'] + k_D) * DOC
+        drift_MBC = SCON_params_dict_rep['u_M'] * DOC - k_M * MBC
+
 
     @staticmethod
     def add_CO2(...):
