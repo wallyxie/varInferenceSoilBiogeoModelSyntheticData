@@ -20,7 +20,7 @@ This script includes the linear and Arrhenius temperature dependence functions t
 The respective analytical steady state estimation functions derived from the deterministic ODE versions of the stochastic SBMs are no longer included in this script, as we are no longer initiating SBMs at steady state before starting simulations.
 '''
 
-Number = Union[int, Number]
+Number = Union[int, float]
 
 ############################################################
 ##SOIL BIOGEOCHEMICAL MODEL TEMPERATURE RESPONSE FUNCTIONS##
