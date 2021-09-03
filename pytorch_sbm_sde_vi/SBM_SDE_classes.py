@@ -95,7 +95,7 @@ class SBM_SDE:
 
         self.times = T_SPAN_TENSOR
         self.i_S = I_S_TENSOR
-        self.i_D = I_D_TENSOR,
+        self.i_D = I_D_TENSOR
         self.temps = TEMP_TENSOR
         self.temp_ref = TEMP_REF
 
@@ -122,10 +122,10 @@ class SCON(SBM_SDE):
         self.diffusion_type = diffusion_type
         self.state_dim = 3
 
-    @staticmethod
     def drift_diffusion(
+            self,
             C_PATH: torch.Tensor, 
-            SCON_fix_u_M_a_Ea_c_params_dict: DictOfTensors, 
+            SCON_params_dict: DictOfTensors, 
             ) -> TupleOfTensors:
         '''
         Returns SCON drift and diffusion tensors 
@@ -151,17 +151,16 @@ class SCON(SBM_SDE):
         #Diffusion matrix is computed based on diffusion type.
         diffusion_sqrt = torch.zeros([drift.size(0), drift.size(1), self.state_dim, self.state_dim], device = drift.device) #Create tensor to assign diffusion matrix elements.        
         if self.diffusion_type == 'C':
-            diffusion_sqrt_single = torch.diag_embed(torch.sqrt(torch.stack([LowerBound.apply(SCON_C_params_dict['c_SOC'], 1e-8), LowerBound.apply(SCON_C_params_dict['c_DOC'], 1e-8), LowerBound.apply(SCON_C_params_dict['c_MBC'], 1e-8)], 1)))
-            diffusion_sqrt = diffusion_sqrt_single.unsqueeze(1).expand(-1, T_SPAN_TENSOR.size(1), -1, -1) #Expand diffusion matrices across all paths and across discretized time steps.            
+            diffusion_sqrt_single = torch.diag_embed(torch.sqrt(torch.stack([LowerBound.apply(SCON_params_dict['c_SOC'], 1e-8), LowerBound.apply(SCON_params_dict['c_DOC'], 1e-8), LowerBound.apply(SCON_params_dict['c_MBC'], 1e-8)], 1)))
+            diffusion_sqrt = diffusion_sqrt_single.unsqueeze(1).expand(-1, self.times.size(1), -1, -1) #Expand diffusion matrices across all paths and across discretized time steps.            
         elif self.diffusion_type == 'SS':
-            diffusion_sqrt = torch.zeros([drift.size(0), drift.size(1), state_dim, state_dim], device = drift.device) #Create tensor to assign diffusion matrix elements.            
+            diffusion_sqrt = torch.zeros([drift.size(0), drift.size(1), self.state_dim, self.state_dim], device = drift.device) #Create tensor to assign diffusion matrix elements.            
             diffusion_sqrt[:, :, 0 : 1, 0] = torch.sqrt(LowerBound.apply(SOC * SCON_params_dict_rep['s_SOC'], 1e-8)) #SOC diffusion standard deviation
             diffusion_sqrt[:, :, 1 : 2, 1] = torch.sqrt(LowerBound.apply(DOC * SCON_params_dict_rep['s_DOC'], 1e-8)) #DOC diffusion standard deviation
             diffusion_sqrt[:, :, 2 : 3, 2] = torch.sqrt(LowerBound.apply(MBC * SCON_params_dict_rep['s_MBC'], 1e-8)) #MBC diffusion standard deviation
         
         return drift, diffusion_sqrt
 
-    @staticmethod
     def add_CO2():
 
 class SAWB(SBM_SDE):
