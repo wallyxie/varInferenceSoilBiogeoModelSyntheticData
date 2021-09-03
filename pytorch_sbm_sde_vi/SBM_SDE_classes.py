@@ -1,3 +1,5 @@
+from typing import Union
+
 #PyData imports
 import numpy as np
 
@@ -18,11 +20,13 @@ This script includes the linear and Arrhenius temperature dependence functions t
 The respective analytical steady state estimation functions derived from the deterministic ODE versions of the stochastic SBMs are no longer included in this script, as we are no longer initiating SBMs at steady state before starting simulations.
 '''
 
+Number = Union[int, Number]
+
 ############################################################
 ##SOIL BIOGEOCHEMICAL MODEL TEMPERATURE RESPONSE FUNCTIONS##
 ############################################################
 
-def temp_gen(t: torch.Tensor, TEMP_REF: float, TEMP_RISE: float = 5) -> torch.Tensor:
+def temp_gen(t: torch.Tensor, TEMP_REF: Number, TEMP_RISE: Number = 5) -> torch.Tensor:
     '''
     Temperature function to force soil biogeochemical models.
     Accepts input time(s) t in torch.Tensor type.
@@ -32,10 +36,10 @@ def temp_gen(t: torch.Tensor, TEMP_REF: float, TEMP_RISE: float = 5) -> torch.Te
     temp = TEMP_REF + (TEMP_RISE * t) / (80 * 24 * 365) + 10 * torch.sin((2 * np.pi / 24) * t) + 10 * torch.sin((2 * np.pi / (24 * 365)) * t)
     return temp
 
-def arrhenius_temp_dep(parameter, temp: float, Ea: torch.Tensor, TEMP_REF: float) -> torch.Tensor:
+def arrhenius_temp_dep(parameter, temp: Number, Ea: torch.Tensor, TEMP_REF: Number) -> torch.Tensor:
     '''
     Arrhenius temperature dependence function.
-    Accepts input parameter as torch.Tensor or Python float type.
+    Accepts input parameter as torch.Tensor or Python Number type.
     Accepts Ea as torch.Tensor type only.
     0.008314 is the gas constant. Temperatures are in K.
     Returns a tensor of transformed parameter value(s).    
@@ -43,10 +47,10 @@ def arrhenius_temp_dep(parameter, temp: float, Ea: torch.Tensor, TEMP_REF: float
     decayed_parameter = parameter * torch.exp(-Ea / 0.008314 * (1 / temp - 1 / TEMP_REF))
     return decayed_parameter
 
-def linear_temp_dep(parameter, temp: float, Q: torch.Tensor, TEMP_REF: float) -> torch.Tensor:
+def linear_temp_dep(parameter, temp: Number, Q: torch.Tensor, TEMP_REF: Number) -> torch.Tensor:
     '''
     For a parameter with linear temperature dependence, returns the transformed parameter value.
-    Accepts input parameter as torch.Tensor or Python float type.    
+    Accepts input parameter as torch.Tensor or Python Number type.    
     Q is the slope of the temperature dependence and is a varying parameter.
     Temperatures are in K.
     '''
@@ -75,23 +79,61 @@ def i_d(t: torch.Tensor) -> torch.Tensor:
 
 class SBM_SDE:
     '''
-    This is the 
+    This is the base class for evaluating the SBM SDE SSMs. Acronyms, acronyms, acronyms!
     '''
 
     def __init__(
             self,
-            C_PATH, 
-            T_SPAN_TENSOR, 
-            I_S_TENSOR, 
-            I_D_TENSOR, 
-            TEMP_TENSOR, 
-            TEMP_REF):
-        pass
+            T_SPAN_TENSOR: torch.Tensor, 
+            I_S_TENSOR: torch.Tensor, 
+            I_D_TENSOR: torch.Tensor, 
+            TEMP_TENSOR: torch.Tensor, 
+            TEMP_REF: Number
+            ):
+
+        self.times = T_SPAN_TENSOR
+        self.i_S = I_S_TENSOR
+        self.i_D = I_D_TENSOR,
+        self.temps = TEMP_TENSOR
 
 class SCON(SBM_SDE):
+    '''
+    Class contains SCON SDE drift (alpha) and diffusion (beta) equations.
+    Constant (c) and state-scaling (ss) diffusion paramterizations are included. diffusion_type must thereby be specified as 'c' or 'ss'. 
+    Other diffusion parameterizations are not included.
+    '''
+    def __init__(
+            self,
+            T_SPAN_TENSOR: torch.Tensor, 
+            I_S_TENSOR: torch.Tensor, 
+            I_D_TENSOR: torch.Tensor, 
+            TEMP_TENSOR: torch.Tensor, 
+            TEMP_REF: Number,
+            diffusion_type: str
+            ):
+        super().__init__(T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF)
+
+        if diffusion_type not in {'c', 'ss'}:
+            raise NotImplementedError('Other diffusion parameterizations aside from constant (c) or state-scaling (ss) have not been implemented.')
+
+        self.diffusion_type = diffusion_type
+        self.state_dim = 3
 
     @staticmethod
-    def drift_diffusion(C_PATH, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF, SCONR_C_fix_u_M_a_Ea_c_params_dict, diffusion_type):
+    def drift_diffusion(
+            C_PATH: torch.Tensor, 
+            self.times: torch.Tensor, 
+            I_S_TENSOR: torch.Tensor, 
+            I_D_TENSOR: torch.Tensor, 
+            TEMP_TENSOR: torch.Tensor, 
+            TEMP_REF: Number, 
+            SCONR_C_fix_u_M_a_Ea_c_params_dict: dict, diffusion_type
+            ):
+        '''
+        Returns SCON drift and diffusion tensors 
+        Expected SCON_params_dict = {'u_M': u_M, 'a_SD': a_SD, 'a_DS': a_DS, 'a_M': a_M, 'a_MSC': a_MSC, 'k_S_ref': k_S_ref, 'k_D_ref': k_D_ref, 'k_M_ref': k_M_ref, 'Ea_S': Ea_S, 'Ea_D': Ea_D, 'Ea_M': Ea_M, 'c_SOC': c_SOC, 'c_DOC': c_DOC, 'c_MBC': c_MBC}
+        '''
+        
 
     @staticmethod
     def add_CO2(...):
