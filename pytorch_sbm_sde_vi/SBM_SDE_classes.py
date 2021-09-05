@@ -183,7 +183,7 @@ class SCON(SBM_SDE):
         #Repeat and permute parameter values to match dimension sizes
         SCON_params_dict_rep = dict((k, v.repeat(1, self.times.size(1), 1).permute(2, 1, 0)) for k, v in SCON_params_dict.items())    
         #Compute CO2.
-        CO2 = (k_S * SOC * (1 - SCON_params_dict['a_SD'])) + (k_D * DOC * (1 - SCON_params_dict['a_DS'])) + (k_M * MBC * (1 - SCON_params_dict['a_M']))
+        CO2 = (k_S * SOC * (1 - SCON_params_dict_rep['a_SD'])) + (k_D * DOC * (1 - SCON_params_dict_rep['a_DS'])) + (k_M * MBC * (1 - SCON_params_dict_rep['a_M']))
         #Add CO2 as additional dimension to original x matrix.
         x_add_CO2 = torch.cat([C_PATH, CO2], -1)
         
