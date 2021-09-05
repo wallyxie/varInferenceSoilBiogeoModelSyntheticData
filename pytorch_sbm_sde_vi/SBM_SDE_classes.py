@@ -152,7 +152,8 @@ class SCON(SBM_SDE):
             diffusion_sqrt[:, :, 0 : 1, 0] = torch.sqrt(LowerBound.apply(SCON_params_dict_rep['c_SOC'], 1e-8)) #SOC diffusion standard deviation
             diffusion_sqrt[:, :, 1 : 2, 1] = torch.sqrt(LowerBound.apply(SCON_params_dict_rep['c_DOC'], 1e-8)) #DOC diffusion standard deviation
             diffusion_sqrt[:, :, 2 : 3, 2] = torch.sqrt(LowerBound.apply(SCON_params_dict_rep['c_MBC'], 1e-8)) #MBC diffusion standard deviation
-            #diffusion_sqrt = diffusion_sqrt_single.unsqueeze(1).expand(-1, self.times.size(1), -1, -1) #Expand diffusion matrices across all paths and across discretized time steps.            
+            #diffusion_sqrt_single = torch.diag_embed(torch.sqrt(torch.stack([LowerBound.apply(SCON_params_dict['c_SOC'], 1e-8), LowerBound.apply(SCON_params_dict['c_DOC'], 1e-8), LowerBound.apply(SCON_params_dict['c_MBC'], 1e-8)], 1))) #Create single diffusion matrix by diagonalizing constant noise scale parameters. 
+            #diffusion_sqrt = diffusion_sqrt_single.unsqueeze(1).expand(-1, self.times.size(1), -1, -1) #Expand diffusion matrices across all paths and across discretized time steps.           
         elif self.diffusion_type == 'SS':
             diffusion_sqrt[:, :, 0 : 1, 0] = torch.sqrt(LowerBound.apply(SOC * SCON_params_dict_rep['s_SOC'], 1e-8)) #SOC diffusion standard deviation
             diffusion_sqrt[:, :, 1 : 2, 1] = torch.sqrt(LowerBound.apply(DOC * SCON_params_dict_rep['s_DOC'], 1e-8)) #DOC diffusion standard deviation
