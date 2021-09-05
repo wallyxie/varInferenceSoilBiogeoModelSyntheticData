@@ -128,7 +128,8 @@ class SCON(SBM_SDE):
             SCON_params_dict: DictOfTensors, 
             ) -> TupleOfTensors:
         '''
-        Returns SCON drift and diffusion tensors 
+        Accepts states x and dictionary of parameter samples.
+        Returns SCON drift and diffusion tensors corresponding to state values and parameter samples.  
         Expected SCON_params_dict = {'u_M': u_M, 'a_SD': a_SD, 'a_DS': a_DS, 'a_M': a_M, 'a_MSC': a_MSC, 'k_S_ref': k_S_ref, 'k_D_ref': k_D_ref, 'k_M_ref': k_M_ref, 'Ea_S': Ea_S, 'Ea_D': Ea_D, 'Ea_M': Ea_M, '[cs]_SOC': [cs]_SOC, '[cs]_DOC': [cs]_DOC, '[cs]_MBC': [cs]_MBC}
         '''
         #Partition SOC, DOC, MBC values. Split based on final C_PATH dim, which specifies state variables and is also indexed as dim #2 in tensor. 
@@ -161,20 +162,49 @@ class SCON(SBM_SDE):
         
         return drift, diffusion_sqrt
 
-    def add_CO2():
+    def add_CO2(
+            self,
+            C_PATH: torch.Tensor,
+            SCON_params_dict: DictOfTensors, 
+            ) -> TupleOfTensors:
+        '''
+        Accepts input of states x and dictionary of parameter samples.
+        Returns matrix (re-sized from x) that not only includes states, but added CO2 values in expanded third dimension of tensor.
+        '''
+        #Partition SOC, DOC, MBC values. Split based on final C_PATH dim, which specifies state variables and is also indexed as dim #2 in tensor. 
+        SOC, DOC, MBC =  torch.chunk(C_PATH, self.state_dim, -1)
+        #Decay parameters are forced by temperature changes.
+        k_S = arrhenius_temp_dep(SCON_params_dict['k_S_ref'], self.temps, SCON_params_dict['Ea_S'], self.temp_ref) #Apply vectorized temperature-dependent transformation to k_S_ref.
+        k_S = k_S.permute(2, 1, 0) #Get k_S into appropriate dimensions. 
+        k_D = arrhenius_temp_dep(SCON_params_dict['k_D_ref'], self.temps, SCON_params_dict['Ea_D'], self.temp_ref) #Apply vectorized temperature-dependent transformation to k_D_ref.
+        k_D = k_D.permute(2, 1, 0) #Get k_D into appropriate dimensions.
+        k_M = arrhenius_temp_dep(SCON_params_dict['k_M_ref'], self.temps, SCON_params_dict['Ea_M'], self.temp_ref) #Apply vectorized temperature-dependent transformation to k_M_ref.
+        k_M = k_M.permute(2, 1, 0) #Get k_M into appropriate dimensions.
+        #Repeat and permute parameter values to match dimension sizes
+        SCON_params_dict_rep = dict((k, v.repeat(1, self.times.size(1), 1).permute(2, 1, 0)) for k, v in SCON_params_dict.items())    
+        #Compute CO2.
+        CO2 = (k_S * SOC * (1 - SCON_params_dict['a_SD'])) + (k_D * DOC * (1 - SCON_params_dict['a_DS'])) + (k_M * MBC * (1 - SCON_params_dict['a_M']))
+        #Add CO2 as additional dimension to original x matrix.
+        x_add_CO2 = torch.cat([C_PATH, CO2], -1)
+        
+        return x_add_CO2
 
 class SAWB(SBM_SDE):
 
     @staticmethod
-    def drift_diffusion(...):
+    def drift_diffusion():
+        pass
 
     @staticmethod
-    def add_CO2(...):
+    def add_CO2():
+        pass
 
 class SAWB_ECA(SBM_SDE):
     
     @staticmethod
-    def drift_diffusion(...):
+    def drift_diffusion():
+        pass
 
     @staticmethod
-    def add_CO2(...):
+    def add_CO2():
+        pass
