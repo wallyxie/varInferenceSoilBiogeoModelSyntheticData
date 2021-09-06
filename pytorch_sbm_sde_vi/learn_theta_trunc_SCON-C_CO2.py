@@ -42,8 +42,6 @@ t = 1000 #In hours.
 n = int(t / dt_flow) + 1
 t_span = np.linspace(0, t, n)
 t_span_tensor = torch.reshape(torch.Tensor(t_span), [1, n, 1]).to(active_device) #T_span needs to be converted to tensor object. Additionally, facilitates conversion of I_S and I_D to tensor objects.
-state_dim_SCON = 3 #Not including CO2 in STATE_DIM, because CO2 is an observation.
-state_dim_SAWB = 4 #Not including CO2 in STATE_DIM, because CO2 is an observation.
 
 #SBM temperature forcing parameters
 temp_ref = 283
@@ -51,14 +49,17 @@ temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
 niter = 380000
-piter = 0
-pretrain_lr = 1e-3 #Norm regularization learning rate
 train_lr = 5e-4 #ELBO learning rate
 batch_size = 30 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
 eval_batch_size = 30
 obs_error_scale = 0.1 #Observation (y) standard deviation.
 prior_scale_factor = 0.333 #Proportion of prior standard deviation to prior means.
 num_layers = 5 #5 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
+
+#Specify desired SBM SDE model type and details.
+sbm_sde_class = 'SCON'
+diffusion_type = 'C'
+learn_CO2 = True
 theta_dist = 'TruncatedNormal' #String needs to be exact name of the distribution class. Other option is 'RescaledLogitNormal'.
 
 #SCON theta truncated normal prior distribution parameter details in order of mean, lower, and upper. Distribution sdev assumed to be some proportion of the mean. 
@@ -95,24 +96,16 @@ temp_tensor = temp_gen(t_span_tensor, temp_ref, temp_rise).to(active_device)
 i_s_tensor = i_s(t_span_tensor).to(active_device) #Exogenous SOC input function
 i_d_tensor = i_d(t_span_tensor).to(active_device) #Exogenous DOC input function
 
-#Specify desired SBM SDE model type and details.
-sbm_sde_class = 'SCON'
-diffusion_type = 'C'
-learn_CO2 = True
-state_dim_SCON_add_CO2 = state_dim_SCON + 1
-
 #Generate observation model.
 csv_data_path = os.path.join('generated_data/', 'SCON-C_CO2_trunc_sample_y_t_1000_dt_0-01_sd_scale_0-333.csv')
-obs_times, obs_means, obs_error = csv_to_obs_df(csv_data_path, state_dim_SCON_add_CO2, t, obs_error_scale)
-obs_model = ObsModel(active_device, TIMES = obs_times, DT = dt_flow, MU = obs_means, SCALE = obs_error).to(active_device) 
 
 #Call training loop function for SCON-C.
 net, q_theta, p_theta, obs_model, ELBO_hist, list_parent_loc_scale = train(
-        active_device, pretrain_lr, train_lr, niter, piter, batch_size, num_layers,
-        state_dim_SCON, csv_data_path, obs_error_scale, t, dt_flow, n, 
+        active_device, train_lr, piter, batch_size, num_layers,
+        csv_data_path, obs_error_scale, t, dt_flow, n, 
         t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
-        drift_diffusion_SCON_C, x0_prior_SCON, SCON_C_priors_details, theta_dist,
-        LEARN_THETA = True, LR_DECAY = 0.95, DECAY_STEP_SIZE = 25000, PRINT_EVERY = 100)
+        sbm_sde_class, diffusion_type, x0_prior_SCON, SCON_C_priors_details, learn_CO2,
+        theta_dist, LR_DECAY = 0.9, DECAY_STEP_SIZE = 25000, PRINT_EVERY = 100)
 
 #Save net and ELBO files.
 now = datetime.now()
@@ -147,5 +140,5 @@ net.eval()
 x, _ = net(eval_batch_size)
 plots_folder = 'training_plots/'
 plot_elbo(ELBO_hist, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, xmin = int((niter - piter) * 0.2)) #xmin < (niter - piter).
-plot_states_post(x, obs_model, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, learn_CO2, ymin_list = [0, 0, 0], ymax_list = [100., 12., 12.])
+plot_states_post(x, obs_model, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, learn_CO2, ymin_list = [0, 0, 0, 0], ymax_list = [100., 12., 12., 0.1.])
 plot_theta(p_theta, q_theta, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string)

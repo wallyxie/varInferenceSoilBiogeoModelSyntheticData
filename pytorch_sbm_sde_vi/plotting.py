@@ -24,10 +24,10 @@ def plot_states_post(x, obs_model, niter, piter, t, dt, batch_size, eval_batch_s
     state_list = []
     if x.size(-1) == 3 and not LEARN_CO2:
         state_list = ['SOC', 'DOC', 'MBC']
-    elif x.size(-1) == 4 and not LEARN_CO2:
-        state_list = ['SOC', 'DOC', 'MBC', 'EEC']
     elif x.size(-1) == 4 and LEARN_CO2:
         state_list = ['SOC', 'DOC', 'MBC', 'CO2']
+    elif x.size(-1) == 4 and not LEARN_CO2:
+        state_list = ['SOC', 'DOC', 'MBC', 'EEC']
     elif x.size(-1) == 5 and LEARN_CO2:
         state_list = ['SOC', 'DOC', 'MBC', 'EEC', 'CO2']
 
