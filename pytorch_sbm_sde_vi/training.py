@@ -80,10 +80,10 @@ def train(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
 
     #Read in data to obtain y and establish observation model.
     obs_dim = None
-    if LEARN_CO2:
-        obs_dim = SBM_SDE.state_dim + 1
-    else:
+    if not LEARN_CO2:
         obs_dim = SBM_SDE.state_dim
+    elif LEARN_CO2:
+        obs_dim = SBM_SDE.state_dim + 1
     obs_times, obs_means, obs_error = csv_to_obs_df(OBS_CSV_STR, obs_dim, T, OBS_ERROR_SCALE) #csv_to_obs_df function in obs_and_flow module
     obs_model = ObsModel(DEVICE, TIMES = obs_times, DT = DT, MU = obs_means, SCALE = obs_error).to(DEVICE)
 
