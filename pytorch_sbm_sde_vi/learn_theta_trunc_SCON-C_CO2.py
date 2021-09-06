@@ -18,8 +18,8 @@ import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
 
-#Model-specific module imports
-from SBM_SDE_tensor import *
+#Module module imports
+from SBM_SDE_classes import *
 from obs_and_flow import *
 from training import *
 from plotting import *
@@ -96,7 +96,7 @@ i_s_tensor = i_s(t_span_tensor).to(active_device) #Exogenous SOC input function
 i_d_tensor = i_d(t_span_tensor).to(active_device) #Exogenous DOC input function
 
 #Generate observation model.
-csv_data_path = os.path.join('generated_data/', 'SCON_C_trunc_sample_y_t_1000_dt_0-005_sd_scale_0-333.csv')
+csv_data_path = os.path.join('generated_data/', 'SCON_C_CO2_trunc_sample_y_t_1000_dt_0-01_sd_scale_0-333.csv')
 obs_times, obs_means_noCO2, obs_error = csv_to_obs_df(csv_data_path, state_dim_SCON, t, obs_error_scale)
 obs_model = ObsModel(active_device, TIMES = obs_times, DT = dt_flow, MU = obs_means_noCO2, SCALE = obs_error).to(active_device) 
 
@@ -110,7 +110,7 @@ net, q_theta, p_theta, obs_model, ELBO_hist, list_parent_loc_scale = train(
 
 #Save net and ELBO files.
 now = datetime.now()
-now_string = 'SCON_C_trunc_' + now.strftime('%Y_%m_%d_%H_%M_%S')
+now_string = 'SCON-C_CO2_trunc_' + now.strftime('%Y_%m_%d_%H_%M_%S')
 save_string = f'_iter_{niter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_lr_{train_lr}_sd_scale_{prior_scale_factor}_{now_string}.pt'
 outputs_folder = 'training_pt_outputs/'
 net_save_string = os.path.join(outputs_folder, 'net' + save_string)
