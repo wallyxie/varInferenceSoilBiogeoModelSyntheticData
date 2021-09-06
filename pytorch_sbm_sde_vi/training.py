@@ -46,7 +46,7 @@ def calc_log_lik(C_PATH: torch.Tensor,
     
         return ll, drift, diffusion_sqrt
 
-    if LEARN_CO2:
+    elif LEARN_CO2:
         drift, diffusion_sqrt, x_add_CO2 = SBM_SDE_CLASS.drift_diffusion_add_CO2(C_PATH[:, :-1, :], PARAMS_DICT)
         euler_maruyama_state_sample_object = D.multivariate_normal.MultivariateNormal(loc = C_PATH[:, :-1, :] + drift * DT, scale_tril = diffusion_sqrt * math.sqrt(DT)) #C_PATH[:, :-1, :] + drift * DT will diverge from C_PATH if C_PATH values not compatible with x0 and theta. Algorithm aims to minimize gap between computed drift and actual gradient between x_n and x_{n+1}. 
     
