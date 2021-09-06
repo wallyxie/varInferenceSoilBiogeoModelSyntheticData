@@ -101,7 +101,7 @@ csv_data_path = os.path.join('generated_data/', 'SCON-C_CO2_trunc_sample_y_t_100
 
 #Call training loop function for SCON-C.
 net, q_theta, p_theta, obs_model, ELBO_hist, list_parent_loc_scale = train(
-        active_device, train_lr, piter, batch_size, num_layers,
+        active_device, train_lr, niter, batch_size, num_layers,
         csv_data_path, obs_error_scale, t, dt_flow, n, 
         t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
         sbm_sde_class, diffusion_type, x0_prior_SCON, SCON_C_priors_details, learn_CO2,
