@@ -1,3 +1,4 @@
+#Python-related imports
 from typing import Dict, Tuple, Union
 
 #PyData imports
@@ -6,7 +7,7 @@ import numpy as np
 #Torch-related imports
 import torch
 
-#Module-specific imports
+#Module imports
 from obs_and_flow import LowerBound
 
 '''
@@ -102,7 +103,7 @@ class SBM_SDE:
 class SCON(SBM_SDE):
     '''
     Class contains SCON SDE drift (alpha) and diffusion (beta) equations.
-    Constant (C) and state-scaling (SS) diffusion paramterizations are included. diffusion_type must thereby be specified as 'C' or 'SS'. 
+    Constant (C) and state-scaling (SS) diffusion paramterizations are included. DIFFUSION_TYPE must thereby be specified as 'C' or 'SS'. 
     Other diffusion parameterizations are not included.
     '''
     def __init__(
@@ -112,14 +113,14 @@ class SCON(SBM_SDE):
             I_D_TENSOR: torch.Tensor, 
             TEMP_TENSOR: torch.Tensor, 
             TEMP_REF: Number,
-            diffusion_type: str
+            DIFFUSION_TYPE: str
             ):
         super().__init__(T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF)
 
-        if diffusion_type not in {'C', 'SS'}:
+        if DIFFUSION_TYPE not in {'C', 'SS'}:
             raise NotImplementedError('Other diffusion parameterizations aside from constant (c) or state-scaling (ss) have not been implemented.')
 
-        self.diffusion_type = diffusion_type
+        self.DIFFUSION_TYPE = DIFFUSION_TYPE
         self.state_dim = 3
 
     def drift_diffusion(
@@ -152,13 +153,13 @@ class SCON(SBM_SDE):
         drift[:, :, 0 : 1] = drift_SOC
         drift[:, :, 1 : 2] = drift_DOC
         drift[:, :, 2 : 3] = drift_MBC
-        if self.diffusion_type == 'C':
+        if self.DIFFUSION_TYPE == 'C':
             diffusion_sqrt[:, :, 0 : 1, 0] = torch.sqrt(LowerBound.apply(SCON_params_dict_rep['c_SOC'], 1e-8)) #SOC diffusion standard deviation
             diffusion_sqrt[:, :, 1 : 2, 1] = torch.sqrt(LowerBound.apply(SCON_params_dict_rep['c_DOC'], 1e-8)) #DOC diffusion standard deviation
             diffusion_sqrt[:, :, 2 : 3, 2] = torch.sqrt(LowerBound.apply(SCON_params_dict_rep['c_MBC'], 1e-8)) #MBC diffusion standard deviation
             #diffusion_sqrt_single = torch.diag_embed(torch.sqrt(torch.stack([LowerBound.apply(SCON_params_dict['c_SOC'], 1e-8), LowerBound.apply(SCON_params_dict['c_DOC'], 1e-8), LowerBound.apply(SCON_params_dict['c_MBC'], 1e-8)], 1))) #Create single diffusion matrix by diagonalizing constant noise scale parameters. 
             #diffusion_sqrt = diffusion_sqrt_single.unsqueeze(1).expand(-1, self.times.size(1), -1, -1) #Expand diffusion matrices across all paths and across discretized time steps.           
-        elif self.diffusion_type == 'SS':
+        elif self.DIFFUSION_TYPE == 'SS':
             diffusion_sqrt[:, :, 0 : 1, 0] = torch.sqrt(LowerBound.apply(SOC * SCON_params_dict_rep['s_SOC'], 1e-8)) #SOC diffusion standard deviation
             diffusion_sqrt[:, :, 1 : 2, 1] = torch.sqrt(LowerBound.apply(DOC * SCON_params_dict_rep['s_DOC'], 1e-8)) #DOC diffusion standard deviation
             diffusion_sqrt[:, :, 2 : 3, 2] = torch.sqrt(LowerBound.apply(MBC * SCON_params_dict_rep['s_MBC'], 1e-8)) #MBC diffusion standard deviation
@@ -195,13 +196,13 @@ class SCON(SBM_SDE):
         drift[:, :, 0 : 1] = drift_SOC
         drift[:, :, 1 : 2] = drift_DOC
         drift[:, :, 2 : 3] = drift_MBC
-        if self.diffusion_type == 'C':
+        if self.DIFFUSION_TYPE == 'C':
             diffusion_sqrt[:, :, 0 : 1, 0] = torch.sqrt(LowerBound.apply(SCON_params_dict_rep['c_SOC'], 1e-8)) #SOC diffusion standard deviation
             diffusion_sqrt[:, :, 1 : 2, 1] = torch.sqrt(LowerBound.apply(SCON_params_dict_rep['c_DOC'], 1e-8)) #DOC diffusion standard deviation
             diffusion_sqrt[:, :, 2 : 3, 2] = torch.sqrt(LowerBound.apply(SCON_params_dict_rep['c_MBC'], 1e-8)) #MBC diffusion standard deviation
             #diffusion_sqrt_single = torch.diag_embed(torch.sqrt(torch.stack([LowerBound.apply(SCON_params_dict['c_SOC'], 1e-8), LowerBound.apply(SCON_params_dict['c_DOC'], 1e-8), LowerBound.apply(SCON_params_dict['c_MBC'], 1e-8)], 1))) #Create single diffusion matrix by diagonalizing constant noise scale parameters. 
             #diffusion_sqrt = diffusion_sqrt_single.unsqueeze(1).expand(-1, self.times.size(1), -1, -1) #Expand diffusion matrices across all paths and across discretized time steps.           
-        elif self.diffusion_type == 'SS':
+        elif self.DIFFUSION_TYPE == 'SS':
             diffusion_sqrt[:, :, 0 : 1, 0] = torch.sqrt(LowerBound.apply(SOC * SCON_params_dict_rep['s_SOC'], 1e-8)) #SOC diffusion standard deviation
             diffusion_sqrt[:, :, 1 : 2, 1] = torch.sqrt(LowerBound.apply(DOC * SCON_params_dict_rep['s_DOC'], 1e-8)) #DOC diffusion standard deviation
             diffusion_sqrt[:, :, 2 : 3, 2] = torch.sqrt(LowerBound.apply(MBC * SCON_params_dict_rep['s_MBC'], 1e-8)) #MBC diffusion standard deviation
@@ -240,7 +241,7 @@ class SCON(SBM_SDE):
 class SAWB(SBM_SDE):
     '''
     Class contains SAWB SDE drift (alpha) and diffusion (beta) equations.
-    Constant (C) and state-scaling (SS) diffusion paramterizations are included. diffusion_type must thereby be specified as 'C' or 'SS'. 
+    Constant (C) and state-scaling (SS) diffusion paramterizations are included. DIFFUSION_TYPE must thereby be specified as 'C' or 'SS'. 
     Other diffusion parameterizations are not included.
     '''
         def __init__(
@@ -250,14 +251,14 @@ class SAWB(SBM_SDE):
             I_D_TENSOR: torch.Tensor, 
             TEMP_TENSOR: torch.Tensor, 
             TEMP_REF: Number,
-            diffusion_type: str
+            DIFFUSION_TYPE: str
             ):
         super().__init__(T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF)
 
-        if diffusion_type not in {'C', 'SS'}:
+        if DIFFUSION_TYPE not in {'C', 'SS'}:
             raise NotImplementedError('Other diffusion parameterizations aside from constant (c) or state-scaling (ss) have not been implemented.')
 
-        self.diffusion_type = diffusion_type
+        self.DIFFUSION_TYPE = DIFFUSION_TYPE
         self.state_dim = 4
 
     def drift_diffusion(
@@ -292,14 +293,14 @@ class SAWB(SBM_SDE):
         drift[:, :, 3 : 4] = drift_EEC
         #Diffusion matrix is computed based on diffusion type.
         diffusion_sqrt = torch.zeros([drift.size(0), drift.size(1), self.state_dim, self.state_dim], device = drift.device) #Create tensor to assign diffusion matrix elements.            
-        if self.diffusion_type == 'C':
+        if self.DIFFUSION_TYPE == 'C':
             diffusion_sqrt[:, :, 0 : 1, 0] = torch.sqrt(LowerBound.apply(SAWB_params_dict_rep['c_SOC'], 1e-8)) #SOC diffusion standard deviation
             diffusion_sqrt[:, :, 1 : 2, 1] = torch.sqrt(LowerBound.apply(SAWB_params_dict_rep['c_DOC'], 1e-8)) #DOC diffusion standard deviation
             diffusion_sqrt[:, :, 2 : 3, 2] = torch.sqrt(LowerBound.apply(SAWB_params_dict_rep['c_MBC'], 1e-8)) #MBC diffusion standard deviation
             diffusion_sqrt[:, :, 3 : 4, 3] = torch.sqrt(LowerBound.apply(SAWB_params_dict_rep['c_EEC'], 1e-8)) #EEC diffusion standard deviation            
             #diffusion_sqrt_single = torch.diag_embed(torch.sqrt(LowerBound.apply(torch.as_tensor([SAWB_params_dict['c_SOC'], SAWB_params_dict['c_DOC'], SAWB_params_dict['c_MBC'], SAWB_params_dict['c_EEC'], SAWB_params_dict['c_CO2']]), 1e-8))) #Create single diffusion matrix by diagonalizing constant noise scale parameters.            
             #diffusion_sqrt = diffusion_sqrt_single.unsqueeze(1).expand(-1, self.times.size(1), -1, -1) #Expand diffusion matrices across all paths and across discretized time steps.
-        elif self.diffusion_type == 'SS':
+        elif self.DIFFUSION_TYPE == 'SS':
             diffusion_sqrt[:, :, 0 : 1, 0] = torch.sqrt(LowerBound.apply(SOC * SAWB_params_dict_rep['s_SOC'], 1e-8)) #SOC diffusion standard deviation
             diffusion_sqrt[:, :, 1 : 2, 1] = torch.sqrt(LowerBound.apply(DOC * SAWB_params_dict_rep['s_DOC'], 1e-8)) #DOC diffusion standard deviation
             diffusion_sqrt[:, :, 2 : 3, 2] = torch.sqrt(LowerBound.apply(MBC * SAWB_params_dict_rep['s_MBC'], 1e-8)) #MBC diffusion standard deviation
@@ -338,14 +339,14 @@ class SAWB(SBM_SDE):
         drift[:, :, 3 : 4] = drift_EEC
         #Diffusion matrix is computed based on diffusion type.
         diffusion_sqrt = torch.zeros([drift.size(0), drift.size(1), self.state_dim, self.state_dim], device = drift.device) #Create tensor to assign diffusion matrix elements.            
-        if self.diffusion_type == 'C':
+        if self.DIFFUSION_TYPE == 'C':
             diffusion_sqrt[:, :, 0 : 1, 0] = torch.sqrt(LowerBound.apply(SAWB_params_dict_rep['c_SOC'], 1e-8)) #SOC diffusion standard deviation
             diffusion_sqrt[:, :, 1 : 2, 1] = torch.sqrt(LowerBound.apply(SAWB_params_dict_rep['c_DOC'], 1e-8)) #DOC diffusion standard deviation
             diffusion_sqrt[:, :, 2 : 3, 2] = torch.sqrt(LowerBound.apply(SAWB_params_dict_rep['c_MBC'], 1e-8)) #MBC diffusion standard deviation
             diffusion_sqrt[:, :, 3 : 4, 3] = torch.sqrt(LowerBound.apply(SAWB_params_dict_rep['c_EEC'], 1e-8)) #EEC diffusion standard deviation            
             #diffusion_sqrt_single = torch.diag_embed(torch.sqrt(LowerBound.apply(torch.as_tensor([SAWB_params_dict['c_SOC'], SAWB_params_dict['c_DOC'], SAWB_params_dict['c_MBC'], SAWB_params_dict['c_EEC'], SAWB_params_dict['c_CO2']]), 1e-8))) #Create single diffusion matrix by diagonalizing constant noise scale parameters.            
             #diffusion_sqrt = diffusion_sqrt_single.unsqueeze(1).expand(-1, self.times.size(1), -1, -1) #Expand diffusion matrices across all paths and across discretized time steps.
-        elif self.diffusion_type == 'SS':
+        elif self.DIFFUSION_TYPE == 'SS':
             diffusion_sqrt[:, :, 0 : 1, 0] = torch.sqrt(LowerBound.apply(SOC * SAWB_params_dict_rep['s_SOC'], 1e-8)) #SOC diffusion standard deviation
             diffusion_sqrt[:, :, 1 : 2, 1] = torch.sqrt(LowerBound.apply(DOC * SAWB_params_dict_rep['s_DOC'], 1e-8)) #DOC diffusion standard deviation
             diffusion_sqrt[:, :, 2 : 3, 2] = torch.sqrt(LowerBound.apply(MBC * SAWB_params_dict_rep['s_MBC'], 1e-8)) #MBC diffusion standard deviation
@@ -384,7 +385,7 @@ class SAWB(SBM_SDE):
 class SAWB_ECA(SBM_SDE):
         '''
     Class contains SAWB-ECA SDE drift (alpha) and diffusion (beta) equations.
-    Constant (C) and state-scaling (SS) diffusion paramterizations are included. diffusion_type must thereby be specified as 'C' or 'SS'. 
+    Constant (C) and state-scaling (SS) diffusion paramterizations are included. DIFFUSION_TYPE must thereby be specified as 'C' or 'SS'. 
     Other diffusion parameterizations are not included.
     '''
         def __init__(
@@ -394,14 +395,14 @@ class SAWB_ECA(SBM_SDE):
             I_D_TENSOR: torch.Tensor, 
             TEMP_TENSOR: torch.Tensor, 
             TEMP_REF: Number,
-            diffusion_type: str
+            DIFFUSION_TYPE: str
             ):
         super().__init__(T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF)
 
-        if diffusion_type not in {'C', 'SS'}:
+        if DIFFUSION_TYPE not in {'C', 'SS'}:
             raise NotImplementedError('Other diffusion parameterizations aside from constant (c) or state-scaling (ss) have not been implemented.')
 
-        self.diffusion_type = diffusion_type
+        self.DIFFUSION_TYPE = DIFFUSION_TYPE
         self.state_dim = 4
     
     def drift_diffusion(
@@ -436,14 +437,14 @@ class SAWB_ECA(SBM_SDE):
         drift[:, :, 3 : 4] = drift_EEC
         #Diffusion matrix is computed based on diffusion type.
         diffusion_sqrt = torch.zeros([drift.size(0), drift.size(1), self.state_dim, self.state_dim], device = drift.device) #Create tensor to assign diffusion matrix elements.            
-        if self.diffusion_type == 'C':
+        if self.DIFFUSION_TYPE == 'C':
             diffusion_sqrt[:, :, 0 : 1, 0] = torch.sqrt(LowerBound.apply(SAWB_ECA_params_dict_rep['c_SOC'], 1e-8)) #SOC diffusion standard deviation
             diffusion_sqrt[:, :, 1 : 2, 1] = torch.sqrt(LowerBound.apply(SAWB_ECA_params_dict_rep['c_DOC'], 1e-8)) #DOC diffusion standard deviation
             diffusion_sqrt[:, :, 2 : 3, 2] = torch.sqrt(LowerBound.apply(SAWB_ECA_params_dict_rep['c_MBC'], 1e-8)) #MBC diffusion standard deviation
             diffusion_sqrt[:, :, 3 : 4, 3] = torch.sqrt(LowerBound.apply(SAWB_ECA_params_dict_rep['c_EEC'], 1e-8)) #EEC diffusion standard deviation            
             #diffusion_sqrt_single = torch.diag_embed(torch.sqrt(LowerBound.apply(torch.as_tensor([SAWB_ECA_params_dict['c_SOC'], SAWB_ECA_params_dict['c_DOC'], SAWB_ECA_params_dict['c_MBC'], SAWB_ECA_params_dict['c_EEC'], SAWB_ECA_params_dict['c_CO2']]), 1e-8))) #Create single diffusion matrix by diagonalizing constant noise scale parameters.            
             #diffusion_sqrt = diffusion_sqrt_single.unsqueeze(1).expand(-1, self.times.size(1), -1, -1) #Expand diffusion matrices across all paths and across discretized time steps.
-        elif self.diffusion_type == 'SS':
+        elif self.DIFFUSION_TYPE == 'SS':
             diffusion_sqrt[:, :, 0 : 1, 0] = torch.sqrt(LowerBound.apply(SOC * SAWB_ECA_params_dict_rep['s_SOC'], 1e-8)) #SOC diffusion standard deviation
             diffusion_sqrt[:, :, 1 : 2, 1] = torch.sqrt(LowerBound.apply(DOC * SAWB_ECA_params_dict_rep['s_DOC'], 1e-8)) #DOC diffusion standard deviation
             diffusion_sqrt[:, :, 2 : 3, 2] = torch.sqrt(LowerBound.apply(MBC * SAWB_ECA_params_dict_rep['s_MBC'], 1e-8)) #MBC diffusion standard deviation
@@ -483,14 +484,14 @@ class SAWB_ECA(SBM_SDE):
         drift[:, :, 3 : 4] = drift_EEC
         #Diffusion matrix is computed based on diffusion type.
         diffusion_sqrt = torch.zeros([drift.size(0), drift.size(1), self.state_dim, self.state_dim], device = drift.device) #Create tensor to assign diffusion matrix elements.            
-        if self.diffusion_type == 'C':
+        if self.DIFFUSION_TYPE == 'C':
             diffusion_sqrt[:, :, 0 : 1, 0] = torch.sqrt(LowerBound.apply(SAWB_ECA_params_dict_rep['c_SOC'], 1e-8)) #SOC diffusion standard deviation
             diffusion_sqrt[:, :, 1 : 2, 1] = torch.sqrt(LowerBound.apply(SAWB_ECA_params_dict_rep['c_DOC'], 1e-8)) #DOC diffusion standard deviation
             diffusion_sqrt[:, :, 2 : 3, 2] = torch.sqrt(LowerBound.apply(SAWB_ECA_params_dict_rep['c_MBC'], 1e-8)) #MBC diffusion standard deviation
             diffusion_sqrt[:, :, 3 : 4, 3] = torch.sqrt(LowerBound.apply(SAWB_ECA_params_dict_rep['c_EEC'], 1e-8)) #EEC diffusion standard deviation            
             #diffusion_sqrt_single = torch.diag_embed(torch.sqrt(LowerBound.apply(torch.as_tensor([SAWB_ECA_params_dict['c_SOC'], SAWB_ECA_params_dict['c_DOC'], SAWB_ECA_params_dict['c_MBC'], SAWB_ECA_params_dict['c_EEC'], SAWB_ECA_params_dict['c_CO2']]), 1e-8))) #Create single diffusion matrix by diagonalizing constant noise scale parameters.            
             #diffusion_sqrt = diffusion_sqrt_single.unsqueeze(1).expand(-1, self.times.size(1), -1, -1) #Expand diffusion matrices across all paths and across discretized time steps.
-        elif self.diffusion_type == 'SS':
+        elif self.DIFFUSION_TYPE == 'SS':
             diffusion_sqrt[:, :, 0 : 1, 0] = torch.sqrt(LowerBound.apply(SOC * SAWB_ECA_params_dict_rep['s_SOC'], 1e-8)) #SOC diffusion standard deviation
             diffusion_sqrt[:, :, 1 : 2, 1] = torch.sqrt(LowerBound.apply(DOC * SAWB_ECA_params_dict_rep['s_DOC'], 1e-8)) #DOC diffusion standard deviation
             diffusion_sqrt[:, :, 2 : 3, 2] = torch.sqrt(LowerBound.apply(MBC * SAWB_ECA_params_dict_rep['s_MBC'], 1e-8)) #MBC diffusion standard deviation

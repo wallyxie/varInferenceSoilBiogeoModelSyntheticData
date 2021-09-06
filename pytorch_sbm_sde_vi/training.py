@@ -1,6 +1,7 @@
 #Python-related imports
 import math
 from tqdm import tqdm
+from typing import Dict, Tuple, Union
 
 #Torch-related imports
 import torch
@@ -10,75 +11,99 @@ import torch.distributions as D
 import torch.nn.functional as F
 import torch.optim as optim
 
-#Model-specific imports
-from obs_and_flow import *
+#Module imports
 from mean_field import *
+from obs_and_flow import *
+from SBM_SDE_classes import *
 
 '''
 This module containins the `calc_log_lik` and `training` functions for pre-training and ELBO training of the soil biogeochemical model SDE systems.
 '''
 
+DictOfTensors = Dict[str, torch.Tensor]
+Number = Union[int, float]
+TupleOfTensors = Tuple[torch.Tensor, torch.Tensor]
+
 ###############################
 ##TRAINING AND ELBO FUNCTIONS##
 ###############################
 
-def calc_log_lik(C_PATH, T_SPAN_TENSOR, DT, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF, DRIFT_DIFFUSION, INIT_PRIOR, PARAMS_DICT, LEARN_CO2 = False):
-    drift, diffusion_sqrt = DRIFT_DIFFUSION(C_PATH[:, :-1, :], T_SPAN_TENSOR[:, 1:, :], I_S_TENSOR[:, 1:, :], I_D_TENSOR[:, 1:, :], TEMP_TENSOR[:, 1:, :], TEMP_REF, PARAMS_DICT)
-    euler_maruyama_state_sample_object = D.multivariate_normal.MultivariateNormal(loc = C_PATH[:, :-1, :] + drift * DT, scale_tril = diffusion_sqrt * math.sqrt(DT)) #C_PATH[:, :-1, :] + drift * DT will diverge from C_PATH if C_PATH values not compatible with x0 and theta. Algorithm aims to minimize gap between computed drift and actual gradient between x_n and x_{n+1}. 
+def calc_log_lik(C_PATH: torch.Tensor, 
+        T_SPAN_TENSOR: torch.Tensor, 
+        DT: float, 
+        SBM_SDE_CLASS, 
+        INIT_PRIOR, 
+        PARAMS_DICT: DictOfTensors, 
+        LEARN_CO2 = False):
+
+    if not LEARN_CO2:
+        drift, diffusion_sqrt = SBM_SDE_CLASS.drift_diffusion(C_PATH[:, :-1, :], PARAMS_DICT)
+        euler_maruyama_state_sample_object = D.multivariate_normal.MultivariateNormal(loc = C_PATH[:, :-1, :] + drift * DT, scale_tril = diffusion_sqrt * math.sqrt(DT)) #C_PATH[:, :-1, :] + drift * DT will diverge from C_PATH if C_PATH values not compatible with x0 and theta. Algorithm aims to minimize gap between computed drift and actual gradient between x_n and x_{n+1}. 
     
-    # Compute log p(x|theta) = log p(x|x0, theta) + log p(x0|theta)
-    ll = euler_maruyama_state_sample_object.log_prob(C_PATH[:, 1:, :]).sum(-1) # log p(x|x0, theta)
-    ll += INIT_PRIOR.log_prob(C_PATH[:, 0, :]) # log p(x0|theta)
+        # Compute log p(x|theta) = log p(x|x0, theta) + log p(x0|theta)
+        ll = euler_maruyama_state_sample_object.log_prob(C_PATH[:, 1:, :]).sum(-1) # log p(x|x0, theta)
+        ll += INIT_PRIOR.log_prob(C_PATH[:, 0, :]) # log p(x0|theta)
     
-    return ll, drift, diffusion_sqrt
+        return ll, drift, diffusion_sqrt
+
+    if LEARN_CO2:
+        drift, diffusion_sqrt, x_add_CO2 = SBM_SDE_CLASS.drift_diffusion_with_CO2(C_PATH[:, :-1, :], PARAMS_DICT)
+        euler_maruyama_state_sample_object = D.multivariate_normal.MultivariateNormal(loc = C_PATH[:, :-1, :] + drift * DT, scale_tril = diffusion_sqrt * math.sqrt(DT)) #C_PATH[:, :-1, :] + drift * DT will diverge from C_PATH if C_PATH values not compatible with x0 and theta. Algorithm aims to minimize gap between computed drift and actual gradient between x_n and x_{n+1}. 
+    
+        # Compute log p(x|theta) = log p(x|x0, theta) + log p(x0|theta)
+        ll = euler_maruyama_state_sample_object.log_prob(C_PATH[:, 1:, :]).sum(-1) # log p(x|x0, theta)
+        ll += INIT_PRIOR.log_prob(C_PATH[:, 0, :]) # log p(x0|theta)
+    
+        return ll, drift, diffusion_sqrt, x_add_CO2
 
 def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LAYERS,
-          STATE_DIM, OBS_CSV_STR, OBS_ERROR_SCALE, T, DT, N, T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF,
-          DRIFT_DIFFUSION, INIT_PRIOR, PRIOR_DIST_DETAILS_DICT, THETA_DIST = None, THETA_POST_DIST = None, THETA_POST_INIT = None,
-          LEARN_THETA = False, LR_DECAY = 0.9, DECAY_STEP_SIZE = 1000, PRINT_EVERY = 10):
+          STATE_DIM, OBS_CSV_STR, OBS_ERROR_SCALE, T, DT, N,
+          T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF,
+          SBM_SDE_CLASS, INIT_PRIOR, PRIOR_DIST_DETAILS_DICT, LEARN_CO2 = False,
+          THETA_DIST = None, THETA_POST_DIST = None, THETA_POST_INIT = None,
+          LR_DECAY = 0.8, DECAY_STEP_SIZE = 50000, PRINT_EVERY = 100):
 
     if PRETRAIN_ITER >= NITER:
         raise ValueError('PRETRAIN_ITER must be < NITER.')
 
     #Read in data to obtain y and establish observation model.
-    obs_times, obs_means_noCO2, obs_error = csv_to_obs_df(OBS_CSV_STR, STATE_DIM, T, OBS_ERROR_SCALE) #csv_to_obs_df function in obs_and_flow module
-    obs_model = ObsModel(DEVICE, TIMES = obs_times, DT = DT, MU = obs_means_noCO2, SCALE = obs_error).to(DEVICE) 
+    obs_times, obs_means, obs_error = csv_to_obs_df(OBS_CSV_STR, STATE_DIM, T, OBS_ERROR_SCALE) #csv_to_obs_df function in obs_and_flow module
+    obs_model = ObsModel(DEVICE, TIMES = obs_times, DT = DT, MU = obs_means, SCALE = obs_error).to(DEVICE) 
 
     #Establish neural network.
-    #net = SDEFlow(DEVICE, obs_model, STATE_DIM, T, DT, N, I_S_TENSOR = I_S_TENSOR, I_D_TENSOR = I_D_TENSOR, num_layers = NUM_LAYERS).to(DEVICE)
     net = SDEFlow(DEVICE, obs_model, STATE_DIM, T, DT, N, num_layers = NUM_LAYERS).to(DEVICE)
     
-    if LEARN_THETA:
-        #Ensure consistent order b/w prior p and variational posterior q
-        param_names = list(PRIOR_DIST_DETAILS_DICT.keys())
+    #if LEARN_THETA:
+    #Ensure consistent order b/w prior p and variational posterior q
+    param_names = list(PRIOR_DIST_DETAILS_DICT.keys())
 
-        #Convert prior details dictionary values to tensors.
-        prior_list = list(zip(*(PRIOR_DIST_DETAILS_DICT[k] for k in param_names))) #Unzip prior distribution details from dictionary values into individual lists.
-        prior_means_tensor, prior_sds_tensor, prior_lowers_tensor, prior_uppers_tensor = torch.tensor(prior_list).to(DEVICE) #Ensure conversion of lists into tensors.
+    #Convert prior details dictionary values to tensors.
+    prior_list = list(zip(*(PRIOR_DIST_DETAILS_DICT[k] for k in param_names))) #Unzip prior distribution details from dictionary values into individual lists.
+    prior_means_tensor, prior_sds_tensor, prior_lowers_tensor, prior_uppers_tensor = torch.tensor(prior_list).to(DEVICE) #Ensure conversion of lists into tensors.
 
-        #Retrieve desired distribution class based on string.
-        dist_class_dict = {'TruncatedNormal': TruncatedNormal,
-                           'RescaledLogitNormal': RescaledLogitNormal,
-                           'MultivariateLogitNormal': MultivariateLogitNormal}
-        THETA_PRIOR_CLASS = dist_class_dict[THETA_DIST]
-        THETA_POST_CLASS = dist_class_dict[THETA_POST_DIST] if THETA_POST_DIST else dist_class_dict[THETA_DIST]
-        #print('Prior, posterior:', THETA_PRIOR_CLASS, THETA_POST_CLASS)
-        
-        #Define prior
-        priors = THETA_PRIOR_CLASS(loc = prior_means_tensor, scale = prior_sds_tensor, a = prior_lowers_tensor, b = prior_uppers_tensor)
-        #priors = BoundedNormal(DEVICE, param_names, PRIOR_DIST_DETAILS_DICT)
+    #Retrieve desired distribution class based on string.
+    dist_class_dict = {'TruncatedNormal': TruncatedNormal,
+                       'RescaledLogitNormal': RescaledLogitNormal,
+                       'MultivariateLogitNormal': MultivariateLogitNormal}
+    THETA_PRIOR_CLASS = dist_class_dict[THETA_DIST]
+    THETA_POST_CLASS = dist_class_dict[THETA_POST_DIST] if THETA_POST_DIST else dist_class_dict[THETA_DIST]
+    #print('Prior, posterior:', THETA_PRIOR_CLASS, THETA_POST_CLASS)
+    
+    #Define prior
+    priors = THETA_PRIOR_CLASS(loc = prior_means_tensor, scale = prior_sds_tensor, a = prior_lowers_tensor, b = prior_uppers_tensor)
+    #priors = BoundedNormal(DEVICE, param_names, PRIOR_DIST_DETAILS_DICT)
 
-        # Initialize posterior q(theta) using its prior p(theta)
-        learn_cov = (THETA_POST_DIST == 'MultivariateLogitNormal')
-        if THETA_POST_INIT is None:
-            THETA_POST_INIT = PRIOR_DIST_DETAILS_DICT
-        #print('learn cov, init post:', learn_cov, THETA_POST_INIT)
-        q_theta = MeanField(DEVICE, param_names, THETA_POST_INIT, THETA_POST_CLASS, learn_cov)
-        #q_theta = MeanField(DEVICE, param_names, PRIOR_DIST_DETAILS_DICT)
-    else:
+    # Initialize posterior q(theta) using its prior p(theta)
+    learn_cov = (THETA_POST_DIST == 'MultivariateLogitNormal')
+    if THETA_POST_INIT is None:
+        THETA_POST_INIT = PRIOR_DIST_DETAILS_DICT
+    #print('learn cov, init post:', learn_cov, THETA_POST_INIT)
+    q_theta = MeanField(DEVICE, param_names, THETA_POST_INIT, THETA_POST_CLASS, learn_cov)
+    #q_theta = MeanField(DEVICE, param_names, PRIOR_DIST_DETAILS_DICT)
+    #else:
         #Establish initial dictionary of theta means in tensor form.
-        theta_dict = {k: torch.tensor(v).to(DEVICE).expand(BATCH_SIZE) for k, (v, _, _) in PRIOR_DIST_DETAILS_DICT.items()}
-        q_theta = None
+        #theta_dict = {k: torch.tensor(v).to(DEVICE).expand(BATCH_SIZE) for k, (v, _, _) in PRIOR_DIST_DETAILS_DICT.items()}
+        #q_theta = None
 
     #Record loss throughout training
     best_loss_norm = 1e20
@@ -88,11 +113,11 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
 
     #Initiate optimizers.
     pretrain_optimizer = optim.Adam(net.parameters(), lr = PRETRAIN_LR)
-    if LEARN_THETA:
-        ELBO_params = list(net.parameters()) + list(q_theta.parameters())
-        ELBO_optimizer = optim.Adamax(ELBO_params, lr = ELBO_LR)
-    else:
-        ELBO_optimizer = optim.Adam(net.parameters(), lr = ELBO_LR)
+    # if LEARN_THETA:
+    ELBO_params = list(net.parameters()) + list(q_theta.parameters())
+    ELBO_optimizer = optim.Adamax(ELBO_params, lr = ELBO_LR)
+    # else:
+    #     ELBO_optimizer = optim.Adam(net.parameters(), lr = ELBO_LR)
     
     #Training loop
     with tqdm(total = NITER, desc = f'Train Diffusion', position = -1) as tq:
@@ -129,35 +154,17 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
             else:
                 ELBO_optimizer.zero_grad()                
                 
-                #Commented out because log p(y_0 | x_0, theta) already accounted for in output of obs_model (we are now learning x_0).
-                #Create x_0 prior
-                #x_0 = C_PATH[:, 0, :]
-                #x_0_prior = D.normal.Normal(loc = x_0, scale = x_0 * OBS_ERROR_SCALE)
-                #log p(y_0 | x_0, theta)
-                #log_p_y_0 = x_0_prior.log_prob(obs_model.mu[:, 0]).sum(-1)
-
                 list_theta = []
                 list_parent_loc_scale = []
-                #list_mean_sd = []
                 theta_dict = None #Initiate theta_dict variable for loop operations.
                 theta = None #Initiate theta variable for loop operations.
                 log_q_theta = None #Initiate log_q_theta variable for loop operations.
                 parent_loc_scale_dict = None #Initiate parent_loc_scale_dict variable for loop operations.
-                #mean_sd_dict = None #Initiate mean_sd_dict variable for loop operations.
 
-                if LEARN_THETA:
-                    #theta_dict, theta, log_q_theta, parent_loc_scale_dict, mean_sd_dict = q_theta(BATCH_SIZE)
-                    theta_dict, theta, log_q_theta, parent_loc_scale_dict = q_theta(BATCH_SIZE)
-                    #if THETA_DIST == TruncatedNormal:
-                    #    theta_dict, theta, log_q_theta, parent_loc_scale_dict, mean_sd_dict = q_theta(BATCH_SIZE)
-                    #elif THETA_DIST == RescaledLogitNormal:
-                    #    theta_dict, theta, log_q_theta, parent_loc_scale_dict = q_theta(BATCH_SIZE)                        
-                    log_p_theta = priors.log_prob(theta).sum(-1)
-                    #list_theta.append(theta_dict)
-                    list_parent_loc_scale.append(parent_loc_scale_dict)
-                    #list_mean_sd.append(mean_sd_dict)
-                else:
-                    log_q_theta, log_p_theta = torch.zeros(2).to(DEVICE)
+                # if LEARN_THETA:
+                theta_dict, theta, log_q_theta, parent_loc_scale_dict = q_theta(BATCH_SIZE)
+                log_p_theta = priors.log_prob(theta).sum(-1)
+                list_parent_loc_scale.append(parent_loc_scale_dict)
 
                 log_lik, drift, diffusion_sqrt = calc_log_lik(C_PATH, T_SPAN_TENSOR.to(DEVICE), DT, I_S_TENSOR.to(DEVICE), I_D_TENSOR.to(DEVICE),
                                        TEMP_TENSOR, TEMP_REF, DRIFT_DIFFUSION, INIT_PRIOR, theta_dict)
@@ -177,19 +184,16 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
                     print('\nC_PATH mean =', C_PATH.mean(-2))
                     print('\nC_PATH =', C_PATH)
 
-                    if LEARN_THETA:
-                        print('\ntheta_dict means: ', {key: theta_dict[key].mean() for key in param_names})
-                        print('\nparent_loc_scale_dict: ', parent_loc_scale_dict)
-                        #print('\nmean_sd_dict: ', mean_sd_dict)
-
-                        #if THETA_DIST == TruncatedNormal:
-                        #    print('\nmean_sd_dict: ', mean_sd_dict)
+                    # if LEARN_THETA:
+                    print('\ntheta_dict means: ', {key: theta_dict[key].mean() for key in param_names})
+                    print('\nparent_loc_scale_dict: ', parent_loc_scale_dict)
+                    #print('\nmean_sd_dict: ', mean_sd_dict)
 
                 ELBO.backward()
-                if LEARN_THETA:
-                    torch.nn.utils.clip_grad_norm_(ELBO_params, 5.0)
-                else:
-                    torch.nn.utils.clip_grad_norm_(net.parameters(), 3.0)
+                # if LEARN_THETA:
+                torch.nn.utils.clip_grad_norm_(ELBO_params, 5.0)
+                # else:
+                #     torch.nn.utils.clip_grad_norm_(net.parameters(), 3.0)
                 ELBO_optimizer.step()
             
                 if it % DECAY_STEP_SIZE == 0:
@@ -197,11 +201,4 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
 
             tq.update()
     
-    #if THETA_DIST == TruncatedNormal:
-    #    return net, q_theta, obs_model, ELBO_losses, list_parent_loc_scale, list_mean_sd
-
-    #elif THETA_DIST == RescaledLogitNormal:
-    #    return net, q_theta, obs_model, ELBO_losses, list_parent_loc_scale
-
-    #return net, q_theta, priors, obs_model, ELBO_losses, list_parent_loc_scale, list_mean_sd
     return net, q_theta, priors, obs_model, ELBO_losses, list_parent_loc_scale    
