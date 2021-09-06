@@ -19,16 +19,16 @@ def plot_elbo(elbo_hist, niter, piter, t, dt, batch_size, eval_batch_size, num_l
     plt.title(f'ELBO history after {xmin} iterations')
     plt.savefig(os.path.join(plots_folder, f'ELBO_iter_{niter}_piter_{piter}_t_{t}_dt_{dt}_batch_{batch_size}_samples_{eval_batch_size}_layers_{num_layers}_lr_{train_lr}_sd_scale_{sd_scale}_{now_string}.png'), dpi = 300)
     
-def plot_states_post(x, obs_model, niter, piter, t, dt, batch_size, eval_batch_size, num_layers, train_lr, sd_scale, plots_folder, now_string, learn_CO2 = False, ymin_list = None, ymax_list = None):
+def plot_states_post(x, obs_model, niter, piter, t, dt, batch_size, eval_batch_size, num_layers, train_lr, sd_scale, plots_folder, now_string, LEARN_CO2 = False, ymin_list = None, ymax_list = None):
 
     state_list = []
-    if x.size(-1) == 3 and not learn_CO2:
+    if x.size(-1) == 3 and not LEARN_CO2:
         state_list = ['SOC', 'DOC', 'MBC']
-    elif x.size(-1) == 4 and not learn_CO2:
+    elif x.size(-1) == 4 and not LEARN_CO2:
         state_list = ['SOC', 'DOC', 'MBC', 'EEC']
-    elif x.size(-1) == 4 and learn_CO2:
+    elif x.size(-1) == 4 and LEARN_CO2:
         state_list = ['SOC', 'DOC', 'MBC', 'CO2']
-    elif x.size(-1) == 5 and learn_CO2:
+    elif x.size(-1) == 5 and LEARN_CO2:
         state_list = ['SOC', 'DOC', 'MBC', 'EEC', 'CO2']
 
     fig, axs = plt.subplots(state_dim)
