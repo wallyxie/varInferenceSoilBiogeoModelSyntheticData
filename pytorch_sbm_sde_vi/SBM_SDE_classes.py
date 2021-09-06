@@ -134,7 +134,7 @@ class SCON(SBM_SDE):
         '''
         #Partition SOC, DOC, MBC values. Split based on final C_PATH dim, which specifies state variables and is also indexed as dim #2 in tensor. 
         SOC, DOC, MBC =  torch.chunk(C_PATH, self.state_dim, -1)
-        #Repeat and permute parameter values to match dimension sizes
+        #Repeat and permute parameter values to match dimension sizes.
         SCON_params_dict_rep = dict((k, v.repeat(1, self.times.size(1), 1).permute(2, 1, 0)) for k, v in SCON_params_dict.items())
         #Initiate tensor with same dims as C_PATH to assign drift.
         drift = torch.empty_like(C_PATH, device = C_PATH.device)
@@ -172,12 +172,12 @@ class SCON(SBM_SDE):
             ) -> TupleOfTensors:
         '''
         Accepts states x and dictionary of parameter samples.
-        Returns SCON drift and diffusion tensors corresponding to state values and parameter samples.  
+        Returns SCON drift and diffusion tensors corresponding to state values and parameter samples, along with tensor of states x concatenated with CO2.  
         Expected SCON_params_dict = {'u_M': u_M, 'a_SD': a_SD, 'a_DS': a_DS, 'a_M': a_M, 'a_MSC': a_MSC, 'k_S_ref': k_S_ref, 'k_D_ref': k_D_ref, 'k_M_ref': k_M_ref, 'Ea_S': Ea_S, 'Ea_D': Ea_D, 'Ea_M': Ea_M, '[cs]_SOC': [cs]_SOC, '[cs]_DOC': [cs]_DOC, '[cs]_MBC': [cs]_MBC}
         '''
         #Partition SOC, DOC, MBC values. Split based on final C_PATH dim, which specifies state variables and is also indexed as dim #2 in tensor. 
         SOC, DOC, MBC =  torch.chunk(C_PATH, self.state_dim, -1)
-        #Repeat and permute parameter values to match dimension sizes
+        #Repeat and permute parameter values to match dimension sizes.
         SCON_params_dict_rep = dict((k, v.repeat(1, self.times.size(1), 1).permute(2, 1, 0)) for k, v in SCON_params_dict.items())
         #Initiate tensor with same dims as C_PATH to assign drift.
         drift = torch.empty_like(C_PATH, device = C_PATH.device)
@@ -224,7 +224,7 @@ class SCON(SBM_SDE):
         '''
         #Partition SOC, DOC, MBC values. Split based on final C_PATH dim, which specifies state variables and is also indexed as dim #2 in tensor. 
         SOC, DOC, MBC =  torch.chunk(C_PATH, self.state_dim, -1)
-        #Repeat and permute parameter values to match dimension sizes
+        #Repeat and permute parameter values to match dimension sizes.
         SCON_params_dict_rep = dict((k, v.repeat(1, self.times.size(1), 1).permute(2, 1, 0)) for k, v in SCON_params_dict.items())
         #Decay parameters are forced by temperature changes.
         k_S = arrhenius_temp_dep(SCON_params_dict_rep['k_S_ref'], self.temps, SCON_params_dict_rep['Ea_S'], self.temp_ref) #Apply vectorized temperature-dependent transformation to k_S_ref.
@@ -268,43 +268,118 @@ class SAWB(SBM_SDE):
         '''
         Accepts states x and dictionary of parameter samples.
         Returns SAWB drift and diffusion tensors corresponding to state values and parameter samples.  
-        Expected SAWB_C_params_dict = {'u_Q_ref': u_Q_ref, 'Q': Q, 'a_MSA': a_MSA, 'K_D': K_D, 'K_U': K_U, 'V_D_ref': V_D_ref, 'V_U_ref': V_U_ref, 'Ea_V_D': Ea_V_D, 'Ea_V_U': Ea_V_U, 'r_M': r_M, 'r_E': r_E, 'r_L': r_L, '[cs]_SOC': [cs]_SOC, '[cs]_DOC': [cs]_DOC, '[cs]_MBC': [cs]_MBC, '[cs]_EEC': [cs]_EEC}
-
+        Expected SAWB_params_dict = {'u_Q_ref': u_Q_ref, 'Q': Q, 'a_MSA': a_MSA, 'K_D': K_D, 'K_U': K_U, 'V_D_ref': V_D_ref, 'V_U_ref': V_U_ref, 'Ea_V_D': Ea_V_D, 'Ea_V_U': Ea_V_U, 'r_M': r_M, 'r_E': r_E, 'r_L': r_L, '[cs]_SOC': [cs]_SOC, '[cs]_DOC': [cs]_DOC, '[cs]_MBC': [cs]_MBC, '[cs]_EEC': [cs]_EEC}
         '''
-        SOC, DOC, MBC, EEC =  torch.chunk(C_PATH, state_dim, -1) #Partition SOC, DOC, MBC, EEC values. Split based on final C_PATH dim, which specifies state variables and is also indexed as dim #2 in tensor.
-        #Repeat and permute parameter values to match dimension sizes
-        SAWB_C_params_dict_rep = dict((k, v.repeat(1, T_SPAN_TENSOR.size(1), 1).permute(2, 1, 0)) for k, v in SAWB_C_params_dict.items())
+        #Partition SOC, DOC, MBC, EEC values. Split based on final C_PATH dim, which specifies state variables and is also indexed as dim #2 in tensor.
+        SOC, DOC, MBC, EEC =  torch.chunk(C_PATH, state_dim, -1)
+        #Repeat and permute parameter values to match dimension sizes.
+        SAWB_params_dict_rep = dict((k, v.repeat(1, T_SPAN_TENSOR.size(1), 1).permute(2, 1, 0)) for k, v in SAWB_params_dict.items())
         #Initiate tensor with same dims as C_PATH to assign drift.
         drift = torch.empty_like(C_PATH, device = C_PATH.device)
         #Decay parameters are forced by temperature changes.
-        u_Q = linear_temp_dep(SAWB_C_params_dict_rep['u_Q_ref'], TEMP_TENSOR, SAWB_C_params_dict_rep['Q'], TEMP_REF) #Apply linear temperature-dependence to u_Q.
-        V_D = arrhenius_temp_dep(SAWB_C_params_dict_rep['V_D_ref'], TEMP_TENSOR, SAWB_C_params_dict_rep['Ea_V_D'], TEMP_REF) #Apply vectorized temperature-dependent transformation to V_D.
-        V_U = arrhenius_temp_dep(SAWB_C_params_dict_rep['V_U_ref'], TEMP_TENSOR, SAWB_C_params_dict_rep['Ea_V_U'], TEMP_REF) #Apply vectorized temperature-dependent transformation to V_U.
-        #Repeat and permute parameter values to match dimension sizes
-        SAWB_C_params_dict_rep = dict((k, v.repeat(1, T_SPAN_TENSOR.size(1), 1).permute(2, 1, 0)) for k, v in SAWB_C_params_dict.items()) 
+        u_Q = linear_temp_dep(SAWB_params_dict_rep['u_Q_ref'], TEMP_TENSOR, SAWB_params_dict_rep['Q'], TEMP_REF) #Apply linear temperature-dependence to u_Q.
+        V_D = arrhenius_temp_dep(SAWB_params_dict_rep['V_D_ref'], TEMP_TENSOR, SAWB_params_dict_rep['Ea_V_D'], TEMP_REF) #Apply vectorized temperature-dependent transformation to V_D.
+        V_U = arrhenius_temp_dep(SAWB_params_dict_rep['V_U_ref'], TEMP_TENSOR, SAWB_params_dict_rep['Ea_V_U'], TEMP_REF) #Apply vectorized temperature-dependent transformation to V_U.
         #Drift is calculated.
-        drift_SOC = I_S_TENSOR + SAWB_C_params_dict_rep['a_MSA'] * SAWB_C_params_dict_rep['r_M'] * MBC - ((V_D * EEC * SOC) / (SAWB_C_params_dict_rep['K_D'] + SOC))
-        drift_DOC = I_D_TENSOR + (1 - SAWB_C_params_dict_rep['a_MSA']) * SAWB_C_params_dict_rep['r_M'] * MBC + ((V_D * EEC * SOC) / (SAWB_C_params_dict_rep['K_D'] + SOC)) + SAWB_C_params_dict_rep['r_L'] * EEC - ((V_U * MBC * DOC) / (SAWB_C_params_dict_rep['K_U'] + DOC))
-        drift_MBC = (u_Q * (V_U * MBC * DOC) / (SAWB_C_params_dict_rep['K_U'] + DOC)) - (SAWB_C_params_dict_rep['r_M'] + SAWB_C_params_dict_rep['r_E']) * MBC
-        drift_EEC = SAWB_C_params_dict_rep['r_E'] * MBC - SAWB_C_params_dict_rep['r_L'] * EEC
+        drift_SOC = I_S_TENSOR + SAWB_params_dict_rep['a_MSA'] * SAWB_params_dict_rep['r_M'] * MBC - ((V_D * EEC * SOC) / (SAWB_params_dict_rep['K_D'] + SOC))
+        drift_DOC = I_D_TENSOR + (1 - SAWB_params_dict_rep['a_MSA']) * SAWB_params_dict_rep['r_M'] * MBC + ((V_D * EEC * SOC) / (SAWB_params_dict_rep['K_D'] + SOC)) + SAWB_params_dict_rep['r_L'] * EEC - ((V_U * MBC * DOC) / (SAWB_params_dict_rep['K_U'] + DOC))
+        drift_MBC = (u_Q * (V_U * MBC * DOC) / (SAWB_params_dict_rep['K_U'] + DOC)) - (SAWB_params_dict_rep['r_M'] + SAWB_params_dict_rep['r_E']) * MBC
+        drift_EEC = SAWB_params_dict_rep['r_E'] * MBC - SAWB_params_dict_rep['r_L'] * EEC
+        #Assign elements to drift vector.
+        drift[:, :, 0 : 1] = drift_SOC
+        drift[:, :, 1 : 2] = drift_DOC
+        drift[:, :, 2 : 3] = drift_MBC
+        drift[:, :, 3 : 4] = drift_EEC
         #Diffusion matrix is computed based on diffusion type.
         diffusion_sqrt = torch.zeros([drift.size(0), drift.size(1), self.state_dim, self.state_dim], device = drift.device) #Create tensor to assign diffusion matrix elements.            
         if self.diffusion_type == 'C':
             diffusion_sqrt[:, :, 0 : 1, 0] = torch.sqrt(LowerBound.apply(SAWB_params_dict_rep['c_SOC'], 1e-8)) #SOC diffusion standard deviation
             diffusion_sqrt[:, :, 1 : 2, 1] = torch.sqrt(LowerBound.apply(SAWB_params_dict_rep['c_DOC'], 1e-8)) #DOC diffusion standard deviation
-            diffusion_sqrt[:, :, 2 : 3, 2] = torch.sqrt(LowerBound.apply(SAWB_params_dict_rep['c_MBC'], 1e-8)) #MBC diffusion standard deviation            diffusion_sqrt = diffusion_sqrt_single.unsqueeze(1).expand(-1, self.times.size(1), -1, -1) #Expand diffusion matrices across all paths and across discretized time steps.            
+            diffusion_sqrt[:, :, 2 : 3, 2] = torch.sqrt(LowerBound.apply(SAWB_params_dict_rep['c_MBC'], 1e-8)) #MBC diffusion standard deviation
+            diffusion_sqrt[:, :, 3 : 4, 3] = torch.sqrt(LowerBound.apply(SAWB_params_dict_rep['c_EEC'], 1e-8)) #EEC diffusion standard deviation            
+            #diffusion_sqrt_single = torch.diag_embed(torch.sqrt(LowerBound.apply(torch.as_tensor([SAWB_params_dict['c_SOC'], SAWB_params_dict['c_DOC'], SAWB_params_dict['c_MBC'], SAWB_params_dict['c_EEC'], SAWB_params_dict['c_CO2']]), 1e-8))) #Create single diffusion matrix by diagonalizing constant noise scale parameters.            
+            #diffusion_sqrt = diffusion_sqrt_single.unsqueeze(1).expand(-1, self.times.size(1), -1, -1) #Expand diffusion matrices across all paths and across discretized time steps.
         elif self.diffusion_type == 'SS':
             diffusion_sqrt[:, :, 0 : 1, 0] = torch.sqrt(LowerBound.apply(SOC * SAWB_params_dict_rep['s_SOC'], 1e-8)) #SOC diffusion standard deviation
             diffusion_sqrt[:, :, 1 : 2, 1] = torch.sqrt(LowerBound.apply(DOC * SAWB_params_dict_rep['s_DOC'], 1e-8)) #DOC diffusion standard deviation
             diffusion_sqrt[:, :, 2 : 3, 2] = torch.sqrt(LowerBound.apply(MBC * SAWB_params_dict_rep['s_MBC'], 1e-8)) #MBC diffusion standard deviation
-        
+            diffusion_sqrt[:, :, 3 : 4, 3] = torch.sqrt(LowerBound.apply(EEC * SAWB_params_dict_rep['s_EEC'], 1e-8)) #EEC diffusion standard deviation            
         return drift, diffusion_sqrt
 
+        def drift_diffusion_with_CO2(
+            self,
+            C_PATH: torch.Tensor, 
+            SAWB_params_dict: DictOfTensors, 
+            ) -> TupleOfTensors:
+        '''
+        Accepts states x and dictionary of parameter samples.
+        Returns SAWB drift and diffusion tensors corresponding to state values and parameter samples, along with tensor of states x concatenated with CO2.  
+        Expected SAWB_params_dict = {'u_Q_ref': u_Q_ref, 'Q': Q, 'a_MSA': a_MSA, 'K_D': K_D, 'K_U': K_U, 'V_D_ref': V_D_ref, 'V_U_ref': V_U_ref, 'Ea_V_D': Ea_V_D, 'Ea_V_U': Ea_V_U, 'r_M': r_M, 'r_E': r_E, 'r_L': r_L, '[cs]_SOC': [cs]_SOC, '[cs]_DOC': [cs]_DOC, '[cs]_MBC': [cs]_MBC, '[cs]_EEC': [cs]_EEC}
+        '''
+        #Partition SOC, DOC, MBC, EEC values. Split based on final C_PATH dim, which specifies state variables and is also indexed as dim #2 in tensor.
+        SOC, DOC, MBC, EEC =  torch.chunk(C_PATH, state_dim, -1)
+        #Repeat and permute parameter values to match dimension sizes.
+        SAWB_params_dict_rep = dict((k, v.repeat(1, T_SPAN_TENSOR.size(1), 1).permute(2, 1, 0)) for k, v in SAWB_params_dict.items())
+        #Initiate tensor with same dims as C_PATH to assign drift.
+        drift = torch.empty_like(C_PATH, device = C_PATH.device)
+        #Decay parameters are forced by temperature changes.
+        u_Q = linear_temp_dep(SAWB_params_dict_rep['u_Q_ref'], TEMP_TENSOR, SAWB_params_dict_rep['Q'], TEMP_REF) #Apply linear temperature-dependence to u_Q.
+        V_D = arrhenius_temp_dep(SAWB_params_dict_rep['V_D_ref'], TEMP_TENSOR, SAWB_params_dict_rep['Ea_V_D'], TEMP_REF) #Apply vectorized temperature-dependent transformation to V_D.
+        V_U = arrhenius_temp_dep(SAWB_params_dict_rep['V_U_ref'], TEMP_TENSOR, SAWB_params_dict_rep['Ea_V_U'], TEMP_REF) #Apply vectorized temperature-dependent transformation to V_U.
+        #Drift is calculated.
+        drift_SOC = I_S_TENSOR + SAWB_params_dict_rep['a_MSA'] * SAWB_params_dict_rep['r_M'] * MBC - ((V_D * EEC * SOC) / (SAWB_params_dict_rep['K_D'] + SOC))
+        drift_DOC = I_D_TENSOR + (1 - SAWB_params_dict_rep['a_MSA']) * SAWB_params_dict_rep['r_M'] * MBC + ((V_D * EEC * SOC) / (SAWB_params_dict_rep['K_D'] + SOC)) + SAWB_params_dict_rep['r_L'] * EEC - ((V_U * MBC * DOC) / (SAWB_params_dict_rep['K_U'] + DOC))
+        drift_MBC = (u_Q * (V_U * MBC * DOC) / (SAWB_params_dict_rep['K_U'] + DOC)) - (SAWB_params_dict_rep['r_M'] + SAWB_params_dict_rep['r_E']) * MBC
+        drift_EEC = SAWB_params_dict_rep['r_E'] * MBC - SAWB_params_dict_rep['r_L'] * EEC
+        #Assign elements to drift vector.
+        drift[:, :, 0 : 1] = drift_SOC
+        drift[:, :, 1 : 2] = drift_DOC
+        drift[:, :, 2 : 3] = drift_MBC
+        drift[:, :, 3 : 4] = drift_EEC
+        #Diffusion matrix is computed based on diffusion type.
+        diffusion_sqrt = torch.zeros([drift.size(0), drift.size(1), self.state_dim, self.state_dim], device = drift.device) #Create tensor to assign diffusion matrix elements.            
+        if self.diffusion_type == 'C':
+            diffusion_sqrt[:, :, 0 : 1, 0] = torch.sqrt(LowerBound.apply(SAWB_params_dict_rep['c_SOC'], 1e-8)) #SOC diffusion standard deviation
+            diffusion_sqrt[:, :, 1 : 2, 1] = torch.sqrt(LowerBound.apply(SAWB_params_dict_rep['c_DOC'], 1e-8)) #DOC diffusion standard deviation
+            diffusion_sqrt[:, :, 2 : 3, 2] = torch.sqrt(LowerBound.apply(SAWB_params_dict_rep['c_MBC'], 1e-8)) #MBC diffusion standard deviation
+            diffusion_sqrt[:, :, 3 : 4, 3] = torch.sqrt(LowerBound.apply(SAWB_params_dict_rep['c_EEC'], 1e-8)) #EEC diffusion standard deviation            
+            #diffusion_sqrt_single = torch.diag_embed(torch.sqrt(LowerBound.apply(torch.as_tensor([SAWB_params_dict['c_SOC'], SAWB_params_dict['c_DOC'], SAWB_params_dict['c_MBC'], SAWB_params_dict['c_EEC'], SAWB_params_dict['c_CO2']]), 1e-8))) #Create single diffusion matrix by diagonalizing constant noise scale parameters.            
+            #diffusion_sqrt = diffusion_sqrt_single.unsqueeze(1).expand(-1, self.times.size(1), -1, -1) #Expand diffusion matrices across all paths and across discretized time steps.
+        elif self.diffusion_type == 'SS':
+            diffusion_sqrt[:, :, 0 : 1, 0] = torch.sqrt(LowerBound.apply(SOC * SAWB_params_dict_rep['s_SOC'], 1e-8)) #SOC diffusion standard deviation
+            diffusion_sqrt[:, :, 1 : 2, 1] = torch.sqrt(LowerBound.apply(DOC * SAWB_params_dict_rep['s_DOC'], 1e-8)) #DOC diffusion standard deviation
+            diffusion_sqrt[:, :, 2 : 3, 2] = torch.sqrt(LowerBound.apply(MBC * SAWB_params_dict_rep['s_MBC'], 1e-8)) #MBC diffusion standard deviation
+            diffusion_sqrt[:, :, 3 : 4, 3] = torch.sqrt(LowerBound.apply(EEC * SAWB_params_dict_rep['s_EEC'], 1e-8)) #EEC diffusion standard deviation           
+        #Compute CO2.
+        CO2 = (1 - u_Q) * (V_U * MBC * DOC) / (SAWB_params_dict_rep['K_U'] + DOC)
+        #Add CO2 as additional dimension to original x matrix.
+        x_add_CO2 = torch.cat([C_PATH, CO2], -1)
 
+        return drift, diffusion_sqrt, x_add_CO2
+
+    def add_CO2(
+            self,
+            C_PATH: torch.Tensor,
+            SAWB_params_dict: DictOfTensors, 
+            ) -> TupleOfTensors:
+        '''
+        Accepts input of states x and dictionary of parameter samples.
+        Returns matrix (re-sized from x) that not only includes states, but added CO2 values in expanded third dimension of tensor.
+        '''
+        #Partition SOC, DOC, MBC, and EEC values. Split based on final C_PATH dim, which specifies state variables and is also indexed as dim #2 in tensor. 
+        SOC, DOC, MBC, EEC =  torch.chunk(C_PATH, self.state_dim, -1)
+        #Repeat and permute parameter values to match dimension sizes.
+        SAWB_params_dict_rep = dict((k, v.repeat(1, self.times.size(1), 1).permute(2, 1, 0)) for k, v in SAWB_params_dict.items())
+        #Decay parameters are forced by temperature changes.
+        u_Q = linear_temp_dep(SAWB_params_dict_rep['u_Q_ref'], TEMP_TENSOR, SAWB_params_dict_rep['Q'], TEMP_REF) #Apply linear temperature-dependence to u_Q.
+        V_D = arrhenius_temp_dep(SAWB_params_dict_rep['V_D_ref'], TEMP_TENSOR, SAWB_params_dict_rep['Ea_V_D'], TEMP_REF) #Apply vectorized temperature-dependent transformation to V_D.
+        V_U = arrhenius_temp_dep(SAWB_params_dict_rep['V_U_ref'], TEMP_TENSOR, SAWB_params_dict_rep['Ea_V_U'], TEMP_REF) #Apply vectorized temperature-dependent transformation to V_U.
+        #Compute CO2.
+        CO2 = (1 - u_Q) * (V_U * MBC * DOC) / (SAWB_params_dict_rep['K_U'] + DOC)
+        #Add CO2 as additional dimension to original x matrix.
+        x_add_CO2 = torch.cat([C_PATH, CO2], -1)
         
-
-    def add_CO2():
-        pass
+        return x_add_CO2
 
 class SAWB_ECA(SBM_SDE):
         '''
@@ -329,8 +404,124 @@ class SAWB_ECA(SBM_SDE):
         self.diffusion_type = diffusion_type
         self.state_dim = 4
     
-    def drift_diffusion():
-        pass
+    def drift_diffusion(
+            self,
+            C_PATH: torch.Tensor, 
+            SAWB_params_dict: DictOfTensors, 
+            ) -> TupleOfTensors:
+        '''
+        Accepts states x and dictionary of parameter samples.
+        Returns SAWB-ECA drift and diffusion tensors corresponding to state values and parameter samples.  
+        Expected SAWB_ECA_params_dict = {'u_Q_ref': u_Q_ref, 'Q': Q, 'a_MSA': a_MSA, 'K_DE': K_DE, 'K_UE': K_UE, 'V_DE_ref': V_DE_ref, 'V_UE_ref': V_UE_ref, 'Ea_V_DE': Ea_V_DE, 'Ea_V_UE': Ea_V_UE, 'r_M': r_M, 'r_E': r_E, 'r_L': r_L, '[cs]_SOC': [cs]_SOC, '[cs]_DOC': [cs]_DOC, '[cs]_MBC': [cs]_MBC, '[cs]_EEC': [cs]_EEC}
+        '''
+        #Partition SOC, DOC, MBC, EEC values. Split based on final C_PATH dim, which specifies state variables and is also indexed as dim #2 in tensor.
+        SOC, DOC, MBC, EEC =  torch.chunk(C_PATH, state_dim, -1)
+        #Repeat and permute parameter values to match dimension sizes.
+        SAWB_ECA_params_dict_rep = dict((k, v.repeat(1, T_SPAN_TENSOR.size(1), 1).permute(2, 1, 0)) for k, v in SAWB_ECA_C_params_dict_rep.items())
+        #Initiate tensor with same dims as C_PATH to assign drift.
+        drift = torch.empty_like(C_PATH, device = C_PATH.device)
+        #Decay parameters are forced by temperature changes.
+        u_Q = linear_temp_dep(SAWB_ECA_params_dict_rep['u_Q_ref'], TEMP_TENSOR, SAWB_ECA_params_dict_rep['Q'], TEMP_REF) #Apply linear temperature-dependence to u_Q.
+        V_DE = arrhenius_temp_dep(SAWB_ECA_params_dict_rep['V_DE_ref'], TEMP_TENSOR, SAWB_ECA_params_dict_rep['Ea_V_DE'], TEMP_REF) #Apply vectorized temperature-dependent transformation to V_DE.
+        V_UE = arrhenius_temp_dep(SAWB_ECA_params_dict_rep['V_UE_ref'], TEMP_TENSOR, SAWB_ECA_params_dict_rep['Ea_V_UE'], TEMP_REF) #Apply vectorized temperature-dependent transformation to V_UE.
+        #Drift is calculated.
+        drift_SOC = I_S_TENSOR + SAWB_ECA_params_dict_rep['a_MSA'] * SAWB_ECA_params_dict_rep['r_M'] * MBC - ((V_DE * EEC * SOC) / (SAWB_ECA_params_dict_rep['K_DE'] + EEC + SOC))
+        drift_DOC = I_D_TENSOR + (1 - SAWB_ECA_params_dict_rep['a_MSA']) * SAWB_ECA_params_dict_rep['r_M'] * MBC + ((V_DE * EEC * SOC) / (SAWB_ECA_params_dict_rep['K_DE'] + EEC + SOC)) + SAWB_ECA_params_dict_rep['r_L'] * EEC - ((V_UE * MBC * DOC) / (SAWB_ECA_params_dict_rep['K_UE'] + MBC + DOC))
+        drift_MBC = (u_Q * (V_UE * MBC * DOC) / (SAWB_ECA_params_dict_rep['K_UE'] + MBC + DOC)) - (SAWB_ECA_params_dict_rep['r_M'] + SAWB_ECA_params_dict_rep['r_E']) * MBC
+        drift_EEC = SAWB_ECA_params_dict_rep['r_E'] * MBC - SAWB_ECA_params_dict_rep['r_L'] * EEC
+        #Assign elements to drift vector.
+        drift[:, :, 0 : 1] = drift_SOC
+        drift[:, :, 1 : 2] = drift_DOC
+        drift[:, :, 2 : 3] = drift_MBC
+        drift[:, :, 3 : 4] = drift_EEC
+        #Diffusion matrix is computed based on diffusion type.
+        diffusion_sqrt = torch.zeros([drift.size(0), drift.size(1), self.state_dim, self.state_dim], device = drift.device) #Create tensor to assign diffusion matrix elements.            
+        if self.diffusion_type == 'C':
+            diffusion_sqrt[:, :, 0 : 1, 0] = torch.sqrt(LowerBound.apply(SAWB_ECA_params_dict_rep['c_SOC'], 1e-8)) #SOC diffusion standard deviation
+            diffusion_sqrt[:, :, 1 : 2, 1] = torch.sqrt(LowerBound.apply(SAWB_ECA_params_dict_rep['c_DOC'], 1e-8)) #DOC diffusion standard deviation
+            diffusion_sqrt[:, :, 2 : 3, 2] = torch.sqrt(LowerBound.apply(SAWB_ECA_params_dict_rep['c_MBC'], 1e-8)) #MBC diffusion standard deviation
+            diffusion_sqrt[:, :, 3 : 4, 3] = torch.sqrt(LowerBound.apply(SAWB_ECA_params_dict_rep['c_EEC'], 1e-8)) #EEC diffusion standard deviation            
+            #diffusion_sqrt_single = torch.diag_embed(torch.sqrt(LowerBound.apply(torch.as_tensor([SAWB_ECA_params_dict['c_SOC'], SAWB_ECA_params_dict['c_DOC'], SAWB_ECA_params_dict['c_MBC'], SAWB_ECA_params_dict['c_EEC'], SAWB_ECA_params_dict['c_CO2']]), 1e-8))) #Create single diffusion matrix by diagonalizing constant noise scale parameters.            
+            #diffusion_sqrt = diffusion_sqrt_single.unsqueeze(1).expand(-1, self.times.size(1), -1, -1) #Expand diffusion matrices across all paths and across discretized time steps.
+        elif self.diffusion_type == 'SS':
+            diffusion_sqrt[:, :, 0 : 1, 0] = torch.sqrt(LowerBound.apply(SOC * SAWB_ECA_params_dict_rep['s_SOC'], 1e-8)) #SOC diffusion standard deviation
+            diffusion_sqrt[:, :, 1 : 2, 1] = torch.sqrt(LowerBound.apply(DOC * SAWB_ECA_params_dict_rep['s_DOC'], 1e-8)) #DOC diffusion standard deviation
+            diffusion_sqrt[:, :, 2 : 3, 2] = torch.sqrt(LowerBound.apply(MBC * SAWB_ECA_params_dict_rep['s_MBC'], 1e-8)) #MBC diffusion standard deviation
+            diffusion_sqrt[:, :, 3 : 4, 3] = torch.sqrt(LowerBound.apply(EEC * SAWB_ECA_params_dict_rep['s_EEC'], 1e-8)) #EEC diffusion standard deviation           
+        return drift, diffusion_sqrt
+        
 
-    def add_CO2():
-        pass
+    def drift_diffusion_with_CO2(
+            self,
+            C_PATH: torch.Tensor, 
+            SAWB_ECA_params_dict: DictOfTensors, 
+            ) -> TupleOfTensors:
+        '''
+        Accepts states x and dictionary of parameter samples.
+        Returns SAWB-ECA drift and diffusion tensors corresponding to state values and parameter samples, along with tensor of states x concatenated with CO2 
+        Expected SAWB_ECA_params_dict = {'u_Q_ref': u_Q_ref, 'Q': Q, 'a_MSA': a_MSA, 'K_DE': K_DE, 'K_UE': K_UE, 'V_DE_ref': V_DE_ref, 'V_UE_ref': V_UE_ref, 'Ea_V_DE': Ea_V_DE, 'Ea_V_UE': Ea_V_UE, 'r_M': r_M, 'r_E': r_E, 'r_L': r_L, '[cs]_SOC': [cs]_SOC, '[cs]_DOC': [cs]_DOC, '[cs]_MBC': [cs]_MBC, '[cs]_EEC': [cs]_EEC}
+        '''
+        #Partition SOC, DOC, MBC, EEC values. Split based on final C_PATH dim, which specifies state variables and is also indexed as dim #2 in tensor.
+        SOC, DOC, MBC, EEC =  torch.chunk(C_PATH, state_dim, -1)
+        #Repeat and permute parameter values to match dimension sizes.
+        SAWB_ECA_params_dict_rep = dict((k, v.repeat(1, T_SPAN_TENSOR.size(1), 1).permute(2, 1, 0)) for k, v in SAWB_ECA_C_params_dict_rep.items())
+        #Initiate tensor with same dims as C_PATH to assign drift.
+        drift = torch.empty_like(C_PATH, device = C_PATH.device)
+        #Decay parameters are forced by temperature changes.
+        u_Q = linear_temp_dep(SAWB_ECA_params_dict_rep['u_Q_ref'], TEMP_TENSOR, SAWB_ECA_params_dict_rep['Q'], TEMP_REF) #Apply linear temperature-dependence to u_Q.
+        V_DE = arrhenius_temp_dep(SAWB_ECA_params_dict_rep['V_DE_ref'], TEMP_TENSOR, SAWB_ECA_params_dict_rep['Ea_V_DE'], TEMP_REF) #Apply vectorized temperature-dependent transformation to V_DE.
+        V_UE = arrhenius_temp_dep(SAWB_ECA_params_dict_rep['V_UE_ref'], TEMP_TENSOR, SAWB_ECA_params_dict_rep['Ea_V_UE'], TEMP_REF) #Apply vectorized temperature-dependent transformation to V_UE.
+        #Drift is calculated.
+        drift_SOC = I_S_TENSOR + SAWB_ECA_params_dict_rep['a_MSA'] * SAWB_ECA_params_dict_rep['r_M'] * MBC - ((V_DE * EEC * SOC) / (SAWB_ECA_params_dict_rep['K_DE'] + EEC + SOC))
+        drift_DOC = I_D_TENSOR + (1 - SAWB_ECA_params_dict_rep['a_MSA']) * SAWB_ECA_params_dict_rep['r_M'] * MBC + ((V_DE * EEC * SOC) / (SAWB_ECA_params_dict_rep['K_DE'] + EEC + SOC)) + SAWB_ECA_params_dict_rep['r_L'] * EEC - ((V_UE * MBC * DOC) / (SAWB_ECA_params_dict_rep['K_UE'] + MBC + DOC))
+        drift_MBC = (u_Q * (V_UE * MBC * DOC) / (SAWB_ECA_params_dict_rep['K_UE'] + MBC + DOC)) - (SAWB_ECA_params_dict_rep['r_M'] + SAWB_ECA_params_dict_rep['r_E']) * MBC
+        drift_EEC = SAWB_ECA_params_dict_rep['r_E'] * MBC - SAWB_ECA_params_dict_rep['r_L'] * EEC
+        #Assign elements to drift vector.
+        drift[:, :, 0 : 1] = drift_SOC
+        drift[:, :, 1 : 2] = drift_DOC
+        drift[:, :, 2 : 3] = drift_MBC
+        drift[:, :, 3 : 4] = drift_EEC
+        #Diffusion matrix is computed based on diffusion type.
+        diffusion_sqrt = torch.zeros([drift.size(0), drift.size(1), self.state_dim, self.state_dim], device = drift.device) #Create tensor to assign diffusion matrix elements.            
+        if self.diffusion_type == 'C':
+            diffusion_sqrt[:, :, 0 : 1, 0] = torch.sqrt(LowerBound.apply(SAWB_ECA_params_dict_rep['c_SOC'], 1e-8)) #SOC diffusion standard deviation
+            diffusion_sqrt[:, :, 1 : 2, 1] = torch.sqrt(LowerBound.apply(SAWB_ECA_params_dict_rep['c_DOC'], 1e-8)) #DOC diffusion standard deviation
+            diffusion_sqrt[:, :, 2 : 3, 2] = torch.sqrt(LowerBound.apply(SAWB_ECA_params_dict_rep['c_MBC'], 1e-8)) #MBC diffusion standard deviation
+            diffusion_sqrt[:, :, 3 : 4, 3] = torch.sqrt(LowerBound.apply(SAWB_ECA_params_dict_rep['c_EEC'], 1e-8)) #EEC diffusion standard deviation            
+            #diffusion_sqrt_single = torch.diag_embed(torch.sqrt(LowerBound.apply(torch.as_tensor([SAWB_ECA_params_dict['c_SOC'], SAWB_ECA_params_dict['c_DOC'], SAWB_ECA_params_dict['c_MBC'], SAWB_ECA_params_dict['c_EEC'], SAWB_ECA_params_dict['c_CO2']]), 1e-8))) #Create single diffusion matrix by diagonalizing constant noise scale parameters.            
+            #diffusion_sqrt = diffusion_sqrt_single.unsqueeze(1).expand(-1, self.times.size(1), -1, -1) #Expand diffusion matrices across all paths and across discretized time steps.
+        elif self.diffusion_type == 'SS':
+            diffusion_sqrt[:, :, 0 : 1, 0] = torch.sqrt(LowerBound.apply(SOC * SAWB_ECA_params_dict_rep['s_SOC'], 1e-8)) #SOC diffusion standard deviation
+            diffusion_sqrt[:, :, 1 : 2, 1] = torch.sqrt(LowerBound.apply(DOC * SAWB_ECA_params_dict_rep['s_DOC'], 1e-8)) #DOC diffusion standard deviation
+            diffusion_sqrt[:, :, 2 : 3, 2] = torch.sqrt(LowerBound.apply(MBC * SAWB_ECA_params_dict_rep['s_MBC'], 1e-8)) #MBC diffusion standard deviation
+            diffusion_sqrt[:, :, 3 : 4, 3] = torch.sqrt(LowerBound.apply(EEC * SAWB_ECA_params_dict_rep['s_EEC'], 1e-8)) #EEC diffusion standard deviation           
+        #Compute CO2.
+        CO2 = (1 - u_Q) * (V_UE * MBC * DOC) / (SAWB_ECA_params_dict_rep['K_UE'] + DOC)
+        #Add CO2 as additional dimension to original x matrix.
+        x_add_CO2 = torch.cat([C_PATH, CO2], -1)
+
+        return drift, diffusion_sqrt, x_add_CO2
+
+    def add_CO2(
+            self,
+            C_PATH: torch.Tensor,
+            SAWB_ECA_params_dict: DictOfTensors, 
+            ) -> TupleOfTensors:
+        '''
+        Accepts input of states x and dictionary of parameter samples.
+        Returns matrix (re-sized from x) that not only includes states, but added CO2 values in expanded third dimension of tensor.
+        '''
+        #Partition SOC, DOC, MBC, and EEC values. Split based on final C_PATH dim, which specifies state variables and is also indexed as dim #2 in tensor. 
+        SOC, DOC, MBC, EEC =  torch.chunk(C_PATH, self.state_dim, -1)
+        #Repeat and permute parameter values to match dimension sizes.
+        SAWB_ECA_params_dict_rep = dict((k, v.repeat(1, self.times.size(1), 1).permute(2, 1, 0)) for k, v in SAWB_ECA_params_dict.items())
+        #Decay parameters are forced by temperature changes.
+        u_Q = linear_temp_dep(SAWB_ECA_params_dict_rep['u_Q_ref'], TEMP_TENSOR, SAWB_ECA_params_dict_rep['Q'], TEMP_REF) #Apply linear temperature-dependence to u_Q.
+        V_DE = arrhenius_temp_dep(SAWB_ECA_params_dict_rep['V_DE_ref'], TEMP_TENSOR, SAWB_ECA_params_dict_rep['Ea_V_DE'], TEMP_REF) #Apply vectorized temperature-dependent transformation to V_DE.
+        V_UE = arrhenius_temp_dep(SAWB_ECA_params_dict_rep['V_UE_ref'], TEMP_TENSOR, SAWB_ECA_params_dict_rep['Ea_V_UE'], TEMP_REF) #Apply vectorized temperature-dependent transformation to V_UE.
+        #Compute CO2.
+        CO2 = (1 - u_Q) * (V_UE * MBC * DOC) / (SAWB_ECA_params_dict_rep['K_UE'] + DOC)
+        #Add CO2 as additional dimension to original x matrix.
+        x_add_CO2 = torch.cat([C_PATH, CO2], -1)
+        
+        return x_add_CO2
