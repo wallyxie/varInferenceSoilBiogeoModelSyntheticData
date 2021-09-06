@@ -36,7 +36,7 @@ def plot_states_post(x, obs_model, niter, piter, t, dt, batch_size, eval_batch_s
     obs_model.mu = obs_model.mu.detach().cpu().numpy()
     obs_model.scale = obs_model.scale.detach().cpu().numpy()
 
-    for i in range(state_dim):
+    for i in range(x.size(-1)):
         q_mean, q_std = x[:, :, i].mean(0).detach().cpu().numpy(), x[:, :, i].std(0).detach().cpu().numpy()
         hours = torch.arange(0, t + dt, dt).detach().cpu().numpy()
         axs[i].plot(obs_model.times, obs_model.mu[i, :], linestyle = 'None', marker = '.', label = 'Observed')

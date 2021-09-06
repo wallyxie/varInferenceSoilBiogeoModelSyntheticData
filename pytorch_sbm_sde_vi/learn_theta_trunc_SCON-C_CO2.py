@@ -95,10 +95,16 @@ temp_tensor = temp_gen(t_span_tensor, temp_ref, temp_rise).to(active_device)
 i_s_tensor = i_s(t_span_tensor).to(active_device) #Exogenous SOC input function
 i_d_tensor = i_d(t_span_tensor).to(active_device) #Exogenous DOC input function
 
+#Specify desired SBM SDE model type and details.
+sbm_sde_class = 'SCON'
+diffusion_type = 'C'
+learn_CO2 = True
+state_dim_SCON_add_CO2 = state_dim_SCON + 1
+
 #Generate observation model.
-csv_data_path = os.path.join('generated_data/', 'SCON_C_CO2_trunc_sample_y_t_1000_dt_0-01_sd_scale_0-333.csv')
-obs_times, obs_means_noCO2, obs_error = csv_to_obs_df(csv_data_path, state_dim_SCON, t, obs_error_scale)
-obs_model = ObsModel(active_device, TIMES = obs_times, DT = dt_flow, MU = obs_means_noCO2, SCALE = obs_error).to(active_device) 
+csv_data_path = os.path.join('generated_data/', 'SCON-C_CO2_trunc_sample_y_t_1000_dt_0-01_sd_scale_0-333.csv')
+obs_times, obs_means, obs_error = csv_to_obs_df(csv_data_path, state_dim_SCON_add_CO2, t, obs_error_scale)
+obs_model = ObsModel(active_device, TIMES = obs_times, DT = dt_flow, MU = obs_means, SCALE = obs_error).to(active_device) 
 
 #Call training loop function for SCON-C.
 net, q_theta, p_theta, obs_model, ELBO_hist, list_parent_loc_scale = train(
@@ -141,5 +147,5 @@ net.eval()
 x, _ = net(eval_batch_size)
 plots_folder = 'training_plots/'
 plot_elbo(ELBO_hist, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, xmin = int((niter - piter) * 0.2)) #xmin < (niter - piter).
-plot_states_post(x, obs_model, state_dim_SCON, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, ymin_list = [0, 0, 0], ymax_list = [100., 12., 10.])
+plot_states_post(x, obs_model, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, learn_CO2, ymin_list = [0, 0, 0], ymax_list = [100., 12., 12.])
 plot_theta(p_theta, q_theta, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string)
