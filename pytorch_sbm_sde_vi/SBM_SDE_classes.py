@@ -166,7 +166,7 @@ class SCON(SBM_SDE):
         
         return drift, diffusion_sqrt
 
-        def drift_diffusion_with_CO2(
+        def drift_diffusion_add_CO2(
             self,
             C_PATH: torch.Tensor, 
             SCON_params_dict: DictOfTensors, 
@@ -307,7 +307,7 @@ class SAWB(SBM_SDE):
             diffusion_sqrt[:, :, 3 : 4, 3] = torch.sqrt(LowerBound.apply(EEC * SAWB_params_dict_rep['s_EEC'], 1e-8)) #EEC diffusion standard deviation            
         return drift, diffusion_sqrt
 
-        def drift_diffusion_with_CO2(
+        def drift_diffusion_add_CO2(
             self,
             C_PATH: torch.Tensor, 
             SAWB_params_dict: DictOfTensors, 
@@ -452,7 +452,7 @@ class SAWB_ECA(SBM_SDE):
         return drift, diffusion_sqrt
         
 
-    def drift_diffusion_with_CO2(
+    def drift_diffusion_add_CO2(
             self,
             C_PATH: torch.Tensor, 
             SAWB_ECA_params_dict: DictOfTensors, 

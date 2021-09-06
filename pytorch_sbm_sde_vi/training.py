@@ -47,7 +47,7 @@ def calc_log_lik(C_PATH: torch.Tensor,
         return ll, drift, diffusion_sqrt
 
     if LEARN_CO2:
-        drift, diffusion_sqrt, x_add_CO2 = SBM_SDE_CLASS.drift_diffusion_with_CO2(C_PATH[:, :-1, :], PARAMS_DICT)
+        drift, diffusion_sqrt, x_add_CO2 = SBM_SDE_CLASS.drift_diffusion_add_CO2(C_PATH[:, :-1, :], PARAMS_DICT)
         euler_maruyama_state_sample_object = D.multivariate_normal.MultivariateNormal(loc = C_PATH[:, :-1, :] + drift * DT, scale_tril = diffusion_sqrt * math.sqrt(DT)) #C_PATH[:, :-1, :] + drift * DT will diverge from C_PATH if C_PATH values not compatible with x0 and theta. Algorithm aims to minimize gap between computed drift and actual gradient between x_n and x_{n+1}. 
     
         # Compute log p(x|theta) = log p(x|x0, theta) + log p(x0|theta)
@@ -59,7 +59,8 @@ def calc_log_lik(C_PATH: torch.Tensor,
 def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LAYERS,
           STATE_DIM, OBS_CSV_STR, OBS_ERROR_SCALE, T, DT, N,
           T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF,
-          SBM_SDE_CLASS, INIT_PRIOR, PRIOR_DIST_DETAILS_DICT, LEARN_CO2 = False,
+          SBM_SDE_CLASS: str, DIFFUSION_TYPE: str,
+          INIT_PRIOR, PRIOR_DIST_DETAILS_DICT, LEARN_CO2 = False,
           THETA_DIST = None, THETA_POST_DIST = None, THETA_POST_INIT = None,
           LR_DECAY = 0.8, DECAY_STEP_SIZE = 50000, PRINT_EVERY = 100):
 
@@ -72,7 +73,18 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
 
     #Establish neural network.
     net = SDEFlow(DEVICE, obs_model, STATE_DIM, T, DT, N, num_layers = NUM_LAYERS).to(DEVICE)
-    
+
+    #Instantiate SBM_SDE object based on specified model and diffusion type.
+    SBM_SDE_class_dict = {
+            'SCON': SCON,
+            'SAWB': SAWB,
+            'SAWB-ECA': SAWB_ECA
+            }
+    if SBM_SDE_CLASS not in SBM_SDE_class_dict:
+        raise NotImplementedError('Other SBM SDEs aside from SCON, SAWB, and SAWB-ECA have not been implemented yet.')
+    SBM_SDE_class = SBM_SDE_class_dict[SBM_SDE_CLASS]
+    SBM_SDE = SBM_SDE_class(T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF, DIFFUSION_TYPE)
+
     #if LEARN_THETA:
     #Ensure consistent order b/w prior p and variational posterior q
     param_names = list(PRIOR_DIST_DETAILS_DICT.keys())
@@ -82,9 +94,11 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
     prior_means_tensor, prior_sds_tensor, prior_lowers_tensor, prior_uppers_tensor = torch.tensor(prior_list).to(DEVICE) #Ensure conversion of lists into tensors.
 
     #Retrieve desired distribution class based on string.
-    dist_class_dict = {'TruncatedNormal': TruncatedNormal,
-                       'RescaledLogitNormal': RescaledLogitNormal,
-                       'MultivariateLogitNormal': MultivariateLogitNormal}
+    dist_class_dict = {
+            'TruncatedNormal': TruncatedNormal,
+            'RescaledLogitNormal': RescaledLogitNormal,
+            'MultivariateLogitNormal': MultivariateLogitNormal
+            }
     THETA_PRIOR_CLASS = dist_class_dict[THETA_DIST]
     THETA_POST_CLASS = dist_class_dict[THETA_POST_DIST] if THETA_POST_DIST else dist_class_dict[THETA_DIST]
     #print('Prior, posterior:', THETA_PRIOR_CLASS, THETA_POST_CLASS)
@@ -160,17 +174,26 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
                 theta = None #Initiate theta variable for loop operations.
                 log_q_theta = None #Initiate log_q_theta variable for loop operations.
                 parent_loc_scale_dict = None #Initiate parent_loc_scale_dict variable for loop operations.
+                ELBO = None #Initiate ELBO variable.
 
                 # if LEARN_THETA:
                 theta_dict, theta, log_q_theta, parent_loc_scale_dict = q_theta(BATCH_SIZE)
                 log_p_theta = priors.log_prob(theta).sum(-1)
                 list_parent_loc_scale.append(parent_loc_scale_dict)
 
-                log_lik, drift, diffusion_sqrt = calc_log_lik(C_PATH, T_SPAN_TENSOR.to(DEVICE), DT, I_S_TENSOR.to(DEVICE), I_D_TENSOR.to(DEVICE),
-                                       TEMP_TENSOR, TEMP_REF, DRIFT_DIFFUSION, INIT_PRIOR, theta_dict)
+                if not LEARN_CO2:
+                    log_lik, drift, diffusion_sqrt = calc_log_lik(C_PATH, T_SPAN_TENSOR.to(DEVICE), DT, 
+                            I_S_TENSOR.to(DEVICE), I_D_TENSOR.to(DEVICE), TEMP_TENSOR, TEMP_REF, 
+                            SBM_SDE, INIT_PRIOR, theta_dict, LEARN_CO2)
+                    ELBO = -log_p_theta.mean() + log_q_theta.mean() + log_prob.mean() - log_lik.mean() - obs_model(C_PATH, theta_dict)                    
+                if LEARN_CO2:
+                    log_lik, drift, diffusion_sqrt, x_add_CO2 = calc_log_lik(C_PATH, T_SPAN_TENSOR.to(DEVICE), DT, 
+                            I_S_TENSOR.to(DEVICE), I_D_TENSOR.to(DEVICE), TEMP_TENSOR, TEMP_REF, 
+                            SBM_SDE, INIT_PRIOR, theta_dict, LEARN_CO2)
+                    ELBO = -log_p_theta.mean() + log_q_theta.mean() + log_prob.mean() - log_lik.mean() - obs_model(x_add_CO2, theta_dict)                    
+
                 
                 #Negative ELBO: -log p(theta) + log q(theta) - log p(y_0|x_0, theta) [already accounted for in obs_model output when learning x_0] + log q(x|theta) - log p(x|theta) - log p(y|x, theta)
-                ELBO = -log_p_theta.mean() + log_q_theta.mean() + log_prob.mean() - log_lik.mean() - obs_model(C_PATH, theta_dict)
                 best_loss_ELBO = ELBO if ELBO < best_loss_ELBO else best_loss_ELBO
                 ELBO_losses.append(ELBO.item())
 
@@ -181,9 +204,12 @@ def train(DEVICE, PRETRAIN_LR, ELBO_LR, NITER, PRETRAIN_ITER, BATCH_SIZE, NUM_LA
                     #print('drift = ', drift)
                     #print('diffusion_sqrt = ', diffusion_sqrt)
                     print(f'\nMoving average ELBO loss at {it + 1} iterations is: {sum(ELBO_losses[-10:]) / len(ELBO_losses[-10:])}. Best ELBO loss value is: {best_loss_ELBO}.')
-                    print('\nC_PATH mean =', C_PATH.mean(-2))
-                    print('\nC_PATH =', C_PATH)
-
+                    if not LEARN_CO2:
+                        print('\nC_PATH mean =', C_PATH.mean(-2))
+                        print('\nC_PATH =', C_PATH)
+                    if LEARN_CO2:
+                        print('\nC_PATH with CO2 mean =', x_add_CO2.mean(-2))
+                        print('\nC_PATH with CO2 =', x_add_CO2)
                     # if LEARN_THETA:
                     print('\ntheta_dict means: ', {key: theta_dict[key].mean() for key in param_names})
                     print('\nparent_loc_scale_dict: ', parent_loc_scale_dict)
