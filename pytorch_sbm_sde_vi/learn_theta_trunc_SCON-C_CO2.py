@@ -48,7 +48,7 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-niter = 380000
+niter = 350000
 train_lr = 5e-4 #ELBO learning rate
 batch_size = 30 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
 eval_batch_size = 30
@@ -57,6 +57,7 @@ prior_scale_factor = 0.333 #Proportion of prior standard deviation to prior mean
 num_layers = 5 #5 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
 
 #Specify desired SBM SDE model type and details.
+state_dim_SCON = 3
 sbm_sde_class = 'SCON'
 diffusion_type = 'C'
 learn_CO2 = True
