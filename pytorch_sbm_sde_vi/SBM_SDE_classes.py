@@ -94,10 +94,10 @@ class SBM_SDE:
             TEMP_REF: Number
             ):
 
-        self.times = T_SPAN_TENSOR
-        self.i_S = I_S_TENSOR
-        self.i_D = I_D_TENSOR
-        self.temps = TEMP_TENSOR
+        self.times = T_SPAN_TENSOR[:, 1:, :]
+        self.i_S = I_S_TENSOR[:, 1:, :]
+        self.i_D = I_D_TENSOR[:, 1:, :]
+        self.temps = TEMP_TENSOR[:, 1:, :]
         self.temp_ref = TEMP_REF
 
 class SCON(SBM_SDE):
