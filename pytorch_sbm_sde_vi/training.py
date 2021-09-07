@@ -186,12 +186,12 @@ def train(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
                 #print('drift = ', drift)
                 #print('diffusion_sqrt = ', diffusion_sqrt)
                 print(f'\nMoving average ELBO loss at {it + 1} iterations is: {sum(ELBO_losses[-10:]) / len(ELBO_losses[-10:])}. Best ELBO loss value is: {best_loss_ELBO}.')
-                if not LEARN_CO2:
-                    print('\nC_PATH mean =', C_PATH.mean(-2))
-                    print('\nC_PATH =', C_PATH)
                 if LEARN_CO2:
                     print('\nC_PATH with CO2 mean =', x_add_CO2.mean(-2))
                     print('\nC_PATH with CO2 =', x_add_CO2)
+                else:
+                    print('\nC_PATH mean =', C_PATH.mean(-2))
+                    print('\nC_PATH =', C_PATH)
                 print('\ntheta_dict means: ', {key: theta_dict[key].mean() for key in param_names})
                 print('\nparent_loc_scale_dict: ', parent_loc_scale_dict)
 
