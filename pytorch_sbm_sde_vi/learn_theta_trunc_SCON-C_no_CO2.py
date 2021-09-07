@@ -1,5 +1,6 @@
 #Python-related imports
-import math, sys
+import math
+import sys
 from datetime import datetime
 import os.path
 
@@ -106,7 +107,7 @@ net, q_theta, p_theta, obs_model, ELBO_hist, list_parent_loc_scale = train(
         csv_data_path, obs_error_scale, t, dt_flow, n, 
         t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
         sbm_sde_class, diffusion_type, x0_prior_SCON, SCON_C_priors_details, learn_CO2,
-        theta_dist, LR_DECAY = 0.9, DECAY_STEP_SIZE = 25000, PRINT_EVERY = 100)
+        theta_dist, LR_DECAY = 0.8, DECAY_STEP_SIZE = 50000, PRINT_EVERY = 100)
 
 #Save net and ELBO files.
 now = datetime.now()
@@ -140,6 +141,6 @@ ELBO_hist = torch.load(ELBO_save_string)
 net.eval()
 x, _ = net(eval_batch_size)
 plots_folder = 'training_plots/'
-plot_elbo(ELBO_hist, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, xmin = int((niter - piter) * 0.2)) #xmin < (niter - piter).
-plot_states_post(x, obs_model, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, learn_CO2, ymin_list = [0, 0, 0, 0], ymax_list = [100., 12., 12., 0.08])
-plot_theta(p_theta, q_theta, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string)
+plot_elbo(ELBO_hist, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, xmin = int(niter * 0.2))
+plot_states_post(x, obs_model, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, learn_CO2, ymin_list = [0, 0, 0, 0], ymax_list = [100., 12., 12., 0.08])
+plot_theta(p_theta, q_theta, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string)

@@ -28,32 +28,26 @@ TupleOfTensors = Tuple[torch.Tensor, torch.Tensor]
 ##TRAINING AND ELBO FUNCTIONS##
 ###############################
 
-def calc_log_lik(C_PATH: torch.Tensor, 
+def calc_log_lik(C_PATH: torch.Tensor,
+        PARAMS_DICT: DictOfTensors,
         DT: float, 
         SBM_SDE_CLASS, 
-        INIT_PRIOR, 
-        PARAMS_DICT: DictOfTensors, 
-        LEARN_CO2 = False):
+        INIT_PRIOR,
+        T_SPAN_TENSOR: torch.Tensor,
+        I_S_TENSOR: torch.Tensor,
+        I_D_TENSOR: torch.Tensor,
+        TEMP_TENSOR: torch.Tensor,
+        TEMP_REF: Number
+        ):
 
-    if LEARN_CO2:
-        drift, diffusion_sqrt, x_add_CO2 = SBM_SDE_CLASS.drift_diffusion_add_CO2(C_PATH[:, :-1, :], PARAMS_DICT)
-        euler_maruyama_state_sample_object = D.multivariate_normal.MultivariateNormal(loc = C_PATH[:, :-1, :] + drift * DT, scale_tril = diffusion_sqrt * math.sqrt(DT)) #C_PATH[:, :-1, :] + drift * DT will diverge from C_PATH if C_PATH values not compatible with x0 and theta. Algorithm aims to minimize gap between computed drift and actual gradient between x_n and x_{n+1}. 
-    
-        # Compute log p(x|theta) = log p(x|x0, theta) + log p(x0|theta)
-        ll = euler_maruyama_state_sample_object.log_prob(C_PATH[:, 1:, :]).sum(-1) # log p(x|x0, theta)
-        ll += INIT_PRIOR.log_prob(C_PATH[:, 0, :]) # log p(x0|theta)
-    
-        return ll, drift, diffusion_sqrt, x_add_CO2
+    drift, diffusion_sqrt = SBM_SDE_CLASS.drift_diffusion(C_PATH[:, :-1, :], PARAMS_DICT, T_SPAN_TENSOR[:, 1:, :], I_S_TENSOR[:, 1:, :], I_D_TENSOR[:, 1:, :], TEMP_TENSOR[:, 1:, :], TEMP_REF)
+    euler_maruyama_state_sample_object = D.multivariate_normal.MultivariateNormal(loc = C_PATH[:, :-1, :] + drift * DT, scale_tril = diffusion_sqrt * math.sqrt(DT)) #C_PATH[:, :-1, :] + drift * DT will diverge from C_PATH if C_PATH values not compatible with x0 and theta. Algorithm aims to minimize gap between computed drift and actual gradient between x_n and x_{n+1}. 
 
-    else:
-        drift, diffusion_sqrt = SBM_SDE_CLASS.drift_diffusion(C_PATH[:, :-1, :], PARAMS_DICT)
-        euler_maruyama_state_sample_object = D.multivariate_normal.MultivariateNormal(loc = C_PATH[:, :-1, :] + drift * DT, scale_tril = diffusion_sqrt * math.sqrt(DT)) #C_PATH[:, :-1, :] + drift * DT will diverge from C_PATH if C_PATH values not compatible with x0 and theta. Algorithm aims to minimize gap between computed drift and actual gradient between x_n and x_{n+1}. 
-    
-        # Compute log p(x|theta) = log p(x|x0, theta) + log p(x0|theta)
-        ll = euler_maruyama_state_sample_object.log_prob(C_PATH[:, 1:, :]).sum(-1) # log p(x|x0, theta)
-        ll += INIT_PRIOR.log_prob(C_PATH[:, 0, :]) # log p(x0|theta)
-    
-        return ll, drift, diffusion_sqrt
+    # Compute log p(x|theta) = log p(x|x0, theta) + log p(x0|theta)
+    ll = euler_maruyama_state_sample_object.log_prob(C_PATH[:, 1:, :]).sum(-1) # log p(x|x0, theta)
+    ll += INIT_PRIOR.log_prob(C_PATH[:, 0, :]) # log p(x0|theta)
+
+    return ll, drift, diffusion_sqrt
 
 def train(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
         OBS_CSV_STR, OBS_ERROR_SCALE, T, DT, N,
@@ -75,9 +69,7 @@ def train(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
     if SBM_SDE_CLASS not in SBM_SDE_class_dict:
         raise NotImplementedError('Other SBM SDEs aside from SCON, SAWB, and SAWB-ECA have not been implemented yet.')
     SBM_SDE_class = SBM_SDE_class_dict[SBM_SDE_CLASS]
-    SBM_SDE = SBM_SDE_class(T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF, DIFFUSION_TYPE)
-    
-    print(SBM_SDE)
+    SBM_SDE = SBM_SDE_class(DIFFUSION_TYPE)
 
     #Read in data to obtain y and establish observation model.
     obs_dim = None
@@ -172,11 +164,14 @@ def train(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
             log_p_theta = priors.log_prob(theta).sum(-1)
             list_parent_loc_scale.append(parent_loc_scale_dict)
 
+            log_lik, drift, diffusion_sqrt = calc_log_lik(C_PATH, theta_dict, DT, SBM_SDE, INIT_PRIOR, 
+                    T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF)
+
             if LEARN_CO2:
-                log_lik, drift, diffusion_sqrt, x_add_CO2 = calc_log_lik(C_PATH, DT, SBM_SDE, INIT_PRIOR, theta_dict, LEARN_CO2)
+                x_add_CO2 = SBM_SDE.add_CO2(C_PATH, theta_dict, TEMP_TENSOR, TEMP_REF)
+                print(x_add_CO2)
                 ELBO = -log_p_theta.mean() + log_q_theta.mean() + log_prob.mean() - log_lik.mean() - obs_model(x_add_CO2, theta_dict)
             else:
-                log_lik, drift, diffusion_sqrt = calc_log_lik(C_PATH, DT, SBM_SDE, INIT_PRIOR, theta_dict, LEARN_CO2)
                 ELBO = -log_p_theta.mean() + log_q_theta.mean() + log_prob.mean() - log_lik.mean() - obs_model(C_PATH, theta_dict)                    
             
             #Negative ELBO: -log p(theta) + log q(theta) - log p(y_0|x_0, theta) [already accounted for in obs_model output when learning x_0] + log q(x|theta) - log p(x|theta) - log p(y|x, theta)
