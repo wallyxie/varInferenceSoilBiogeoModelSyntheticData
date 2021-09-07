@@ -169,13 +169,11 @@ def train(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
 
             if LEARN_CO2:
                 x_add_CO2 = SBM_SDE.add_CO2(C_PATH, theta_dict, TEMP_TENSOR, TEMP_REF)
-                print(x_add_CO2)
                 ELBO = -log_p_theta.mean() + log_q_theta.mean() + log_prob.mean() - log_lik.mean() - obs_model(x_add_CO2, theta_dict)
             else:
                 ELBO = -log_p_theta.mean() + log_q_theta.mean() + log_prob.mean() - log_lik.mean() - obs_model(C_PATH, theta_dict)                    
             
             #Negative ELBO: -log p(theta) + log q(theta) - log p(y_0|x_0, theta) [already accounted for in obs_model output when learning x_0] + log q(x|theta) - log p(x|theta) - log p(y|x, theta)
-            print(ELBO)
             best_loss_ELBO = ELBO if ELBO < best_loss_ELBO else best_loss_ELBO
             ELBO_losses.append(ELBO.item())
 
