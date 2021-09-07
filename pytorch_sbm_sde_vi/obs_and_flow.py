@@ -63,7 +63,7 @@ class MaskedConv1d(nn.Conv1d):
         self.register_buffer('mask', self.weight.data.clone())
         _, _, kW = self.weight.size() # (out_cha, in_cha, kernel_size)
         self.mask.fill_(1)
-        self.mask[:, :, kW // 2 + 1 * (mask_type == 'B'):] = 0
+        self.mask[:, :, kW // 2 + 1 * (mask_type == 'B'):] = 0 # [1, 0, 0] or [1, 1, 0]
 
     def forward(self, x):
         self.weight.data *= self.mask
@@ -162,8 +162,8 @@ class PermutationLayer(nn.Module):
         self.index_1 = torch.randperm(STATE_DIM)
 
     def forward(self, x):
-        B, S, L = x.shape
-        x_reshape = x.reshape(B, S, -1, self.state_dim)
+        B, S, L = x.shape # (batch_size, 1, state_dim * n)
+        x_reshape = x.reshape(B, S, -1, self.state_dim) # (batch_size, 1, n, state_dim)
         x_perm = x_reshape[:, :, :, self.index_1]
         x = x_perm.reshape(B, S, L)
         return x
