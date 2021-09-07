@@ -121,7 +121,7 @@ def train(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
     ELBO_losses = []
 
     #Initiate optimizers.
-    pretrain_optimizer = optim.Adam(net.parameters(), lr = PRETRAIN_LR)
+    #pretrain_optimizer = optim.Adam(net.parameters(), lr = PRETRAIN_LR)
     ELBO_params = list(net.parameters()) + list(q_theta.parameters())
     ELBO_optimizer = optim.Adamax(ELBO_params, lr = ELBO_LR)
     
