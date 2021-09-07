@@ -53,8 +53,7 @@ def plot_states_post(x, obs_model, niter, t, dt, batch_size, eval_batch_size, nu
     plt.xlabel('Hour')
     fig.savefig(os.path.join(plots_folder, f'net_iter_{niter}_t_{t}_dt_{dt}_batch_{batch_size}_samples_{eval_batch_size}_layers_{num_layers}_lr_{train_lr}_sd_scale_{sd_scale}_{now_string}.png'), dpi = 300)
 
-def plot_theta(p_theta, q_theta, niter, t, dt, batch_size, eval_batch_size, num_layers, train_lr, sd_scale, plots_folder, now_string,
-               ncols=4):
+def plot_theta(p_theta, q_theta, niter, t, dt, batch_size, eval_batch_size, num_layers, train_lr, sd_scale, plots_folder, now_string, ncols=4):
     # Prior distribution object
     p_dist = p_theta
 
