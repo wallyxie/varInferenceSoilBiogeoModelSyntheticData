@@ -383,7 +383,7 @@ class SAWB(SBM_SDE):
         return x_add_CO2
 
 class SAWB_ECA(SBM_SDE):
-        '''
+    '''
     Class contains SAWB-ECA SDE drift (alpha) and diffusion (beta) equations.
     Constant (C) and state-scaling (SS) diffusion paramterizations are included. DIFFUSION_TYPE must thereby be specified as 'C' or 'SS'. 
     Other diffusion parameterizations are not included.
