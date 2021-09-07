@@ -166,11 +166,11 @@ class SCON(SBM_SDE):
         
         return drift, diffusion_sqrt
 
-        def drift_diffusion_add_CO2(
-            self,
-            C_PATH: torch.Tensor, 
-            SCON_params_dict: DictOfTensors, 
-            ) -> TupleOfTensors:
+    def drift_diffusion_add_CO2(
+        self,
+        C_PATH: torch.Tensor, 
+        SCON_params_dict: DictOfTensors, 
+        ) -> TupleOfTensors:
         '''
         Accepts states x and dictionary of parameter samples.
         Returns SCON drift and diffusion tensors corresponding to state values and parameter samples, along with tensor of states x concatenated with CO2.  
@@ -244,15 +244,15 @@ class SAWB(SBM_SDE):
     Constant (C) and state-scaling (SS) diffusion paramterizations are included. DIFFUSION_TYPE must thereby be specified as 'C' or 'SS'. 
     Other diffusion parameterizations are not included.
     '''
-        def __init__(
-            self,
-            T_SPAN_TENSOR: torch.Tensor, 
-            I_S_TENSOR: torch.Tensor, 
-            I_D_TENSOR: torch.Tensor, 
-            TEMP_TENSOR: torch.Tensor, 
-            TEMP_REF: Number,
-            DIFFUSION_TYPE: str
-            ):
+    def __init__(
+        self,
+        T_SPAN_TENSOR: torch.Tensor, 
+        I_S_TENSOR: torch.Tensor, 
+        I_D_TENSOR: torch.Tensor, 
+        TEMP_TENSOR: torch.Tensor, 
+        TEMP_REF: Number,
+        DIFFUSION_TYPE: str
+        ):
         super().__init__(T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF)
 
         if DIFFUSION_TYPE not in {'C', 'SS'}:
@@ -307,11 +307,11 @@ class SAWB(SBM_SDE):
             diffusion_sqrt[:, :, 3 : 4, 3] = torch.sqrt(LowerBound.apply(EEC * SAWB_params_dict_rep['s_EEC'], 1e-8)) #EEC diffusion standard deviation            
         return drift, diffusion_sqrt
 
-        def drift_diffusion_add_CO2(
-            self,
-            C_PATH: torch.Tensor, 
-            SAWB_params_dict: DictOfTensors, 
-            ) -> TupleOfTensors:
+    def drift_diffusion_add_CO2(
+        self,
+        C_PATH: torch.Tensor, 
+        SAWB_params_dict: DictOfTensors, 
+        ) -> TupleOfTensors:
         '''
         Accepts states x and dictionary of parameter samples.
         Returns SAWB drift and diffusion tensors corresponding to state values and parameter samples, along with tensor of states x concatenated with CO2.  
@@ -388,15 +388,15 @@ class SAWB_ECA(SBM_SDE):
     Constant (C) and state-scaling (SS) diffusion paramterizations are included. DIFFUSION_TYPE must thereby be specified as 'C' or 'SS'. 
     Other diffusion parameterizations are not included.
     '''
-        def __init__(
-            self,
-            T_SPAN_TENSOR: torch.Tensor, 
-            I_S_TENSOR: torch.Tensor, 
-            I_D_TENSOR: torch.Tensor, 
-            TEMP_TENSOR: torch.Tensor, 
-            TEMP_REF: Number,
-            DIFFUSION_TYPE: str
-            ):
+    def __init__(
+        self,
+        T_SPAN_TENSOR: torch.Tensor, 
+        I_S_TENSOR: torch.Tensor, 
+        I_D_TENSOR: torch.Tensor, 
+        TEMP_TENSOR: torch.Tensor, 
+        TEMP_REF: Number,
+        DIFFUSION_TYPE: str
+        ):
         super().__init__(T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF)
 
         if DIFFUSION_TYPE not in {'C', 'SS'}:
