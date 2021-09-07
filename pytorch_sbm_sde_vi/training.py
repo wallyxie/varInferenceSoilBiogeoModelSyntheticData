@@ -76,6 +76,8 @@ def train(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
         raise NotImplementedError('Other SBM SDEs aside from SCON, SAWB, and SAWB-ECA have not been implemented yet.')
     SBM_SDE_class = SBM_SDE_class_dict[SBM_SDE_CLASS]
     SBM_SDE = SBM_SDE_class(T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF, DIFFUSION_TYPE)
+    
+    print(SBM_SDE)
 
     #Read in data to obtain y and establish observation model.
     obs_dim = None
@@ -114,8 +116,8 @@ def train(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
     q_theta = MeanField(DEVICE, param_names, THETA_POST_INIT, THETA_POST_CLASS, learn_cov)
 
     #Record loss throughout training
-    best_loss_norm = 1e20
-    best_loss_ELBO = 1e20
+    best_loss_norm = 1e15
+    best_loss_ELBO = 1e15
     norm_losses = []
     ELBO_losses = []
 
@@ -125,7 +127,7 @@ def train(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
     ELBO_optimizer = optim.Adamax(ELBO_params, lr = ELBO_LR)
     
     #Training loop
-    with tqdm(total = NITER, desc = f'Train Diffusion', position = -1) as tq:
+    with tqdm(total = NITER, desc = f'Learning SDE and hidden parameters.', position = -1) as tq:
         for it in range(NITER):
             net.train()
             C_PATH, log_prob = net(BATCH_SIZE) #Obtain paths with solutions to times including t0.
@@ -164,7 +166,7 @@ def train(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
             theta = None #Initiate theta variable for loop operations.
             log_q_theta = None #Initiate log_q_theta variable for loop operations.
             parent_loc_scale_dict = None #Initiate parent_loc_scale_dict variable for loop operations.
-            ELBO = None #Initiate ELBO variable.
+            ELBO = 1e20 #Initiate ELBO variable.
 
             theta_dict, theta, log_q_theta, parent_loc_scale_dict = q_theta(BATCH_SIZE)
             log_p_theta = priors.log_prob(theta).sum(-1)
@@ -178,6 +180,7 @@ def train(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
                 ELBO = -log_p_theta.mean() + log_q_theta.mean() + log_prob.mean() - log_lik.mean() - obs_model(C_PATH, theta_dict)                    
             
             #Negative ELBO: -log p(theta) + log q(theta) - log p(y_0|x_0, theta) [already accounted for in obs_model output when learning x_0] + log q(x|theta) - log p(x|theta) - log p(y|x, theta)
+            print(ELBO)
             best_loss_ELBO = ELBO if ELBO < best_loss_ELBO else best_loss_ELBO
             ELBO_losses.append(ELBO.item())
 
@@ -204,6 +207,6 @@ def train(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
             if it % DECAY_STEP_SIZE == 0:
                 ELBO_optimizer.param_groups[0]['lr'] *= LR_DECAY
 
-        tq.update()
+            tq.update()
     
     return net, q_theta, priors, obs_model, ELBO_losses, list_parent_loc_scale    
