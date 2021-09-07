@@ -135,6 +135,7 @@ net.to(active_device)
 obs_model = torch.load(obs_model_save_string)
 obs_model.to(active_device)
 ELBO_hist = torch.load(ELBO_save_string)
+true_theta = torch.load('generated_data/SCON-C_CO2_trunc_sample_y_t_1000_dt_0-01_sd_scale_0-333_rsample.pt', map_location = active_device)
 
 #Plot training posterior results and ELBO history.
 net.eval()
@@ -142,4 +143,4 @@ x, _ = net(eval_batch_size)
 plots_folder = 'training_plots/'
 plot_elbo(ELBO_hist, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, xmin = int(niter * 0.2))
 plot_states_post(x, q_theta, sbm_sde_class, diffusion_type, temp_tensor, temp_ref, obs_model, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, learn_CO2, ymin_list = [0, 0, 0, 0], ymax_list = [100., 12., 12., 0.08])
-plot_theta(p_theta, q_theta, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string)
+plot_theta(p_theta, q_theta, true_theta, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string)

@@ -73,7 +73,7 @@ def plot_states_post(x, q_theta, SBM_SDE_CLASS, DIFFUSION_TYPE, TEMP_TENSOR, TEM
     fig.set_size_inches(15, 15)
     fig.savefig(os.path.join(plots_folder, f'net_iter_{niter}_t_{t}_dt_{dt}_batch_{batch_size}_samples_{eval_batch_size}_layers_{num_layers}_lr_{train_lr}_sd_scale_{sd_scale}_{now_string}.png'), dpi = 300)
 
-def plot_theta(p_theta, q_theta, niter, t, dt, batch_size, eval_batch_size, num_layers, train_lr, sd_scale, plots_folder, now_string, ncols=4):
+def plot_theta(p_theta, q_theta, true_theta, niter, t, dt, batch_size, eval_batch_size, num_layers, train_lr, sd_scale, plots_folder, now_string, ncols=4):
     # Prior distribution object
     p_dist = p_theta
 
@@ -120,9 +120,11 @@ def plot_theta(p_theta, q_theta, niter, t, dt, batch_size, eval_batch_size, num_
     for i, row in enumerate(axes):
         for j, ax in enumerate(row):
             if param_index < num_params:
+                key = q_theta.keys[param_index]
                 ax.plot(x[int(prior_first_one_indices[param_index]): int(prior_last_one_indices[param_index]), param_index].detach().cpu().numpy(), pdf_prior[int(prior_first_one_indices[param_index]): int(prior_last_one_indices[param_index]), param_index].detach().cpu().numpy(), label='Prior $p(\\theta)$')
                 ax.plot(x[int(post_first_one_indices[param_index]): int(post_last_one_indices[param_index]), param_index].detach().cpu().numpy(), pdf_post[int(post_first_one_indices[param_index]): int(post_last_one_indices[param_index]), param_index].detach().cpu().numpy(), label='Approximate posterior $q(\\theta)$')
-                ax.set_xlabel(q_theta.keys[param_index])
+                ax.axvline(true_theta[key], color='gray', label='True $\\theta$')
+                ax.set_xlabel(key)
                 ax.set_ylabel('Density')
             elif param_index == num_params:
                 handles, labels = axes[0, 0].get_legend_handles_labels()
