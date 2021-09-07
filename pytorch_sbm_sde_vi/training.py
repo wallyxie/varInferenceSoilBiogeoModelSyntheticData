@@ -173,12 +173,10 @@ def train(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
 
             if LEARN_CO2:
                 log_lik, drift, diffusion_sqrt, x_add_CO2 = calc_log_lik(C_PATH, T_SPAN_TENSOR.to(DEVICE), DT, 
-                        I_S_TENSOR.to(DEVICE), I_D_TENSOR.to(DEVICE), TEMP_TENSOR, TEMP_REF, 
                         SBM_SDE, INIT_PRIOR, theta_dict, LEARN_CO2)
                 ELBO = -log_p_theta.mean() + log_q_theta.mean() + log_prob.mean() - log_lik.mean() - obs_model(x_add_CO2, theta_dict)
             else:
                 log_lik, drift, diffusion_sqrt = calc_log_lik(C_PATH, T_SPAN_TENSOR.to(DEVICE), DT, 
-                        I_S_TENSOR.to(DEVICE), I_D_TENSOR.to(DEVICE), TEMP_TENSOR, TEMP_REF, 
                         SBM_SDE, INIT_PRIOR, theta_dict, LEARN_CO2)
                 ELBO = -log_p_theta.mean() + log_q_theta.mean() + log_prob.mean() - log_lik.mean() - obs_model(C_PATH, theta_dict)                    
             
