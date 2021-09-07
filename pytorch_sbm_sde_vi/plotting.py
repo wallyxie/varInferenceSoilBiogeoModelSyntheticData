@@ -31,7 +31,7 @@ def plot_states_post(x, obs_model, niter, t, dt, batch_size, eval_batch_size, nu
     elif x.size(-1) == 5 and LEARN_CO2:
         state_list = ['SOC', 'DOC', 'MBC', 'EEC', 'CO2']
 
-    fig, axs = plt.subplots(state_dim)
+    fig, axs = plt.subplots(x.size(-1))
 
     obs_model.mu = obs_model.mu.detach().cpu().numpy()
     obs_model.scale = obs_model.scale.detach().cpu().numpy()
