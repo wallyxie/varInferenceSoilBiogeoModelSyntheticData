@@ -19,17 +19,35 @@ def plot_elbo(elbo_hist, niter, t, dt, batch_size, eval_batch_size, num_layers, 
     plt.title(f'ELBO history after {xmin} iterations')
     plt.savefig(os.path.join(plots_folder, f'ELBO_iter_{niter}_t_{t}_dt_{dt}_batch_{batch_size}_samples_{eval_batch_size}_layers_{num_layers}_lr_{train_lr}_sd_scale_{sd_scale}_{now_string}.png'), dpi = 300)
     
-def plot_states_post(x, obs_model, niter, t, dt, batch_size, eval_batch_size, num_layers, train_lr, sd_scale, plots_folder, now_string, LEARN_CO2 = False, ymin_list = None, ymax_list = None):
+def plot_states_post(x, q_theta, SBM_SDE_CLASS, DIFFUSION_TYPE, TEMP_TENSOR, TEMP_REF, obs_model, niter, t, dt, batch_size, eval_batch_size, num_layers, train_lr, sd_scale, plots_folder, now_string, LEARN_CO2 = False, ymin_list = None, ymax_list = None):
 
     state_list = []
+
     if x.size(-1) == 3 and not LEARN_CO2:
         state_list = ['SOC', 'DOC', 'MBC']
-    elif x.size(-1) == 4 and LEARN_CO2:
+    elif x.size(-1) == 3 and LEARN_CO2:
         state_list = ['SOC', 'DOC', 'MBC', 'CO2']
     elif x.size(-1) == 4 and not LEARN_CO2:
         state_list = ['SOC', 'DOC', 'MBC', 'EEC']
-    elif x.size(-1) == 5 and LEARN_CO2:
+    elif x.size(-1) == 4 and LEARN_CO2:
         state_list = ['SOC', 'DOC', 'MBC', 'EEC', 'CO2']
+    else:
+        raise Exception('Matching condition does not exist with x.size() and LEARN_CO2 status.')
+
+    #Instantiate SBM_SDE object based on specified model and diffusion type.
+    SBM_SDE_class_dict = {
+            'SCON': SCON,
+            'SAWB': SAWB,
+            'SAWB-ECA': SAWB_ECA
+            }
+    if SBM_SDE_CLASS not in SBM_SDE_class_dict:
+        raise NotImplementedError('Other SBM SDEs aside from SCON, SAWB, and SAWB-ECA have not been implemented yet.')
+    SBM_SDE_class = SBM_SDE_class_dict[SBM_SDE_CLASS]
+    SBM_SDE = SBM_SDE_class(DIFFUSION_TYPE)
+
+    if LEARN_CO2:
+        q_theta_sample_dict, _, _, _ = q_theta(x.size(0))
+        x = SBM_SDE.add_CO2(x, q_theta_sample_dict, TEMP_TENSOR, TEMP_REF) #Add CO2 to x tensor if CO2 is being fit.
 
     fig, axs = plt.subplots(x.size(-1))
 
