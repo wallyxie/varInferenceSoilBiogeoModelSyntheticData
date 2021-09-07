@@ -66,7 +66,7 @@ def plot_theta(p_theta, q_theta, niter, t, dt, batch_size, eval_batch_size, num_
     q_dist = q_theta.dist(loc, scale, a = lower, b = upper)
     
     # Compute prior and posterior densities at points x
-    num_pts = 10000000
+    num_pts = 1000000
     x = torch.zeros([num_pts, loc.size(0)]) #Examining densities as we move through distribution supports. So torch.Size([bins, parameters]) is desired size of x.
     for param_index in range(0, loc.size(0)):
         x[:, param_index] = torch.linspace(lower[param_index], upper[param_index], num_pts)
