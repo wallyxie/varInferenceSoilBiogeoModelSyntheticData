@@ -49,8 +49,8 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-niter = 310000
-train_lr = 5e-5 #ELBO learning rate
+niter = 320000
+train_lr = 1e-5 #ELBO learning rate
 batch_size = 30 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
 eval_batch_size = 30
 obs_error_scale = 0.1 #Observation (y) standard deviation.
@@ -87,8 +87,7 @@ SCON_C_priors_details = {'u_M': u_M_details, 'a_SD': a_SD_details, 'a_DS': a_DS_
 #Initial condition prior means
 x0_SCON = [65, 0.4, 2.5]
 x0_SCON_tensor = torch.tensor(x0_SCON).to(active_device)
-x0_prior_SCON = D.multivariate_normal.MultivariateNormal(x0_SCON_tensor,
-                                                         scale_tril = torch.eye(state_dim_SCON).to(active_device) * obs_error_scale * x0_SCON_tensor)
+x0_prior_SCON = D.multivariate_normal.MultivariateNormal(x0_SCON_tensor, scale_tril = torch.eye(state_dim_SCON).to(active_device) * obs_error_scale * x0_SCON_tensor)
 
 #Generate exogenous input vectors.
 #Obtain temperature forcing function.
@@ -107,7 +106,7 @@ net, q_theta, p_theta, obs_model, ELBO_hist, list_parent_loc_scale = train(
         csv_data_path, obs_error_scale, t, dt_flow, n, 
         t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
         sbm_sde_class, diffusion_type, x0_prior_SCON, SCON_C_priors_details, learn_CO2,
-        theta_dist, LR_DECAY = 0.85, DECAY_STEP_SIZE = 25000, PRINT_EVERY = 50)
+        theta_dist, LR_DECAY = 0.8, DECAY_STEP_SIZE = 25000, PRINT_EVERY = 50)
 
 #Save net and ELBO files.
 now = datetime.now()
