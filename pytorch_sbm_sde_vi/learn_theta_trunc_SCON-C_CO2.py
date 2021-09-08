@@ -49,10 +49,10 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-niter = 300000
+niter = 230000
 train_lr = 2e-5 #ELBO learning rate
-batch_size = 30 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
-eval_batch_size = 30
+batch_size = 50 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
+eval_batch_size = 50
 obs_error_scale = 0.1 #Observation (y) standard deviation.
 prior_scale_factor = 0.333 #Proportion of prior standard deviation to prior means.
 num_layers = 5 #5 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
@@ -132,6 +132,8 @@ torch.save(list_parent_loc_scale, list_parent_loc_scale_save_string)
 torch.cuda.empty_cache()
 net = torch.load(net_save_string)
 net.to(active_device)
+p_theta = torch.load(p_theta_save_string)
+p_theta.to(active_device)
 q_theta = torch.load(q_theta_save_string)
 q_theta.to(active_device)
 obs_model = torch.load(obs_model_save_string)

@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 #Torch-related imports
 import torch
 
-#Module module imports
+#Module imports
 from SBM_SDE_classes import *
 
 def plot_elbo(elbo_hist, niter, t, dt, batch_size, eval_batch_size, num_layers, train_lr, sd_scale, plots_folder, now_string, xmin = 0, ymax = None, yscale = 'linear'):
