@@ -62,7 +62,7 @@ state_dim_SCON = 3
 sbm_sde_class = 'SCON'
 diffusion_type = 'C'
 learn_CO2 = False
-theta_dist = 'TruncatedNormal' #String needs to be exact name of the distribution class. Other option is 'RescaledLogitNormal'.
+theta_dist = 'TruncatedNormal' #String needs to be exact name of the distribution class. Options are 'TruncatedNormal' and 'RescaledLogitNormal'.
 
 #SCON theta truncated normal prior distribution parameter details in order of mean, lower, and upper. Distribution sdev assumed to be some proportion of the mean. 
 u_M_details = torch.Tensor([0.0016, 0.0016 * prior_scale_factor, 0, 0.1]).to(active_device)
