@@ -9,7 +9,10 @@ import matplotlib.pyplot as plt
 #Torch-related imports
 import torch
 
-def plot_elbo(elbo_hist, niter, piter, t, dt, batch_size, eval_batch_size, num_layers, train_lr, sd_scale, plots_folder, now_string, xmin = 0, ymax = None, yscale = 'linear'):
+#Module imports
+from SBM_SDE_classes import *
+
+def plot_elbo(elbo_hist, niter, t, dt, batch_size, eval_batch_size, num_layers, train_lr, sd_scale, plots_folder, now_string, xmin = 0, ymax = None, yscale = 'linear'):
     iters = torch.arange(xmin + 1, len(elbo_hist) + 1).detach().cpu().numpy()
     plt.plot(iters, elbo_hist[xmin:])
     plt.ylim((None, ymax))
@@ -17,16 +20,44 @@ def plot_elbo(elbo_hist, niter, piter, t, dt, batch_size, eval_batch_size, num_l
     plt.ylabel('ELBO')
     plt.xlabel('Iteration')
     plt.title(f'ELBO history after {xmin} iterations')
-    plt.savefig(os.path.join(plots_folder, f'ELBO_iter_{niter}_piter_{piter}_t_{t}_dt_{dt}_batch_{batch_size}_samples_{eval_batch_size}_layers_{num_layers}_lr_{train_lr}_sd_scale_{sd_scale}_{now_string}.png'), dpi = 300)
+    plt.savefig(os.path.join(plots_folder, f'ELBO_iter_{niter}_t_{t}_dt_{dt}_batch_{batch_size}_samples_{eval_batch_size}_layers_{num_layers}_lr_{train_lr}_sd_scale_{sd_scale}_{now_string}.png'), dpi = 300)
     
-def plot_states_post(x, obs_model, state_dim, niter, piter, t, dt, batch_size, eval_batch_size, num_layers, train_lr, sd_scale, plots_folder, now_string, ymin_list = None, ymax_list = None):
-    state_list = ['SOC', 'DOC', 'MBC', 'EEC']   
-    fig, axs = plt.subplots(state_dim)
+def plot_states_post(x, q_theta, SBM_SDE_CLASS, DIFFUSION_TYPE, TEMP_TENSOR, TEMP_REF, obs_model, niter, t, dt, batch_size, eval_batch_size, num_layers, train_lr, sd_scale, plots_folder, now_string, LEARN_CO2 = False, ymin_list = None, ymax_list = None):
+
+    state_list = []
+
+    if x.size(-1) == 3 and not LEARN_CO2:
+        state_list = ['SOC', 'DOC', 'MBC']
+    elif x.size(-1) == 3 and LEARN_CO2:
+        state_list = ['SOC', 'DOC', 'MBC', 'CO2']
+    elif x.size(-1) == 4 and not LEARN_CO2:
+        state_list = ['SOC', 'DOC', 'MBC', 'EEC']
+    elif x.size(-1) == 4 and LEARN_CO2:
+        state_list = ['SOC', 'DOC', 'MBC', 'EEC', 'CO2']
+    else:
+        raise Exception('Matching condition does not exist with x.size() and LEARN_CO2 status.')
+
+    #Instantiate SBM_SDE object based on specified model and diffusion type.
+    SBM_SDE_class_dict = {
+            'SCON': SCON,
+            'SAWB': SAWB,
+            'SAWB-ECA': SAWB_ECA
+            }
+    if SBM_SDE_CLASS not in SBM_SDE_class_dict:
+        raise NotImplementedError('Other SBM SDEs aside from SCON, SAWB, and SAWB-ECA have not been implemented yet.')
+    SBM_SDE_class = SBM_SDE_class_dict[SBM_SDE_CLASS]
+    SBM_SDE = SBM_SDE_class(DIFFUSION_TYPE)
+
+    if LEARN_CO2:
+        q_theta_sample_dict, _, _, _ = q_theta(x.size(0))
+        x = SBM_SDE.add_CO2(x, q_theta_sample_dict, TEMP_TENSOR, TEMP_REF) #Add CO2 to x tensor if CO2 is being fit.
+
+    fig, axs = plt.subplots(x.size(-1))
 
     obs_model.mu = obs_model.mu.detach().cpu().numpy()
     obs_model.scale = obs_model.scale.detach().cpu().numpy()
 
-    for i in range(state_dim):
+    for i in range(x.size(-1)):
         q_mean, q_std = x[:, :, i].mean(0).detach().cpu().numpy(), x[:, :, i].std(0).detach().cpu().numpy()
         hours = torch.arange(0, t + dt, dt).detach().cpu().numpy()
         axs[i].plot(obs_model.times, obs_model.mu[i, :], linestyle = 'None', marker = '.', label = 'Observed')
@@ -41,10 +72,11 @@ def plot_states_post(x, obs_model, state_dim, niter, piter, t, dt, batch_size, e
         axs[i].set_ylim([ymin, ymax])
         #plt.title(f'Approximate posterior $q(x|\\theta, y)$\nNumber of samples = {eval_batch_size}\nTimestep = {dt}\nIterations = {niter}')
     plt.xlabel('Hour')
-    fig.savefig(os.path.join(plots_folder, f'net_iter_{niter}_piter_{piter}_t_{t}_dt_{dt}_batch_{batch_size}_samples_{eval_batch_size}_layers_{num_layers}_lr_{train_lr}_sd_scale_{sd_scale}_{now_string}.png'), dpi = 300)
+    #plt.tight_layout()
+    fig.set_size_inches(15, 15)
+    fig.savefig(os.path.join(plots_folder, f'net_iter_{niter}_t_{t}_dt_{dt}_batch_{batch_size}_samples_{eval_batch_size}_layers_{num_layers}_lr_{train_lr}_sd_scale_{sd_scale}_{now_string}.png'), dpi = 300)
 
-def plot_theta(p_theta, q_theta, niter, piter, t, dt, batch_size, eval_batch_size, num_layers, train_lr, sd_scale, plots_folder, now_string,
-               ncols=4):
+def plot_theta(p_theta, q_theta, true_theta, niter, t, dt, batch_size, eval_batch_size, num_layers, train_lr, sd_scale, plots_folder, now_string, ncols=4):
     # Prior distribution object
     p_dist = p_theta
 
@@ -56,7 +88,7 @@ def plot_theta(p_theta, q_theta, niter, piter, t, dt, batch_size, eval_batch_siz
     q_dist = q_theta.dist(loc, scale, a = lower, b = upper)
     
     # Compute prior and posterior densities at points x
-    num_pts = 10000000
+    num_pts = 1000000
     x = torch.zeros([num_pts, loc.size(0)]) #Examining densities as we move through distribution supports. So torch.Size([bins, parameters]) is desired size of x.
     for param_index in range(0, loc.size(0)):
         x[:, param_index] = torch.linspace(lower[param_index], upper[param_index], num_pts)
@@ -91,9 +123,11 @@ def plot_theta(p_theta, q_theta, niter, piter, t, dt, batch_size, eval_batch_siz
     for i, row in enumerate(axes):
         for j, ax in enumerate(row):
             if param_index < num_params:
+                key = q_theta.keys[param_index]
                 ax.plot(x[int(prior_first_one_indices[param_index]): int(prior_last_one_indices[param_index]), param_index].detach().cpu().numpy(), pdf_prior[int(prior_first_one_indices[param_index]): int(prior_last_one_indices[param_index]), param_index].detach().cpu().numpy(), label='Prior $p(\\theta)$')
                 ax.plot(x[int(post_first_one_indices[param_index]): int(post_last_one_indices[param_index]), param_index].detach().cpu().numpy(), pdf_post[int(post_first_one_indices[param_index]): int(post_last_one_indices[param_index]), param_index].detach().cpu().numpy(), label='Approximate posterior $q(\\theta)$')
-                ax.set_xlabel(q_theta.keys[param_index])
+                ax.axvline(true_theta[key], color='gray', label='True $\\theta$')
+                ax.set_xlabel(key)
                 ax.set_ylabel('Density')
             elif param_index == num_params:
                 handles, labels = axes[0, 0].get_legend_handles_labels()
@@ -104,4 +138,4 @@ def plot_theta(p_theta, q_theta, niter, piter, t, dt, batch_size, eval_batch_siz
             param_index += 1
             
     plt.tight_layout()
-    fig.savefig(os.path.join(plots_folder, f'theta_iter_{niter}_piter_{piter}_t_{t}_dt_{dt}_batch_{batch_size}_samples_{eval_batch_size}_layers_{num_layers}_lr_{train_lr}_sd_scale_{sd_scale}_{now_string}.png'), dpi = 300)
+    fig.savefig(os.path.join(plots_folder, f'theta_iter_{niter}_t_{t}_dt_{dt}_batch_{batch_size}_samples_{eval_batch_size}_layers_{num_layers}_lr_{train_lr}_sd_scale_{sd_scale}_{now_string}.png'), dpi = 300)
