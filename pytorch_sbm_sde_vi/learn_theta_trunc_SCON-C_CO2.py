@@ -49,10 +49,10 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-niter = 230000
+niter = 240000
 train_lr = 2e-5 #ELBO learning rate
-batch_size = 50 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
-eval_batch_size = 50
+batch_size = 55 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
+eval_batch_size = 55
 obs_error_scale = 0.1 #Observation (y) standard deviation.
 prior_scale_factor = 0.333 #Proportion of prior standard deviation to prior means.
 num_layers = 5 #5 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
@@ -106,7 +106,7 @@ net, q_theta, p_theta, obs_model, ELBO_hist, list_parent_loc_scale = train(
         csv_data_path, obs_error_scale, t, dt_flow, n, 
         t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
         sbm_sde_class, diffusion_type, x0_prior_SCON, SCON_C_priors_details, learn_CO2,
-        theta_dist, LR_DECAY = 0.8, DECAY_STEP_SIZE = 25000, PRINT_EVERY = 20)
+        theta_dist, LR_DECAY = 0.9, DECAY_STEP_SIZE = 25000, PRINT_EVERY = 50)
 
 #Save net and ELBO files.
 now = datetime.now()
@@ -133,7 +133,6 @@ torch.cuda.empty_cache()
 net = torch.load(net_save_string)
 net.to(active_device)
 p_theta = torch.load(p_theta_save_string)
-p_theta.to(active_device)
 q_theta = torch.load(q_theta_save_string)
 q_theta.to(active_device)
 obs_model = torch.load(obs_model_save_string)
