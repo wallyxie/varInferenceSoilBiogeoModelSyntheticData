@@ -316,23 +316,3 @@ class ObsModel(nn.Module):
     
     def plt_dat(self):
         return self.mu, self.times
-
-class ObsModelCO2(ObsModel):
-
-    '''
-    ObsModelCO2 is a derived class of ObsModel and needs to inherit ObsModel's classes. CO2 mu should already be a part of ObsModel.mu following read-in from data.
-    '''
-
-    def __init__(self, DEVICE, TIMES, DT, MU, SCALE, GET_CO2, T_SPAN_TENSOR, TEMP_GEN, TEMP_REF):
-        super().__init__(DEVICE, TIMES, DT, MU, SCALE)
-        self.get_CO2 = GET_CO2
-        self.t_span_tensor = T_SPAN_TENSOR
-        self.temp_gen = TEMP_GEN
-        self.temp_ref = TEMP_REF
-
-    def forward(self, x, theta):
-        CO2 = self.get_CO2(x, self.t_span_tensor, theta, self.temp_gen, self.temp_ref)
-        x_with_CO2 = torch.cat((x[:, self.idx, :], CO2[:, self.idx, :]), dim = -1)
-        #print(self.mu.permute(1, 0), x_with_CO2)
-        obs_ll = D.normal.Normal(self.mu.permute(1, 0), self.scale).log_prob(x_with_CO2)
-        return torch.sum(obs_ll, [-1, -2]).mean()

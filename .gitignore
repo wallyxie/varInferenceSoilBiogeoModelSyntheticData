@@ -9,3 +9,6 @@ notes/
 *checkpoint
 *.sub
 pytorch_sbm_sde_vi/SBM_SDE_gen_y_test.ipynb
+pytorch_sbm_sde_vi/python_notebooks/classes_refactor_test.ipynb
+pytorch_sbm_sde_vi/test_refactor_inference.ipynb
+pytorch_sbm_sde_vi/python_notebooks/Plots.ipynb
