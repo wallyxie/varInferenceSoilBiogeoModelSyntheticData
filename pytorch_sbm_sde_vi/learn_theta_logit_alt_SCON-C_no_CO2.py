@@ -10,7 +10,7 @@ import torch.distributions as D
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.autograd import Function
-from RescaledLogitNormal import *
+from TruncatedNormal import *
 from LogitNormal import *
 
 #PyData imports
@@ -49,10 +49,10 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-niter = 240000
+niter = 210000
 train_lr = 2e-5 #ELBO learning rate
-batch_size = 55 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
-eval_batch_size = 55
+batch_size = 50 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
+eval_batch_size = 50
 obs_error_scale = 0.1 #Observation (y) standard deviation.
 prior_scale_factor = 0.333 #Proportion of prior standard deviation to prior means.
 num_layers = 5 #5 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
@@ -67,8 +67,6 @@ theta_dist = 'RescaledLogitNormal' #String needs to be exact name of the distrib
 #Load parameterization of priors.
 priors_file = 'generated_data/SCON-C_CO2_logit_alt_sample_y_t_1000_dt_0-01_sd_scale_0-333_hyperparams.pt'
 SCON_C_priors_details = {k: v.to(active_device) for k, v in torch.load(priors_file).items()}
-
-SCON_C_priors_details = {'u_M': u_M_details, 'a_SD': a_SD_details, 'a_DS': a_DS_details, 'a_M': a_M_details, 'a_MSC': a_MSC_details, 'k_S_ref': k_S_ref_details, 'k_D_ref': k_D_ref_details, 'k_M_ref': k_M_ref_details, 'Ea_S': Ea_S_details, 'Ea_D': Ea_D_details, 'Ea_M': Ea_M_details, 'c_SOC': c_SOC_details, 'c_DOC': c_DOC_details, 'c_MBC': c_MBC_details}
 
 #Initial condition prior means
 x0_SCON = [65, 0.4, 2.5]
