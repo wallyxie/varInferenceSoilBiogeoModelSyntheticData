@@ -18,10 +18,10 @@ def plot_theta(p_theta_file, q_theta_file, true_theta_file, fig_file,
     if q_theta.learn_cov:
         loc = q_theta.means
         scale_tril = D.transform_to(q_theta.dist.arg_constraints['scale_tril'])(q_theta.sds)
-        cov_mat = scale_tril @ scale_tril.T
-        scale = torch.diag(cov_mat).sqrt()
         lower = q_theta.lowers
         upper = q_theta.uppers
+        q_joint = q_theta.dist(loc, scale_tril=scale_tril, a=lower, b=upper)
+        scale = torch.diag(q_joint.covariance_matrix).sqrt()
         q_dist = RescaledLogitNormal(loc, scale, a = lower, b = upper) # marginal
     else:
         loc = q_theta.means
@@ -82,13 +82,18 @@ def plot_theta(p_theta_file, q_theta_file, true_theta_file, fig_file,
 
     # If covariance is learned, also save the correlation matrix plot
     if q_theta.learn_cov:
-        # Calculate correlation b/w parameters
-        corr = cov_mat / torch.outer(scale, scale)
+        # Sample from multivariate distribution
+        num_samples = 100000
+        theta_samples = q_joint.sample((num_samples, )) # (num_samples, num_params)
+
+        # Calculate (empirical) correlation b/w parameters
+        #corr = (q_joint.covariance_matrix / torch.outer(scale, scale)).detach()
+        corr = np.corrcoef(theta_samples.T)
 
         # Plot correlation matrix
         plt.figure(figsize = (8, 8))
-        plt.imshow(corr.detach(), cmap='coolwarm', vmin=-1, vmax=1)
-        plt.colorbar()
+        plt.imshow(corr, cmap='coolwarm', vmin=-1, vmax=1)
+        plt.colorbar(shrink=0.8)
         plt.xticks(range(num_params), labels=q_theta.keys, rotation='vertical')
         plt.yticks(range(num_params), labels=q_theta.keys)
         plt.title('Correlation between parameters')
@@ -137,7 +142,8 @@ def plot_states(net_file, kf_file, fig_file, fig_dir='figs', num_samples=10,
                             alpha = 0.4, label = 'Flow 2.5-97.5%', color=color)
         else:
             for j in range(num_samples):
-                axs[i].plot(hours, x[j, :, i], color=color, alpha=0.9)
+                label = 'Flow sample' if j == 0 else None
+                axs[i].plot(hours, x[j, :, i], color=color, alpha=0.9, label = label)
 
         # Plot kf posterior
         color = cm.get_cmap('tab10')(1)

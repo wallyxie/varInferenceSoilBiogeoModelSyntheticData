@@ -141,7 +141,7 @@ class MultivariateLogitNormal(Distribution):
     def log_prob(self, x):
         lower, upper = self.sigmoid.lower, self.sigmoid.upper
         logit_x = self.logit(x)
-        log_jac = torch.log((upper - lower)/((x-lower)*(upper-x))).sum()
+        log_jac = torch.log((upper - lower)/((x-lower)*(upper-x))).sum(-1) # sum across event_dim
         return self.base.log_prob(logit_x) + log_jac
 
 class RescaledSigmoid(nn.Module):
