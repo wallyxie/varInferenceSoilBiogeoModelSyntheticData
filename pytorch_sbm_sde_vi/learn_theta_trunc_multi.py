@@ -42,8 +42,6 @@ t = 1000 #In hours.
 n = int(t / dt_flow) + 1
 t_span = np.linspace(0, t, n)
 t_span_tensor = torch.reshape(torch.Tensor(t_span), [1, n, 1]).to(active_device) #T_span needs to be converted to tensor object. Additionally, facilitates conversion of I_S and I_D to tensor objects.
-state_dim_SCON = 3 #Not including CO2 in STATE_DIM, because CO2 is an observation.
-state_dim_SAWB = 4 #Not including CO2 in STATE_DIM, because CO2 is an observation.
 
 #SBM temperature forcing parameters
 temp_ref = 283
@@ -51,14 +49,18 @@ temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
 niter = 380000 #550000
-piter = 0
-pretrain_lr = 1e-3 #Norm regularization learning rate
 train_lr = 5e-4 #ELBO learning rate
 batch_size = 30 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
 eval_batch_size = 30
 obs_error_scale = 0.1 #Observation (y) standard deviation.
 prior_scale_factor = 0.333 #Proportion of prior standard deviation to prior means.
 num_layers = 5 #5 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
+
+#Specify desired SBM SDE model type and details.
+sbm_sde_class = 'SCON'
+diffusion_type = 'C'
+learn_CO2 = False
+state_dim_SCON = 3 #Not including CO2 in STATE_DIM, because CO2 is an observation.
 theta_dist = 'TruncatedNormal' #String needs to be exact name of the distribution class. Other option is 'RescaledLogitNormal'.
 theta_post_dist = 'MultivariateLogitNormal'
 
@@ -82,9 +84,10 @@ c_MBC_details = torch.Tensor([0.002, 0.002 * prior_scale_factor, 0, 0.02]).to(ac
 
 # Theta priors
 SCON_C_priors_details = {'u_M': u_M_details, 'a_SD': a_SD_details, 'a_DS': a_DS_details, 'a_M': a_M_details, 'a_MSC': a_MSC_details, 'k_S_ref': k_S_ref_details, 'k_D_ref': k_D_ref_details, 'k_M_ref': k_M_ref_details, 'Ea_S': Ea_S_details, 'Ea_D': Ea_D_details, 'Ea_M': Ea_M_details, 'c_SOC': c_SOC_details, 'c_DOC': c_DOC_details, 'c_MBC': c_MBC_details}
+
 # Init theta posteriors
 init_file = 'generated_data/SCON_C_logit_alt_sample_y_t_1000_dt_0-005_sd_scale_0-333_hyperparams.pt'
-SCON_C_post_init = {k: v.to(active_device) for k, v in torch.load(init_file).items()}
+theta_post_init = {k: v.to(active_device) for k, v in torch.load(init_file).items()}
 
 #Initial condition prior means
 x0_SCON = [65, 0.4, 2.5]
@@ -102,16 +105,15 @@ i_d_tensor = i_d(t_span_tensor).to(active_device) #Exogenous DOC input function
 
 #Generate observation model.
 csv_data_path = os.path.join('generated_data/', 'SCON_C_trunc_sample_y_t_1000_dt_0-005_sd_scale_0-333.csv')
-obs_times, obs_means_noCO2, obs_error = csv_to_obs_df(csv_data_path, state_dim_SCON, t, obs_error_scale)
-obs_model = ObsModel(active_device, TIMES = obs_times, DT = dt_flow, MU = obs_means_noCO2, SCALE = obs_error).to(active_device) 
 
 #Call training loop function for SCON-C.
 net, q_theta, p_theta, obs_model, ELBO_hist, list_parent_loc_scale = train(
-        active_device, pretrain_lr, train_lr, niter, piter, batch_size, num_layers,
-        state_dim_SCON, csv_data_path, obs_error_scale, t, dt_flow, n, 
+        active_device, train_lr, niter, batch_size, num_layers,
+        csv_data_path, obs_error_scale, t, dt_flow, n, 
         t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
-        drift_diffusion_SCON_C, x0_prior_SCON, SCON_C_priors_details, theta_dist, theta_post_dist, SCON_C_post_init,
-        LEARN_THETA = True, LR_DECAY = 0.95, DECAY_STEP_SIZE = 25000, PRINT_EVERY = 100)
+        sbm_sde_class, diffusion_type, x0_prior_SCON, SCON_C_priors_details, learn_CO2,
+        THETA_DIST=theta_dist, THETA_POST_DIST=theta_post_dist, THETA_POST_INIT=theta_post_init,
+        LR_DECAY = 0.8, DECAY_STEP_SIZE = 25000, PRINT_EVERY = 50)
 
 #Save net and ELBO files.
 now = datetime.now()
@@ -137,6 +139,9 @@ torch.save(list_parent_loc_scale, list_parent_loc_scale_save_string)
 torch.cuda.empty_cache()
 net = torch.load(net_save_string)
 net.to(active_device)
+p_theta = torch.load(p_theta_save_string)
+q_theta = torch.load(q_theta_save_string)
+q_theta.to(active_device)
 obs_model = torch.load(obs_model_save_string)
 obs_model.to(active_device)
 ELBO_hist = torch.load(ELBO_save_string)
@@ -145,5 +150,5 @@ ELBO_hist = torch.load(ELBO_save_string)
 net.eval()
 x, _ = net(eval_batch_size)
 plots_folder = 'training_plots/'
-plot_elbo(ELBO_hist, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, xmin = int((niter - piter) * 0.2)) #xmin < (niter - piter).
-plot_states_post(x, obs_model, state_dim_SCON, niter, piter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, ymin_list = [0, 0, 0], ymax_list = [100., 12., 10.])
+plot_elbo(ELBO_hist, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, xmin = int((niter - piter) * 0.2)) #xmin < (niter - piter).
+plot_states_post(x, q_theta, sbm_sde_class, diffusion_type, temp_tensor, temp_ref, obs_model, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, learn_CO2)

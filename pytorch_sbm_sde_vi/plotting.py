@@ -67,8 +67,8 @@ def plot_states_post(x, q_theta, SBM_SDE_CLASS, DIFFUSION_TYPE, TEMP_TENSOR, TEM
         state = state_list[i]
         #axs[i].legend()
         plt.setp(axs[i], ylabel = state)
-        ymin = ymin_list[i]
-        ymax = ymax_list[i]
+        ymin = ymin_list[i] if ymin_list else None
+        ymax = ymax_list[i] if ymax_list else None
         axs[i].set_ylim([ymin, ymax])
         #plt.title(f'Approximate posterior $q(x|\\theta, y)$\nNumber of samples = {eval_batch_size}\nTimestep = {dt}\nIterations = {niter}')
     plt.xlabel('Hour')

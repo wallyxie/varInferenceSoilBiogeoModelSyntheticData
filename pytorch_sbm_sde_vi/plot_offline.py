@@ -5,6 +5,7 @@ from matplotlib import pyplot as plt
 from matplotlib import cm
 import torch.distributions as D
 from LogitNormal import *
+from SBM_SDE_classes import *
 
 plt.rcParams.update({'font.size': 16, 'lines.linewidth': 2, 'lines.markersize': 10})
 
@@ -102,10 +103,13 @@ def plot_theta(p_theta_file, q_theta_file, true_theta_file, fig_file,
         plt.savefig('/'.join([fig_dir, 'corr_{}'.format(fig_file)]), dpi=300)
 
 def plot_states(net_file, kf_file, fig_file, fig_dir='figs', num_samples=10,
-                summarize_net=True, ymin_list=None, ymax_list=None, device=torch.device('cpu')):
+                summarize_net=True, ymin_list=None, ymax_list=None, device=torch.device('cpu'),
+                q_theta_file=None, SBM_SDE=None, temp_ref=283, temp_rise=5):
     # Load net object
     net = torch.load(net_file, map_location=device)
     obs_model, state_dim, t, dt = net.obs_model, net.state_dim, net.t, net.dt
+    obs_dim = obs_model.obs_dim
+    learn_co2 = obs_dim > state_dim
     
     # Load KalmanFilter object
     kf = torch.load(kf_file, map_location=device)
@@ -115,15 +119,31 @@ def plot_states(net_file, kf_file, fig_file, fig_dir='figs', num_samples=10,
     net.eval()
     x = net(num_samples)[0].detach()
     
-    # Define figure and axes objects
-    state_list = ['SOC', 'DOC', 'MBC', 'EEC']
-    fig, axs = plt.subplots(state_dim, figsize=(15, 15))
-    if ymin_list is None:
-        ymin_list = [None] * state_dim
-    if ymax_list is None:
-        ymax_list = [None] * state_dim
+    # If learn_co2, deterministically compute CO2 based on sampled x and theta
+    if learn_co2:    
+        n = int(t / dt) + 1
+        t_span = np.linspace(0, t, n)
+        t_span_tensor = torch.reshape(torch.Tensor(t_span), [1, n, 1])
+        temp_tensor = temp_gen(t_span_tensor, temp_ref, temp_rise)
+
+        q_theta = torch.load(q_theta_file, map_location=device)
+        theta_samples, _, _, _ = q_theta(num_samples)
+        x = SBM_SDE.add_CO2(x, theta_samples, temp_tensor, temp_ref).detach() # add CO2 to x tensor
     
-    for i in range(state_dim):
+    # Define figure and axes objects
+    labels = ['SOC', 'DOC', 'MBC']
+    if state_dim > 3:
+        labels.append('EEC')
+    if learn_co2:
+        labels.append('CO2')
+
+    fig, axs = plt.subplots(obs_dim, figsize=(15, 15))
+    if ymin_list is None:
+        ymin_list = [None] * obs_dim
+    if ymax_list is None:
+        ymax_list = [None] * obs_dim
+    
+    for i in range(obs_dim):
         hours = torch.arange(0, t + dt, dt)
 
         # Plot observations
@@ -152,8 +172,7 @@ def plot_states(net_file, kf_file, fig_file, fig_dir='figs', num_samples=10,
         axs[i].fill_between(hours, kf_mean - 2 * kf_sd, kf_mean + 2 * kf_sd, color=color,
                             alpha = 0.4, label = 'Kalman 2.5-97.5%')
         
-        state = state_list[i]
-        axs[i].set_ylabel(state) #plt.setp(axs[i], ylabel = state)
+        axs[i].set_ylabel(labels[i])
         ymin = ymin_list[i]
         ymax = ymax_list[i]
         axs[i].set_ylim([ymin, ymax])
