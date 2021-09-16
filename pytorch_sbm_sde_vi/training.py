@@ -196,7 +196,7 @@ def train1(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
                 ELBO = -log_p_theta.mean() + log_q_theta.mean() + log_prob.mean() - log_lik.mean() - obs_model(C_PATH, theta_dict)
 
             stop = process_time()
-            print('Elapsed time for CO2 and ELBO computations: ', stop - start)
+            print('Elapsed time for train1 CO2 and ELBO computations: ', stop - start)
             
             #Negative ELBO: -log p(theta) + log q(theta) - log p(y_0|x_0, theta) [already accounted for in obs_model output when learning x_0] + log q(x|theta) - log p(x|theta) - log p(y|x, theta)
             best_loss_ELBO = ELBO if ELBO < best_loss_ELBO else best_loss_ELBO
@@ -354,7 +354,7 @@ def train2(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
                 ELBO = -log_p_theta.mean() + log_q_theta.mean() + log_prob.mean() - log_lik.mean() - obs_model(C_PATH, theta_dict)
 
             stop = process_time()
-            print('Elapsed time for CO2 and ELBO computations: ', stop - start)            
+            print('Elapsed time for train2 CO2 and ELBO computations: ', stop - start)            
             
             #Negative ELBO: -log p(theta) + log q(theta) - log p(y_0|x_0, theta) [already accounted for in obs_model output when learning x_0] + log q(x|theta) - log p(x|theta) - log p(y|x, theta)
             best_loss_ELBO = ELBO if ELBO < best_loss_ELBO else best_loss_ELBO
