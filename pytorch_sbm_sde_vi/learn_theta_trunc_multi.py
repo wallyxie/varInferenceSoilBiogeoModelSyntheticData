@@ -64,23 +64,39 @@ state_dim_SCON = 3 #Not including CO2 in STATE_DIM, because CO2 is an observatio
 theta_dist = 'TruncatedNormal' #String needs to be exact name of the distribution class. Other option is 'RescaledLogitNormal'.
 theta_post_dist = 'MultivariateLogitNormal'
 
+#Parameter prior means
+u_M_mean = 0.0016
+a_SD_mean = 0.5
+a_DS_mean = 0.5
+a_M_mean = 0.5
+a_MSC_mean = 0.5
+k_S_ref_mean = 0.0005
+k_D_ref_mean = 0.0008
+k_M_ref_mean = 0.0007
+Ea_S_mean = 55
+Ea_D_mean = 48
+Ea_M_mean = 48
+c_SOC_mean = 0.5
+c_DOC_mean = 0.01
+c_MBC_mean = 0.01
+
 #SCON theta truncated normal prior distribution parameter details in order of mean, lower, and upper. Distribution sdev assumed to be some proportion of the mean. 
-u_M_details = torch.Tensor([0.0016, 0.0016 * prior_scale_factor, 0, 0.1]).to(active_device)
-a_SD_details = torch.Tensor([0.5, 0.5 * prior_scale_factor, 0, 1]).to(active_device)
-a_DS_details = torch.Tensor([0.5, 0.5 * prior_scale_factor, 0, 1]).to(active_device)
-a_M_details = torch.Tensor([0.5, 0.5 * prior_scale_factor, 0, 1]).to(active_device)
-a_MSC_details = torch.Tensor([0.5, 0.5 * prior_scale_factor, 0, 1]).to(active_device)
-k_S_ref_details = torch.Tensor([0.0005, 0.0005 * prior_scale_factor, 0, 0.01]).to(active_device)
-k_D_ref_details = torch.Tensor([0.0008, 0.0008 * prior_scale_factor, 0, 0.01]).to(active_device)
-k_M_ref_details = torch.Tensor([0.0007, 0.0007 * prior_scale_factor, 0, 0.01]).to(active_device)
-Ea_S_details = torch.Tensor([55, 55 * prior_scale_factor, 10, 100]).to(active_device)
-Ea_D_details = torch.Tensor([48, 48 * prior_scale_factor, 10, 100]).to(active_device)
-Ea_M_details = torch.Tensor([48, 48 * prior_scale_factor, 10, 100]).to(active_device)
+u_M_details = torch.Tensor([u_M_mean, u_M_mean * prior_scale_factor, 0, 1])
+a_SD_details = torch.Tensor([a_SD_mean, a_SD_mean * prior_scale_factor, 0, 1])
+a_DS_details = torch.Tensor([a_DS_mean, a_DS_mean * prior_scale_factor, 0, 1])
+a_M_details = torch.Tensor([a_M_mean, a_M_mean * prior_scale_factor, 0, 1])
+a_MSC_details = torch.Tensor([a_MSC_mean, a_MSC_mean * prior_scale_factor, 0, 1])
+k_S_ref_details = torch.Tensor([k_S_ref_mean, k_S_ref_mean * prior_scale_factor, 0, 1])
+k_D_ref_details = torch.Tensor([k_D_ref_mean, k_D_ref_mean * prior_scale_factor, 0, 1])
+k_M_ref_details = torch.Tensor([k_M_ref_mean, k_M_ref_mean * prior_scale_factor, 0, 1])
+Ea_S_details = torch.Tensor([Ea_S_mean, Ea_S_mean * prior_scale_factor, 10, 100])
+Ea_D_details = torch.Tensor([Ea_D_mean, Ea_D_mean * prior_scale_factor, 10, 100])
+Ea_M_details = torch.Tensor([Ea_M_mean, Ea_M_mean * prior_scale_factor, 10, 100])
 
 #SCON-C diffusion matrix parameter truncated normal prior distribution parameter details in order of mean, lower, and upper. 
-c_SOC_details = torch.Tensor([0.1, 0.1 * prior_scale_factor, 0, 1]).to(active_device)
-c_DOC_details = torch.Tensor([0.002, 0.002 * prior_scale_factor, 0, 0.02]).to(active_device)
-c_MBC_details = torch.Tensor([0.002, 0.002 * prior_scale_factor, 0, 0.02]).to(active_device)
+c_SOC_details = torch.Tensor([c_SOC_mean, c_SOC_mean * prior_scale_factor, 0, 1])
+c_DOC_details = torch.Tensor([c_DOC_mean, c_DOC_mean * prior_scale_factor, 0, 1])
+c_MBC_details = torch.Tensor([c_MBC_mean, c_MBC_mean * prior_scale_factor, 0, 1])
 
 # Theta priors
 SCON_C_priors_details = {'u_M': u_M_details, 'a_SD': a_SD_details, 'a_DS': a_DS_details, 'a_M': a_M_details, 'a_MSC': a_MSC_details, 'k_S_ref': k_S_ref_details, 'k_D_ref': k_D_ref_details, 'k_M_ref': k_M_ref_details, 'Ea_S': Ea_S_details, 'Ea_D': Ea_D_details, 'Ea_M': Ea_M_details, 'c_SOC': c_SOC_details, 'c_DOC': c_DOC_details, 'c_MBC': c_MBC_details}

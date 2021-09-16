@@ -80,7 +80,7 @@ c_SOC_mean = 0.5
 c_DOC_mean = 0.01
 c_MBC_mean = 0.01
 
-#SCON theta truncated normal distribution parameter details in order of mean, sdev, lower, and upper.
+#SCON theta truncated normal prior distribution parameter details in order of mean, lower, and upper. Distribution sdev assumed to be some proportion of the mean. 
 u_M_details = torch.Tensor([u_M_mean, u_M_mean * prior_scale_factor, 0, 1])
 a_SD_details = torch.Tensor([a_SD_mean, a_SD_mean * prior_scale_factor, 0, 1])
 a_DS_details = torch.Tensor([a_DS_mean, a_DS_mean * prior_scale_factor, 0, 1])
@@ -93,7 +93,7 @@ Ea_S_details = torch.Tensor([Ea_S_mean, Ea_S_mean * prior_scale_factor, 10, 100]
 Ea_D_details = torch.Tensor([Ea_D_mean, Ea_D_mean * prior_scale_factor, 10, 100])
 Ea_M_details = torch.Tensor([Ea_M_mean, Ea_M_mean * prior_scale_factor, 10, 100])
 
-#SCON-C diffusion matrix parameter distribution details
+#SCON-C diffusion matrix parameter truncated normal prior distribution parameter details in order of mean, lower, and upper. 
 c_SOC_details = torch.Tensor([c_SOC_mean, c_SOC_mean * prior_scale_factor, 0, 1])
 c_DOC_details = torch.Tensor([c_DOC_mean, c_DOC_mean * prior_scale_factor, 0, 1])
 c_MBC_details = torch.Tensor([c_MBC_mean, c_MBC_mean * prior_scale_factor, 0, 1])
