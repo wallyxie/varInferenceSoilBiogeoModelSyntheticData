@@ -2,7 +2,7 @@
 import math
 from tqdm import tqdm
 from typing import Dict, Tuple, Union
-from time import process_time()
+from time import process_time
 
 #Torch-related imports
 import torch
