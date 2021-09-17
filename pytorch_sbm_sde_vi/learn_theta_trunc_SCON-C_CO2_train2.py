@@ -3,6 +3,7 @@ import math
 import sys
 from datetime import datetime
 import os.path
+from time import process_time
 
 #Torch-related imports
 import torch
@@ -49,7 +50,7 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-niter = 100
+niter = 200
 train_lr = 2e-5 #ELBO learning rate
 batch_size = 30 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
 eval_batch_size = 30
@@ -116,6 +117,7 @@ i_d_tensor = i_d(t_span_tensor).to(active_device) #Exogenous DOC input function
 #Generate observation model.
 csv_data_path = os.path.join('generated_data/', 'SCON-C_CO2_trunc_sample_y_t_1000_dt_0-01_sd_scale_0-333.csv')
 
+start = process_time()
 #Call training loop function for SCON-C.
 net, q_theta, p_theta, obs_model, ELBO_hist, list_parent_loc_scale, SBM_SDE_instance = train2(
         active_device, train_lr, niter, batch_size, num_layers,
@@ -123,6 +125,8 @@ net, q_theta, p_theta, obs_model, ELBO_hist, list_parent_loc_scale, SBM_SDE_inst
         t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
         sbm_sde_class, diffusion_type, x0_prior_SCON, SCON_C_priors_details, learn_CO2,
         theta_dist, LR_DECAY = 0.9, DECAY_STEP_SIZE = 25000, PRINT_EVERY = 50)
+end = process_time()
+print('train2 time: ', start - end)
 
 #Save net and ELBO files.
 now = datetime.now()

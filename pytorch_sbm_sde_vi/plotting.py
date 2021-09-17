@@ -81,11 +81,20 @@ def plot_theta(p_theta, q_theta, true_theta, niter, t, dt, batch_size, eval_batc
     p_dist = p_theta
 
     # Posterior distribution object
-    loc = q_theta.means
-    scale = torch.max(q_theta.sds, torch.tensor(1e-6))
-    lower = q_theta.lowers
-    upper = q_theta.uppers
-    q_dist = q_theta.dist(loc, scale, a = lower, b = upper)
+    if q_theta.learn_cov:
+        loc = q_theta.means
+        scale_tril = D.transform_to(q_theta.dist.arg_constraints['scale_tril'])(q_theta.sds)
+        lower = q_theta.lowers
+        upper = q_theta.uppers
+        q_joint = q_theta.dist(loc, scale_tril=scale_tril, a=lower, b=upper)
+        scale = torch.diag(q_joint.covariance_matrix).sqrt()
+        q_dist = RescaledLogitNormal(loc, scale, a = lower, b = upper) # marginal
+    else:
+        loc = q_theta.means
+        scale = torch.max(q_theta.sds, torch.tensor(1e-6))
+        lower = q_theta.lowers
+        upper = q_theta.uppers
+        q_dist = q_theta.dist(loc, scale, a = lower, b = upper)
     
     # Compute prior and posterior densities at points x
     num_pts = 1000000
@@ -101,13 +110,13 @@ def plot_theta(p_theta, q_theta, true_theta, niter, t, dt, batch_size, eval_batc
     post_first_one_indices = torch.zeros(loc.size(0))
     post_last_one_indices = torch.zeros(loc.size(0))
     for param_index in range(0, loc.size(0)):
-        prior_geq_ones = pdf_prior[:, param_index] >= 2e-5 #Find pdf values >= 1 in prior.
+        prior_geq_ones = pdf_prior[:, param_index] >= 1e-6 #Find pdf values >= 1 in prior.
         prior_cumsum = prior_geq_ones.cumsum(axis = -1) #Cumsum over all true values.
         prior_min_index = prior_cumsum.min(0).indices
         prior_max_index = prior_cumsum.max(0).indices
         prior_first_one_indices[param_index] = prior_min_index
         prior_last_one_indices[param_index] = prior_max_index
-        post_geq_ones = pdf_post[:, param_index] >= 2e-5 #Find pdf values >= 1 in posterior.
+        post_geq_ones = pdf_post[:, param_index] >= 1e-6 #Find pdf values >= 1 in posterior.
         post_cumsum = post_geq_ones.cumsum(axis = -1) #Cumsum over all true values.
         post_min_index = post_cumsum.min(0).indices
         post_max_index = post_cumsum.max(0).indices 
