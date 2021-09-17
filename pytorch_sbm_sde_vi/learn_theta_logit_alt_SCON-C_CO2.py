@@ -10,8 +10,6 @@ import torch.distributions as D
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.autograd import Function
-from TruncatedNormal import *
-from LogitNormal import *
 
 #PyData imports
 import numpy as np
@@ -25,6 +23,8 @@ from obs_and_flow import *
 from training import *
 from plotting import *
 from mean_field import *
+from TruncatedNormal import *
+from LogitNormal import *
 
 #Other imports
 from tqdm import tqdm
