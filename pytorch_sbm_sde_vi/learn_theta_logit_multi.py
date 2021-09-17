@@ -19,7 +19,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 #Model-specific module imports
-from SBM_SDE_tensor import *
+from SBM_SDE_classes import *
 from obs_and_flow import *
 from training import *
 from plotting import *
