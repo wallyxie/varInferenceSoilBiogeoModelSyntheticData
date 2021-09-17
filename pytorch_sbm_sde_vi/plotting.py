@@ -12,6 +12,8 @@ import torch.distributions as D
 
 #Module imports
 from SBM_SDE_classes import *
+from TruncatedNormal import *
+from LogitNormal import *
 
 def plot_elbo(elbo_hist, niter, t, dt, batch_size, eval_batch_size, num_layers, train_lr, sd_scale, plots_folder, now_string, xmin = 0, ymax = None, yscale = 'linear'):
     iters = torch.arange(xmin + 1, len(elbo_hist) + 1).detach().cpu().numpy()
