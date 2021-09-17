@@ -102,7 +102,7 @@ c_MBC_details = torch.Tensor([c_MBC_mean, c_MBC_mean * prior_scale_factor, 0, 1]
 SCON_C_priors_details = {'u_M': u_M_details, 'a_SD': a_SD_details, 'a_DS': a_DS_details, 'a_M': a_M_details, 'a_MSC': a_MSC_details, 'k_S_ref': k_S_ref_details, 'k_D_ref': k_D_ref_details, 'k_M_ref': k_M_ref_details, 'Ea_S': Ea_S_details, 'Ea_D': Ea_D_details, 'Ea_M': Ea_M_details, 'c_SOC': c_SOC_details, 'c_DOC': c_DOC_details, 'c_MBC': c_MBC_details}
 
 # Init theta posteriors
-init_file = 'generated_data/SCON-C_no_CO2_trunc_sample_y_t_1000_dt_0-01_sd_scale_0-333_hyperparams.pt'
+init_file = 'generated_data/SCON-C_CO2_trunc_sample_y_t_1000_dt_0-01_sd_scale_0-333_hyperparams.pt'
 theta_post_init = {k: v.to(active_device) for k, v in torch.load(init_file).items()}
 
 #Initial condition prior means
@@ -120,7 +120,7 @@ i_s_tensor = i_s(t_span_tensor).to(active_device) #Exogenous SOC input function
 i_d_tensor = i_d(t_span_tensor).to(active_device) #Exogenous DOC input function
 
 #Generate observation model.
-csv_data_path = os.path.join('generated_data/', 'SCON-C_CO2_trunc_sample_y_t_1000_dt_0-01_sd_scale_0-333.csv')
+csv_data_path = os.path.join('generated_data/', 'SCON-C_no_CO2_trunc_sample_y_t_1000_dt_0-01_sd_scale_0-333.csv')
 
 #Call training loop function for SCON-C.
 net, q_theta, p_theta, obs_model, ELBO_hist, list_parent_loc_scale, SBM_SDE_instance = train2(

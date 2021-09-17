@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 
 #Torch-related imports
 import torch
+import torch.distributions as D
 
 #Module imports
 from SBM_SDE_classes import *
