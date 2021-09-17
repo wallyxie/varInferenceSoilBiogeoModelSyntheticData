@@ -2,7 +2,6 @@
 import math
 from tqdm import tqdm
 from typing import Dict, Tuple, Union
-from time import process_time
 
 #Torch-related imports
 import torch
@@ -180,13 +179,11 @@ def train1(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
             theta = None #Initiate theta variable for loop operations.
             log_q_theta = None #Initiate log_q_theta variable for loop operations.
             parent_loc_scale_dict = None #Initiate parent_loc_scale_dict variable for loop operations.
-            ELBO = 1e20 #Initiate ELBO variable.
 
             theta_dict, theta, log_q_theta, parent_loc_scale_dict = q_theta(BATCH_SIZE)
             log_p_theta = priors.log_prob(theta).sum(-1)
             list_parent_loc_scale.append(parent_loc_scale_dict)
 
-            start = process_time()
             log_lik, drift, diffusion_sqrt = calc_log_lik1(C_PATH, theta_dict, DT, SBM_SDE, INIT_PRIOR)
 
             if LEARN_CO2:
@@ -195,9 +192,6 @@ def train1(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
             else:
                 ELBO = -log_p_theta.mean() + log_q_theta.mean() + log_prob.mean() - log_lik.mean() - obs_model(C_PATH, theta_dict)
 
-            stop = process_time()
-            print('Elapsed time for train1 CO2 and ELBO computations: ', stop - start)
-            
             #Negative ELBO: -log p(theta) + log q(theta) - log p(y_0|x_0, theta) [already accounted for in obs_model output when learning x_0] + log q(x|theta) - log p(x|theta) - log p(y|x, theta)
             best_loss_ELBO = ELBO if ELBO < best_loss_ELBO else best_loss_ELBO
             ELBO_losses.append(ELBO.item())
@@ -338,13 +332,10 @@ def train2(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
             theta = None #Initiate theta variable for loop operations.
             log_q_theta = None #Initiate log_q_theta variable for loop operations.
             parent_loc_scale_dict = None #Initiate parent_loc_scale_dict variable for loop operations.
-            ELBO = 1e20 #Initiate ELBO variable.
 
             theta_dict, theta, log_q_theta, parent_loc_scale_dict = q_theta(BATCH_SIZE)
             log_p_theta = priors.log_prob(theta).sum(-1)
             list_parent_loc_scale.append(parent_loc_scale_dict)
-
-            start = process_time()
 
             if LEARN_CO2:
                 log_lik, drift, diffusion_sqrt, x_add_CO2 = calc_log_lik2(C_PATH, theta_dict, DT, SBM_SDE, INIT_PRIOR, LEARN_CO2)
@@ -353,9 +344,6 @@ def train2(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
                 log_lik, drift, diffusion_sqrt = calc_log_lik2(C_PATH, theta_dict, DT, SBM_SDE, INIT_PRIOR, LEARN_CO2)
                 ELBO = -log_p_theta.mean() + log_q_theta.mean() + log_prob.mean() - log_lik.mean() - obs_model(C_PATH, theta_dict)
 
-            stop = process_time()
-            print('Elapsed time for train2 CO2 and ELBO computations: ', stop - start)            
-            
             #Negative ELBO: -log p(theta) + log q(theta) - log p(y_0|x_0, theta) [already accounted for in obs_model output when learning x_0] + log q(x|theta) - log p(x|theta) - log p(y|x, theta)
             best_loss_ELBO = ELBO if ELBO < best_loss_ELBO else best_loss_ELBO
             ELBO_losses.append(ELBO.item())
