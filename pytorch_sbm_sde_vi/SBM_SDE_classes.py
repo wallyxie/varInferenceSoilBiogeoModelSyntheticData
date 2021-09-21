@@ -295,7 +295,7 @@ class SAWB(SBM_SDE):
         i_D_tensor_drift_diffusion = self.i_D[:, 1:, :]
         temp_tensor_drift_diffusion = self.temps[:, 1:, :]
         #Partition SOC, DOC, MBC, EEC values. Split based on final c_path_drift_diffusion dim, which specifies state variables and is also indexed as dim #2 in tensor.
-        SOC, DOC, MBC, EEC =  torch.chunk(c_path_drift_diffusion, state_dim, -1)
+        SOC, DOC, MBC, EEC =  torch.chunk(c_path_drift_diffusion, self.state_dim, -1)
         #Repeat and permute parameter values to match dimension sizes.
         SAWB_params_dict_rep = dict((k, v.repeat(1, t_span_tensor_drift_diffusion.size(1), 1).permute(2, 1, 0)) for k, v in SAWB_params_dict.items())
         #Initiate tensor with same dims as c_path_drift_diffusion to assign drift.
@@ -344,7 +344,7 @@ class SAWB(SBM_SDE):
         i_S_tensor_drift_diffusion = self.i_S[:, 1:, :]
         i_D_tensor_drift_diffusion = self.i_D[:, 1:, :]
         #Partition SOC, DOC, MBC, EEC values. Split based on final C_PATH dim, which specifies state variables and is also indexed as dim #2 in tensor.
-        SOC_full, DOC_full, MBC_full, EEC_full =  torch.chunk(C_PATH, state_dim, -1)
+        SOC_full, DOC_full, MBC_full, EEC_full =  torch.chunk(C_PATH, self.state_dim, -1)
         SOC = SOC_full[:, :-1, :]
         DOC = DOC_full[:, :-1, :]
         MBC = MBC_full[:, :-1, :]
@@ -355,11 +355,11 @@ class SAWB(SBM_SDE):
         #Initiate tensor with same dims as C_PATH to assign drift.
         drift = torch.empty_like(c_path_drift_diffusion, device = C_PATH.device)
         #Decay parameters are forced by temperature changes.
-        u_Q_full = linear_temp_dep(SAWB_params_dict_rep['u_Q_ref'], self.temps, SAWB_params_dict_rep['Q'], self.temp_ref) #Apply linear temperature-dependence to u_Q.
+        u_Q_full = linear_temp_dep(SAWB_params_dict_rep_full['u_Q_ref'], self.temps, SAWB_params_dict_rep_full['Q'], self.temp_ref) #Apply linear temperature-dependence to u_Q.
         u_Q = u_Q_full[:, 1:, :]
-        V_D_full = arrhenius_temp_dep(SAWB_params_dict_rep['V_D_ref'], self.temps, SAWB_params_dict_rep['Ea_V_D'], self.temp_ref) #Apply vectorized temperature-dependent transformation to V_D.
+        V_D_full = arrhenius_temp_dep(SAWB_params_dict_rep_full['V_D_ref'], self.temps, SAWB_params_dict_rep_full['Ea_V_D'], self.temp_ref) #Apply vectorized temperature-dependent transformation to V_D.
         V_D = V_D_full[:, 1:, :]
-        V_U_full = arrhenius_temp_dep(SAWB_params_dict_rep['V_U_ref'], self.temps, SAWB_params_dict_rep['Ea_V_U'], self.temp_ref) #Apply vectorized temperature-dependent transformation to V_U.
+        V_U_full = arrhenius_temp_dep(SAWB_params_dict_rep_full['V_U_ref'], self.temps, SAWB_params_dict_rep_full['Ea_V_U'], self.temp_ref) #Apply vectorized temperature-dependent transformation to V_U.
         V_U = V_U_full[:, 1:, :]
         #Drift is calculated.
         drift_SOC = i_S_tensor_drift_diffusion + SAWB_params_dict_rep['a_MSA'] * SAWB_params_dict_rep['r_M'] * MBC - ((V_D * EEC * SOC) / (SAWB_params_dict_rep['K_D'] + SOC))
@@ -456,9 +456,9 @@ class SAWB_ECA(SBM_SDE):
         i_D_tensor_drift_diffusion = self.i_D[:, 1:, :]
         temp_tensor_drift_diffusion = self.temps[:, 1:, :]
         #Partition SOC, DOC, MBC, EEC values. Split based on final c_path_drift_diffusion dim, which specifies state variables and is also indexed as dim #2 in tensor.
-        SOC, DOC, MBC, EEC =  torch.chunk(c_path_drift_diffusion, state_dim, -1)
+        SOC, DOC, MBC, EEC =  torch.chunk(c_path_drift_diffusion, self.state_dim, -1)
         #Repeat and permute parameter values to match dimension sizes.
-        SAWB_ECA_params_dict_rep = dict((k, v.repeat(1, t_span_tensor_drift_diffusion.size(1), 1).permute(2, 1, 0)) for k, v in SAWB_ECA_params_dict_rep.items())
+        SAWB_ECA_params_dict_rep = dict((k, v.repeat(1, t_span_tensor_drift_diffusion.size(1), 1).permute(2, 1, 0)) for k, v in SAWB_ECA_params_dict.items())
         #Initiate tensor with same dims as c_path_drift_diffusion to assign drift.
         drift = torch.empty_like(c_path_drift_diffusion, device = C_PATH.device)
         #Decay parameters are forced by temperature changes.
@@ -507,7 +507,7 @@ class SAWB_ECA(SBM_SDE):
         i_D_tensor_drift_diffusion = self.i_D[:, 1:, :]
         temp_tensor_drift_diffusion = self.temps[:, 1:, :]
         #Partition SOC, DOC, MBC, EEC values. Split based on final C_PATH dim, which specifies state variables and is also indexed as dim #2 in tensor.
-        SOC_full, DOC_full, MBC_full, EEC_full =  torch.chunk(C_PATH, state_dim, -1)
+        SOC_full, DOC_full, MBC_full, EEC_full =  torch.chunk(C_PATH, self.state_dim, -1)
         SOC = SOC_full[:, :-1, :]
         DOC = DOC_full[:, :-1, :]
         MBC = MBC_full[:, :-1, :]
@@ -518,15 +518,15 @@ class SAWB_ECA(SBM_SDE):
         #Initiate tensor with same dims as C_PATH to assign drift.
         drift = torch.empty_like(c_path_drift_diffusion, device = C_PATH.device)
         #Decay parameters are forced by temperature changes.
-        u_Q_full = linear_temp_dep(SAWB_ECA_params_dict_rep['u_Q_ref'], self.temps, SAWB_ECA_params_dict_rep['Q'], self.temp_ref) #Apply linear temperature-dependence to u_Q.
+        u_Q_full = linear_temp_dep(SAWB_ECA_params_dict_rep_full['u_Q_ref'], self.temps, SAWB_ECA_params_dict_rep_full['Q'], self.temp_ref) #Apply linear temperature-dependence to u_Q.
         u_Q = u_Q_full[:, 1:, :]
-        V_DE_full = arrhenius_temp_dep(SAWB_ECA_params_dict_rep['V_DE_ref'], self.temps, SAWB_ECA_params_dict_rep['Ea_V_DE'], self.temp_ref) #Apply vectorized temperature-dependent transformation to V_DE.
+        V_DE_full = arrhenius_temp_dep(SAWB_ECA_params_dict_rep_full['V_DE_ref'], self.temps, SAWB_ECA_params_dict_rep_full['Ea_V_DE'], self.temp_ref) #Apply vectorized temperature-dependent transformation to V_DE.
         V_DE = V_DE_full[:, 1:, :]
-        V_UE_full = arrhenius_temp_dep(SAWB_ECA_params_dict_rep['V_UE_ref'], self.temps, SAWB_ECA_params_dict_rep['Ea_V_UE'], self.temp_ref) #Apply vectorized temperature-dependent transformation to V_UE.
+        V_UE_full = arrhenius_temp_dep(SAWB_ECA_params_dict_rep_full['V_UE_ref'], self.temps, SAWB_ECA_params_dict_rep_full['Ea_V_UE'], self.temp_ref) #Apply vectorized temperature-dependent transformation to V_UE.
         V_UE = V_UE_full[:, 1:, :]
         #Drift is calculated.
-        drift_SOC = I_S_TENSOR + SAWB_ECA_params_dict_rep['a_MSA'] * SAWB_ECA_params_dict_rep['r_M'] * MBC - ((V_DE * EEC * SOC) / (SAWB_ECA_params_dict_rep['K_DE'] + EEC + SOC))
-        drift_DOC = I_D_TENSOR + (1 - SAWB_ECA_params_dict_rep['a_MSA']) * SAWB_ECA_params_dict_rep['r_M'] * MBC + ((V_DE * EEC * SOC) / (SAWB_ECA_params_dict_rep['K_DE'] + EEC + SOC)) + SAWB_ECA_params_dict_rep['r_L'] * EEC - ((V_UE * MBC * DOC) / (SAWB_ECA_params_dict_rep['K_UE'] + MBC + DOC))
+        drift_SOC = i_S_tensor_drift_diffusion + SAWB_ECA_params_dict_rep['a_MSA'] * SAWB_ECA_params_dict_rep['r_M'] * MBC - ((V_DE * EEC * SOC) / (SAWB_ECA_params_dict_rep['K_DE'] + EEC + SOC))
+        drift_DOC = i_D_tensor_drift_diffusion + (1 - SAWB_ECA_params_dict_rep['a_MSA']) * SAWB_ECA_params_dict_rep['r_M'] * MBC + ((V_DE * EEC * SOC) / (SAWB_ECA_params_dict_rep['K_DE'] + EEC + SOC)) + SAWB_ECA_params_dict_rep['r_L'] * EEC - ((V_UE * MBC * DOC) / (SAWB_ECA_params_dict_rep['K_UE'] + MBC + DOC))
         drift_MBC = (u_Q * (V_UE * MBC * DOC) / (SAWB_ECA_params_dict_rep['K_UE'] + MBC + DOC)) - (SAWB_ECA_params_dict_rep['r_M'] + SAWB_ECA_params_dict_rep['r_E']) * MBC
         drift_EEC = SAWB_ECA_params_dict_rep['r_E'] * MBC - SAWB_ECA_params_dict_rep['r_L'] * EEC
         #Assign elements to drift vector.
