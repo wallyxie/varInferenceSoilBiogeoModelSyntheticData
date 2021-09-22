@@ -133,7 +133,7 @@ net, q_theta, p_theta, obs_model, ELBO_hist, list_parent_loc_scale, SBM_SDE_inst
 
 #Save net and ELBO files.
 now = datetime.now()
-now_string = 'SCON_C_trunc_multi' + now.strftime('_%Y_%m_%d_%H_%M_%S')
+now_string = 'SCON-C_trunc_multi' + now.strftime('_%Y_%m_%d_%H_%M_%S')
 save_string = f'_iter_{niter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_lr_{train_lr}_sd_scale_{prior_scale_factor}_{now_string}.pt'
 outputs_folder = 'training_pt_outputs/'
 net_save_string = os.path.join(outputs_folder, 'net' + save_string)
