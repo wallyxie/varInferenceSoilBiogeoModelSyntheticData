@@ -65,7 +65,7 @@ theta_dist = 'RescaledLogitNormal' #String needs to be exact name of the distrib
 theta_post_dist = 'MultivariateLogitNormal'
 
 #Load logit-normal priors
-priors_file = 'generated_data/SCON_C_logit_alt_sample_y_t_1000_dt_0-005_sd_scale_0-333_hyperparams.pt'
+priors_file = 'generated_data/SCON-C_CO2_logit_alt_sample_y_t_1000_dt_0-01_sd_scale_0-333_hyperparams.pt'
 SCON_C_priors_details = {k: v.to(active_device) for k, v in torch.load(priors_file).items()}
 
 #Initial condition prior means
