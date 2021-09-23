@@ -49,10 +49,10 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-niter = 300000
+niter = 250000
 train_lr = 2e-5 #ELBO learning rate
-batch_size = 35 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
-eval_batch_size = 35
+batch_size = 45 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
+eval_batch_size = 45
 obs_error_scale = 0.1 #Observation (y) standard deviation.
 prior_scale_factor = 0.333 #Proportion of prior standard deviation to prior means.
 num_layers = 5 #5 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
@@ -77,10 +77,10 @@ Ea_V_UE_mean = 55
 r_M_mean = 0.002
 r_E_mean = 0.00024
 r_L_mean = 0.0003
-s_SOC_mean = 0.002
-s_DOC_mean = 0.002
-s_MBC_mean = 0.002
-s_EEC_mean = 0.002
+s_SOC_mean = 0.004
+s_DOC_mean = 0.004
+s_MBC_mean = 0.004
+s_EEC_mean = 0.004
 
 #SAWB-ECA theta truncated normal distribution parameter details in order of mean, sdev, lower, and upper.
 u_Q_ref_details = torch.Tensor([u_Q_ref_mean, u_Q_ref_mean * prior_scale_factor, 0, 1])
@@ -168,5 +168,5 @@ net.eval()
 x, _ = net(eval_batch_size)
 plots_folder = 'training_plots/'
 plot_elbo(ELBO_hist, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, xmin = int(niter * 0.2))
-plot_states_post(x, q_theta, obs_model, SBM_SDE_instance, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, learn_CO2, ymin_list = [0, 0, 0, 0, 0], ymax_list = [100., 2.5, 12., 2., 0.18])
+plot_states_post(x, q_theta, obs_model, SBM_SDE_instance, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, learn_CO2, ymin_list = [0, 0, 0, 0, 0], ymax_list = [100., 4., 14., 3.5, 0.25])
 plot_theta(p_theta, q_theta, true_theta, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string)
