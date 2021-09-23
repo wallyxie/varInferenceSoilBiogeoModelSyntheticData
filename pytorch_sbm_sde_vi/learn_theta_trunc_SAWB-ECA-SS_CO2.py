@@ -49,10 +49,10 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-niter = 290000
-train_lr = 2e-5 #ELBO learning rate
-batch_size = 40 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
-eval_batch_size = 40
+niter = 250000
+train_lr = 9e-6 #ELBO learning rate
+batch_size = 45 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
+eval_batch_size = 45
 obs_error_scale = 0.1 #Observation (y) standard deviation.
 prior_scale_factor = 0.333 #Proportion of prior standard deviation to prior means.
 num_layers = 5 #5 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
@@ -65,18 +65,18 @@ learn_CO2 = True
 theta_dist = 'TruncatedNormal' #String needs to be exact name of the distribution class. Options are 'TruncatedNormal' and 'RescaledLogitNormal'.
 
 #Parameter prior means
-u_Q_ref_mean = 0.2
+u_Q_ref_mean = 0.3
 Q_mean = 0.001
 a_MSA_mean = 0.5
-K_DE_mean = 1850
-K_UE_mean = 0.2
-V_DE_ref_mean = 0.16
-V_UE_ref_mean = 0.012
-Ea_V_DE_mean = 65
+K_DE_mean = 1600
+K_UE_mean = 0.1
+V_DE_ref_mean = 0.38
+V_UE_ref_mean = 0.04
+Ea_V_DE_mean = 60
 Ea_V_UE_mean = 55
-r_M_mean = 0.0018
-r_E_mean = 0.00003
-r_L_mean = 0.000008
+r_M_mean = 0.002
+r_E_mean = 0.00024
+r_L_mean = 0.0003
 s_SOC_mean = 0.005
 s_DOC_mean = 0.005
 s_MBC_mean = 0.005
@@ -93,8 +93,8 @@ V_UE_ref_details = torch.Tensor([V_UE_ref_mean, V_UE_ref_mean * prior_scale_fact
 Ea_V_DE_details = torch.Tensor([Ea_V_DE_mean, Ea_V_DE_mean * prior_scale_factor, 10, 150])
 Ea_V_UE_details = torch.Tensor([Ea_V_UE_mean, Ea_V_UE_mean * prior_scale_factor, 10, 150])
 r_M_details = torch.Tensor([r_M_mean, r_M_mean * prior_scale_factor, 0, 1])
-r_E_details = torch.Tensor([r_E_mean, r_M_mean * prior_scale_factor, 0, 1])
-r_L_details = torch.Tensor([r_L_mean, r_M_mean * prior_scale_factor, 0, 1])
+r_E_details = torch.Tensor([r_E_mean, r_E_mean * prior_scale_factor, 0, 1])
+r_L_details = torch.Tensor([r_L_mean, r_L_mean * prior_scale_factor, 0, 1])
 
 #SAWB-ECA-SS diffusion matrix parameter distribution details
 s_SOC_details = torch.Tensor([s_SOC_mean, s_SOC_mean * prior_scale_factor, 0, 1])
@@ -168,5 +168,5 @@ net.eval()
 x, _ = net(eval_batch_size)
 plots_folder = 'training_plots/'
 plot_elbo(ELBO_hist, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, xmin = int(niter * 0.2))
-plot_states_post(x, q_theta, obs_model, SBM_SDE_instance, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, learn_CO2, ymin_list = [0, 0, 0, 0, 0], ymax_list = [100., 8, 10., 4., 0.15])
+plot_states_post(x, q_theta, obs_model, SBM_SDE_instance, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, learn_CO2, ymin_list = [0, 0, 0, 0, 0], ymax_list = [110., 3.5, 12., 3., 0.15])
 plot_theta(p_theta, q_theta, true_theta, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string)
