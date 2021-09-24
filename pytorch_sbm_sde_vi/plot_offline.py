@@ -26,7 +26,7 @@ def plot_theta(p_theta_file, q_theta_file, true_theta_file, fig_file,
         q_dist = RescaledLogitNormal(loc, scale, a = lower, b = upper) # marginal
     else:
         loc = q_theta.means
-        scale = torch.max(q_theta.sds, torch.tensor(1e-6))
+        scale = torch.max(q_theta.sds, torch.tensor(1e-8))
         lower = q_theta.lowers
         upper = q_theta.uppers
         q_dist = q_theta.dist(loc, scale, a = lower, b = upper)
