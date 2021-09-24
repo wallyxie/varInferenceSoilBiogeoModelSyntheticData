@@ -50,7 +50,7 @@ temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
 niter = 250000
-train_lr = 1e-6 #ELBO learning rate
+train_lr = 2e-5 #ELBO learning rate
 batch_size = 45 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
 eval_batch_size = 45
 obs_error_scale = 0.1 #Observation (y) standard deviation.
@@ -65,22 +65,22 @@ learn_CO2 = True
 theta_dist = 'TruncatedNormal' #String needs to be exact name of the distribution class. Options are 'TruncatedNormal' and 'RescaledLogitNormal'.
 
 #Parameter prior means
-u_Q_ref_mean = 0.3
+u_Q_ref_mean = 0.25
 Q_mean = 0.001
 a_MSA_mean = 0.5
-K_DE_mean = 1600
+K_DE_mean = 1000
 K_UE_mean = 0.1
 V_DE_ref_mean = 0.38
 V_UE_ref_mean = 0.04
-Ea_V_DE_mean = 60
-Ea_V_UE_mean = 55
+Ea_V_DE_mean = 55
+Ea_V_UE_mean = 50
 r_M_mean = 0.002
-r_E_mean = 0.00024
-r_L_mean = 0.0003
-s_SOC_mean = 0.005
-s_DOC_mean = 0.005
-s_MBC_mean = 0.005
-s_EEC_mean = 0.005
+r_E_mean = 0.000024
+r_L_mean = 0.000015
+s_SOC_mean = 0.001
+s_DOC_mean = 0.001
+s_MBC_mean = 0.001
+s_EEC_mean = 0.001
 
 #SAWB-ECA theta truncated normal distribution parameter details in order of mean, sdev, lower, and upper.
 u_Q_ref_details = torch.Tensor([u_Q_ref_mean, u_Q_ref_mean * prior_scale_factor, 0, 1])
