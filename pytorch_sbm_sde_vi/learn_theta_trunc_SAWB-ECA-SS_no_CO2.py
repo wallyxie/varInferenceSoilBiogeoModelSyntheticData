@@ -50,7 +50,7 @@ temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
 niter = 220000
-train_lr = 2e-5 #ELBO learning rate
+train_lr = 5e-4 #ELBO learning rate
 batch_size = 35 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
 eval_batch_size = 35
 obs_error_scale = 0.1 #Observation (y) standard deviation.
@@ -61,7 +61,7 @@ num_layers = 6 #5 - number needed to fit UCI HPC3 RAM requirements with 16 GB RA
 state_dim_SAWB_ECA = 4
 SBM_SDE_class = 'SAWB-ECA'
 diffusion_type = 'SS'
-learn_CO2 = True
+learn_CO2 = False
 theta_dist = 'TruncatedNormal' #String needs to be exact name of the distribution class. Options are 'TruncatedNormal' and 'RescaledLogitNormal'.
 
 #Parameter prior means
@@ -118,7 +118,7 @@ i_s_tensor = i_s(t_span_tensor).to(active_device) #Exogenous SOC input function
 i_d_tensor = i_d(t_span_tensor).to(active_device) #Exogenous DOC input function
 
 #Generate observation model.
-csv_data_path = os.path.join('generated_data/', 'SAWB-ECA-SS_CO2_trunc_sample_y_t_1000_dt_0-01_sd_scale_0-333.csv')
+csv_data_path = os.path.join('generated_data/', 'SAWB-ECA-SS_no_CO2_trunc_sample_y_t_1000_dt_0-01_sd_scale_0-333.csv')
 
 #Call training loop function for SCON-C.
 net, q_theta, p_theta, obs_model, ELBO_hist, list_parent_loc_scale, SBM_SDE_instance = train2(
@@ -126,7 +126,7 @@ net, q_theta, p_theta, obs_model, ELBO_hist, list_parent_loc_scale, SBM_SDE_inst
         csv_data_path, obs_error_scale, t, dt_flow, n, 
         t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
         SBM_SDE_class, diffusion_type, x0_prior_SAWB_ECA, SAWB_ECA_SS_priors_details, learn_CO2,
-        theta_dist, BYPASS_NAN = True, LR_DECAY = 0.88, DECAY_STEP_SIZE = 25000, PRINT_EVERY = 50)
+        theta_dist, BYPASS_NAN = False, LR_DECAY = 0.88, DECAY_STEP_SIZE = 25000, PRINT_EVERY = 50)
 
 #Save net and ELBO files.
 now = datetime.now()
