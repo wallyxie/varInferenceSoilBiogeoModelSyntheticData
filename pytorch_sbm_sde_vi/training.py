@@ -141,12 +141,22 @@ def train1(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
     
     #Training loop
     with tqdm(total = NITER, desc = f'Learning SDE and hidden parameters.', position = -1) as tq:
+        torch.autograd.set_detect_anomaly(True)        
         for it in range(NITER):
             net.train()
             C_PATH, log_prob = net(BATCH_SIZE) #Obtain paths with solutions to times including t0.
             
+            # if torch.isnan(C_PATH).any():
+            #     raise ValueError(f'nan in x at niter: {it}. Try reducing learning rate to start.')
+
+            #Check for NaNs in x.
+            nan_count = 0
             if torch.isnan(C_PATH).any():
-                raise ValueError(f'nan in x at niter: {it}. Try reducing learning rate to start.')
+                nan_count += 1
+                print(f'nan_count = {nan_count}')
+                print(f'Warning. NaN in x at niter: {it}. Using `torch.nan_to_num` to bypass. Check gradient clipping and learning rate.')
+                C_PATH = torch.nan_to_num(C_PATH)
+
             
             # if it <= PRETRAIN_ITER:
             #     pretrain_optimizer.zero_grad()
@@ -213,7 +223,7 @@ def train1(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
                 print('\nparent_loc_scale_dict: ', parent_loc_scale_dict)
 
             ELBO.backward()
-            torch.nn.utils.clip_grad_norm_(ELBO_params, 5.0)
+            torch.nn.utils.clip_grad_norm_(ELBO_params, 3.0)
             ELBO_optimizer.step()
         
             if it % DECAY_STEP_SIZE == 0:
@@ -294,12 +304,21 @@ def train2(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
     
     #Training loop
     with tqdm(total = NITER, desc = f'Learning SDE and hidden parameters.', position = -1) as tq:
+        torch.autograd.set_detect_anomaly(True)
         for it in range(NITER):
             net.train()
             C_PATH, log_prob = net(BATCH_SIZE) #Obtain paths with solutions to times including t0.
             
+            # if torch.isnan(C_PATH).any():
+            #     raise ValueError(f'nan in x at niter: {it}. Try reducing learning rate to start.')
+
+            #Check for NaNs in x.
+            nan_count = 0
             if torch.isnan(C_PATH).any():
-                raise ValueError(f'nan in x at niter: {it}. Try reducing learning rate to start.')
+                nan_count += 1
+                print(f'nan_count = {nan_count}')
+                print(f'Warning. NaN in x at niter: {it}. Using `torch.nan_to_num` to bypass. Check gradient clipping and learning rate.')
+                C_PATH = torch.nan_to_num(C_PATH)
             
             # if it <= PRETRAIN_ITER:
             #     pretrain_optimizer.zero_grad()
