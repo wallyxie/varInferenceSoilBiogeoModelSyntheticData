@@ -91,29 +91,36 @@ def plot_theta(p_theta, q_theta, true_theta, niter, t, dt, batch_size, eval_batc
     # Compute prior and posterior densities at points x
     num_pts = 10000000
     x = torch.zeros([num_pts, loc.size(0)]) #Examining densities as we move through distribution supports. So torch.Size([bins, parameters]) is desired size of x.
+    x0 = torch.min(q_dist.mean - 4 * q_dist.stddev, p_dist.mean - 4 * p_dist.stddev)
+    x0 = torch.max(x0, lower).detach()
+
+    x1 = torch.max(q_dist.mean + 4 * q_dist.stddev, p_dist.mean + 4 * p_dist.stddev)
+    x1 = torch.min(x1, upper).detach()
+
     for param_index in range(0, loc.size(0)):
-        x[:, param_index] = torch.linspace(lower[param_index], upper[param_index], num_pts)
+        x[:, param_index] = torch.linspace(x0[param_index], x1[param_index], num_pts)
+
     pdf_prior = torch.exp(p_dist.log_prob(x)).detach()
     pdf_post = torch.exp(q_dist.log_prob(x)).detach()
 
-    #Find appropriate plotting range of x based on pdf density concentration (where pdf > 1 for prior and post).    
-    prior_first_one_indices = torch.zeros(loc.size(0))
-    prior_last_one_indices = torch.zeros(loc.size(0))
-    post_first_one_indices = torch.zeros(loc.size(0))
-    post_last_one_indices = torch.zeros(loc.size(0))
-    for param_index in range(0, loc.size(0)):
-        prior_geq_ones = pdf_prior[:, param_index] >= 1e-6 #Find pdf values >= 1 in prior.
-        prior_cumsum = prior_geq_ones.cumsum(axis = -1) #Cumsum over all true values.
-        prior_min_index = prior_cumsum.min(0).indices
-        prior_max_index = prior_cumsum.max(0).indices
-        prior_first_one_indices[param_index] = prior_min_index
-        prior_last_one_indices[param_index] = prior_max_index
-        post_geq_ones = pdf_post[:, param_index] >= 1e-6 #Find pdf values >= 1 in posterior.
-        post_cumsum = post_geq_ones.cumsum(axis = -1) #Cumsum over all true values.
-        post_min_index = post_cumsum.min(0).indices
-        post_max_index = post_cumsum.max(0).indices 
-        post_first_one_indices[param_index] = post_min_index
-        post_last_one_indices[param_index] = post_max_index
+    # #Find appropriate plotting range of x based on pdf density concentration (where pdf > 1 for prior and post).    
+    # prior_first_one_indices = torch.zeros(loc.size(0))
+    # prior_last_one_indices = torch.zeros(loc.size(0))
+    # post_first_one_indices = torch.zeros(loc.size(0))
+    # post_last_one_indices = torch.zeros(loc.size(0))
+    # for param_index in range(0, loc.size(0)):
+    #     prior_geq_ones = pdf_prior[:, param_index] >= 1e-6 #Find pdf values >= 1 in prior.
+    #     prior_cumsum = prior_geq_ones.cumsum(axis = -1) #Cumsum over all true values.
+    #     prior_min_index = prior_cumsum.min(0).indices
+    #     prior_max_index = prior_cumsum.max(0).indices
+    #     prior_first_one_indices[param_index] = prior_min_index
+    #     prior_last_one_indices[param_index] = prior_max_index
+    #     post_geq_ones = pdf_post[:, param_index] >= 1e-6 #Find pdf values >= 1 in posterior.
+    #     post_cumsum = post_geq_ones.cumsum(axis = -1) #Cumsum over all true values.
+    #     post_min_index = post_cumsum.min(0).indices
+    #     post_max_index = post_cumsum.max(0).indices 
+    #     post_first_one_indices[param_index] = post_min_index
+    #     post_last_one_indices[param_index] = post_max_index
 
     # Plot
     num_params = len(loc)
@@ -125,11 +132,11 @@ def plot_theta(p_theta, q_theta, true_theta, niter, t, dt, batch_size, eval_batc
         for j, ax in enumerate(row):
             if param_index < num_params:
                 key = q_theta.keys[param_index]
-                ax.plot(x[int(prior_first_one_indices[param_index]): int(prior_last_one_indices[param_index]), param_index].detach().cpu().numpy(), pdf_prior[int(prior_first_one_indices[param_index]): int(prior_last_one_indices[param_index]), param_index].detach().cpu().numpy(), label='Prior $p(\\theta)$')
-                ax.plot(x[int(post_first_one_indices[param_index]): int(post_last_one_indices[param_index]), param_index].detach().cpu().numpy(), pdf_post[int(post_first_one_indices[param_index]): int(post_last_one_indices[param_index]), param_index].detach().cpu().numpy(), label='Approximate posterior $q(\\theta)$')
+                ax.plot(x[:, param_index], pdf_prior[:, param_index], label='Prior $p(\\theta)$')
+                ax.plot(x[:, param_index], pdf_post[:, param_index], label='Approximate posterior $q(\\theta)$')
                 ax.axvline(true_theta[key], color='gray', label='True $\\theta$')
                 ax.set_xlabel(key)
-                ax.set_ylabel('Density')
+                ax.set_ylabel('density')
             elif param_index == num_params:
                 handles, labels = axes[0, 0].get_legend_handles_labels()
                 ax.legend(handles, labels, loc='center')
