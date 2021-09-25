@@ -140,9 +140,9 @@ def train1(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
     ELBO_optimizer = optim.Adamax(ELBO_params, lr = ELBO_LR)
     
     #Training loop
+    if BYPASS_NAN:
+        torch.autograd.set_detect_anomaly(True)
     with tqdm(total = NITER, desc = f'Learning SDE and hidden parameters.', position = -1) as tq:
-        if BYPASS_NAN:
-            torch.autograd.set_detect_anomaly(True)
         for it in range(NITER):
             net.train()
             C_PATH, log_prob = net(BATCH_SIZE) #Obtain paths with solutions to times including t0.
@@ -304,9 +304,9 @@ def train2(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
     ELBO_optimizer = optim.Adamax(ELBO_params, lr = ELBO_LR)
     
     #Training loop
-    with tqdm(total = NITER, desc = f'Learning SDE and hidden parameters.', position = -1) as tq:
-        if BYPASS_NAN:
+    if BYPASS_NAN:
             torch.autograd.set_detect_anomaly(True)
+    with tqdm(total = NITER, desc = f'Learning SDE and hidden parameters.', position = -1) as tq:
         for it in range(NITER):
             net.train()
             C_PATH, log_prob = net(BATCH_SIZE) #Obtain paths with solutions to times including t0.

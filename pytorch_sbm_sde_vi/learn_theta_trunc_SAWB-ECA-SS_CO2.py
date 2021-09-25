@@ -55,7 +55,7 @@ batch_size = 35 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB R
 eval_batch_size = 35
 obs_error_scale = 0.1 #Observation (y) standard deviation.
 prior_scale_factor = 0.333 #Proportion of prior standard deviation to prior means.
-num_layers = 5 #5 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
+num_layers = 6 #5 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
 
 #Specify desired SBM SDE model type and details.
 state_dim_SAWB_ECA = 4
@@ -126,7 +126,7 @@ net, q_theta, p_theta, obs_model, ELBO_hist, list_parent_loc_scale, SBM_SDE_inst
         csv_data_path, obs_error_scale, t, dt_flow, n, 
         t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
         SBM_SDE_class, diffusion_type, x0_prior_SAWB_ECA, SAWB_ECA_SS_priors_details, learn_CO2,
-        theta_dist, BYPASS_NAN = True, LR_DECAY = 0.88, DECAY_STEP_SIZE = 25000, PRINT_EVERY = 50)
+        theta_dist, BYPASS_NAN = False, LR_DECAY = 0.88, DECAY_STEP_SIZE = 25000, PRINT_EVERY = 50)
 
 #Save net and ELBO files.
 now = datetime.now()
