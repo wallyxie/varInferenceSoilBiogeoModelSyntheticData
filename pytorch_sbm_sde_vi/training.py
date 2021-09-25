@@ -140,8 +140,8 @@ def train1(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
     ELBO_optimizer = optim.Adamax(ELBO_params, lr = ELBO_LR)
     
     #Training loop
-    if BYPASS_NAN:
-        torch.autograd.set_detect_anomaly(True)
+    # if BYPASS_NAN:
+    #     torch.autograd.set_detect_anomaly(True)
     with tqdm(total = NITER, desc = f'Learning SDE and hidden parameters.', position = -1) as tq:
         for it in range(NITER):
             net.train()
@@ -304,8 +304,8 @@ def train2(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
     ELBO_optimizer = optim.Adamax(ELBO_params, lr = ELBO_LR)
     
     #Training loop
-    if BYPASS_NAN:
-            torch.autograd.set_detect_anomaly(True)
+    # if BYPASS_NAN:
+    #         torch.autograd.set_detect_anomaly(True)
     with tqdm(total = NITER, desc = f'Learning SDE and hidden parameters.', position = -1) as tq:
         for it in range(NITER):
             net.train()
