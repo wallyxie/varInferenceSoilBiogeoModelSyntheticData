@@ -89,7 +89,7 @@ def plot_theta(p_theta, q_theta, true_theta, niter, t, dt, batch_size, eval_batc
         q_dist = q_theta.dist(loc, scale, a = lower, b = upper)
     
     # Compute prior and posterior densities at points x
-    num_pts = 10000000
+    num_pts = 1000000
     x = torch.zeros([num_pts, loc.size(0)]) #Examining densities as we move through distribution supports. So torch.Size([bins, parameters]) is desired size of x.
     x0 = torch.min(q_dist.mean - 4 * q_dist.stddev, p_dist.mean - 4 * p_dist.stddev)
     x0 = torch.max(x0, lower).detach()
@@ -100,8 +100,9 @@ def plot_theta(p_theta, q_theta, true_theta, niter, t, dt, batch_size, eval_batc
     for param_index in range(0, loc.size(0)):
         x[:, param_index] = torch.linspace(x0[param_index], x1[param_index], num_pts)
 
-    pdf_prior = torch.exp(p_dist.log_prob(x)).detach()
-    pdf_post = torch.exp(q_dist.log_prob(x)).detach()
+    pdf_prior = torch.exp(p_dist.log_prob(x)).detach().cpu()
+    pdf_post = torch.exp(q_dist.log_prob(x)).detach().cpu()
+    x = x.detach().cpu()
 
     # #Find appropriate plotting range of x based on pdf density concentration (where pdf > 1 for prior and post).    
     # prior_first_one_indices = torch.zeros(loc.size(0))
@@ -136,7 +137,7 @@ def plot_theta(p_theta, q_theta, true_theta, niter, t, dt, batch_size, eval_batc
                 ax.plot(x[:, param_index], pdf_post[:, param_index], label='Approximate posterior $q(\\theta)$')
                 ax.axvline(true_theta[key], color='gray', label='True $\\theta$')
                 ax.set_xlabel(key)
-                ax.set_ylabel('density')
+                ax.set_ylabel('Density')
             elif param_index == num_params:
                 handles, labels = axes[0, 0].get_legend_handles_labels()
                 ax.legend(handles, labels, loc='center')
