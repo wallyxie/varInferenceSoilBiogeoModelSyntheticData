@@ -92,7 +92,7 @@ net, q_theta, p_theta, obs_model, ELBO_hist, list_parent_loc_scale, SBM_SDE_inst
         t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
         SBM_SDE_class, diffusion_type, x0_prior_SCON, SCON_C_priors_details, learn_CO2,
         THETA_DIST=theta_dist, THETA_POST_DIST=theta_post_dist,
-        LR_DECAY = 0.8, DECAY_STEP_SIZE = 25000, PRINT_EVERY = 50)
+        BYPASS_NAN = False, LR_DECAY = 0.9, DECAY_STEP_SIZE = 25000, PRINT_EVERY = 50)
 
 #Save net and ELBO files.
 now = datetime.now()
