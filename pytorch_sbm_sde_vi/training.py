@@ -141,7 +141,8 @@ def train1(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
     
     #Training loop
     with tqdm(total = NITER, desc = f'Learning SDE and hidden parameters.', position = -1) as tq:
-        torch.autograd.set_detect_anomaly(True)        
+        if BYPASS_NAN:
+            torch.autograd.set_detect_anomaly(True)
         for it in range(NITER):
             net.train()
             C_PATH, log_prob = net(BATCH_SIZE) #Obtain paths with solutions to times including t0.
@@ -304,7 +305,8 @@ def train2(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
     
     #Training loop
     with tqdm(total = NITER, desc = f'Learning SDE and hidden parameters.', position = -1) as tq:
-        torch.autograd.set_detect_anomaly(True)
+        if BYPASS_NAN:
+            torch.autograd.set_detect_anomaly(True)
         for it in range(NITER):
             net.train()
             C_PATH, log_prob = net(BATCH_SIZE) #Obtain paths with solutions to times including t0.
