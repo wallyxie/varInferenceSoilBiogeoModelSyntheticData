@@ -104,7 +104,7 @@ def plot_theta(p_theta_file, q_theta_file, true_theta_file, fig_file,
 
 def plot_states(net_file, kf_file, fig_file, fig_dir='figs', num_samples=10,
                 summarize_net=True, ymin_list=None, ymax_list=None, device=torch.device('cpu'),
-                q_theta_file=None, SBM_SDE=None, temp_ref=283, temp_rise=5):
+                q_theta_file=None, SBM_SDE_file=None):
     # Load net object
     net = torch.load(net_file, map_location=device)
     obs_model, state_dim, t, dt = net.obs_model, net.state_dim, net.t, net.dt
@@ -119,15 +119,20 @@ def plot_states(net_file, kf_file, fig_file, fig_dir='figs', num_samples=10,
     net.eval()
     x = net(num_samples)[0].detach()
     
-    # If learn_co2, deterministically compute CO2 based on sampled x and theta
+    # If learn_co2, deterministically compute CO2 given sampled x and theta
     if learn_co2:    
-        n = int(t / dt) + 1
-        t_span = np.linspace(0, t, n)
-        t_span_tensor = torch.reshape(torch.Tensor(t_span), [1, n, 1])
-        temp_tensor = temp_gen(t_span_tensor, temp_ref, temp_rise)
+        #n = int(t / dt) + 1
+        #t_span = np.linspace(0, t, n)
+        #t_span_tensor = torch.reshape(torch.Tensor(t_span), [1, n, 1])
+        #temp_tensor = temp_gen(t_span_tensor, temp_ref, temp_rise)
 
+        # Draw theta samples
         q_theta = torch.load(q_theta_file, map_location=device)
         theta_samples, _, _, _ = q_theta(num_samples)
+
+        # Compute CO2
+        SBM_SDE = torch.load(SBM_SDE_file, map_location=device)
+        temp_tensor, temp_ref = SBM_SDE.temps, SBM_SDE.temp_ref
         x = SBM_SDE.add_CO2(x, theta_samples, temp_tensor, temp_ref).detach() # add CO2 to x tensor
     
     # Define figure and axes objects
