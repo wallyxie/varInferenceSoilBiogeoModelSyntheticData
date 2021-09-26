@@ -76,7 +76,7 @@ def train1(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
         SBM_SDE_CLASS: str, DIFFUSION_TYPE: str,
         INIT_PRIOR, PRIOR_DIST_DETAILS_DICT, LEARN_CO2 = False,
         THETA_DIST = None, THETA_POST_DIST = None, THETA_POST_INIT = None,
-        LR_DECAY = 0.8, DECAY_STEP_SIZE = 50000, PRINT_EVERY = 100):
+        BYPASS_NAN = False, LR_DECAY = 0.8, DECAY_STEP_SIZE = 50000, PRINT_EVERY = 100):
 
     # if PRETRAIN_ITER >= NITER:
     #     raise ValueError('PRETRAIN_ITER must be < NITER.')
@@ -140,13 +140,24 @@ def train1(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
     ELBO_optimizer = optim.Adamax(ELBO_params, lr = ELBO_LR)
     
     #Training loop
+    # if BYPASS_NAN:
+    #     torch.autograd.set_detect_anomaly(True)
     with tqdm(total = NITER, desc = f'Learning SDE and hidden parameters.', position = -1) as tq:
         for it in range(NITER):
             net.train()
             C_PATH, log_prob = net(BATCH_SIZE) #Obtain paths with solutions to times including t0.
             
+            #NaN handling            
+            nan_count = 0
+            #Check for NaNs in x.
             if torch.isnan(C_PATH).any():
-                raise ValueError(f'nan in x at niter: {it}. Try reducing learning rate to start.')
+                if BYPASS_NAN:
+                    nan_count += 1
+                    print(f'nan_count = {nan_count}')
+                    print(f'Warning. NaN in x at niter: {it}. Using `torch.nan_to_num` to bypass. Check gradient clipping and learning rate to start.')
+                    C_PATH = torch.nan_to_num(C_PATH)
+                else:
+                    raise ValueError(f'nan in x at niter: {it}. Check gradient clipping and learning rate to start.')
             
             # if it <= PRETRAIN_ITER:
             #     pretrain_optimizer.zero_grad()
@@ -213,7 +224,7 @@ def train1(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
                 print('\nparent_loc_scale_dict: ', parent_loc_scale_dict)
 
             ELBO.backward()
-            torch.nn.utils.clip_grad_norm_(ELBO_params, 5.0)
+            torch.nn.utils.clip_grad_norm_(ELBO_params, 3.0)
             ELBO_optimizer.step()
         
             if it % DECAY_STEP_SIZE == 0:
@@ -229,7 +240,7 @@ def train2(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
         SBM_SDE_CLASS: str, DIFFUSION_TYPE: str,
         INIT_PRIOR, PRIOR_DIST_DETAILS_DICT, LEARN_CO2 = False,
         THETA_DIST = None, THETA_POST_DIST = None, THETA_POST_INIT = None,
-        LR_DECAY = 0.8, DECAY_STEP_SIZE = 50000, PRINT_EVERY = 100):
+        BYPASS_NAN = False, LR_DECAY = 0.8, DECAY_STEP_SIZE = 50000, PRINT_EVERY = 100):
 
     # if PRETRAIN_ITER >= NITER:
     #     raise ValueError('PRETRAIN_ITER must be < NITER.')
@@ -293,13 +304,24 @@ def train2(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
     ELBO_optimizer = optim.Adamax(ELBO_params, lr = ELBO_LR)
     
     #Training loop
+    # if BYPASS_NAN:
+    #         torch.autograd.set_detect_anomaly(True)
     with tqdm(total = NITER, desc = f'Learning SDE and hidden parameters.', position = -1) as tq:
         for it in range(NITER):
             net.train()
             C_PATH, log_prob = net(BATCH_SIZE) #Obtain paths with solutions to times including t0.
             
+            #NaN handling            
+            nan_count = 0
+            #Check for NaNs in x.
             if torch.isnan(C_PATH).any():
-                raise ValueError(f'nan in x at niter: {it}. Try reducing learning rate to start.')
+                if BYPASS_NAN:
+                    nan_count += 1
+                    print(f'nan_count = {nan_count}')
+                    print(f'Warning. NaN in x at niter: {it}. Using `torch.nan_to_num` to bypass. Check gradient clipping and learning rate to start.')
+                    C_PATH = torch.nan_to_num(C_PATH)
+                else:
+                    raise ValueError(f'nan in x at niter: {it}. Check gradient clipping and learning rate to start.')
             
             # if it <= PRETRAIN_ITER:
             #     pretrain_optimizer.zero_grad()
