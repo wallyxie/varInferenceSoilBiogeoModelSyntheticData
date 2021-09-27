@@ -224,7 +224,7 @@ def train1(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
                 print('\nparent_loc_scale_dict: ', parent_loc_scale_dict)
 
             ELBO.backward()
-            torch.nn.utils.clip_grad_norm_(ELBO_params, 3.0)
+            torch.nn.utils.clip_grad_norm_(ELBO_params, 5.0)
             ELBO_optimizer.step()
         
             if it % DECAY_STEP_SIZE == 0:
