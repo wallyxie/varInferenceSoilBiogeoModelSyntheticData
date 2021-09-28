@@ -65,7 +65,7 @@ learn_CO2 = True
 theta_dist = 'RescaledLogitNormal' #String needs to be exact name of the distribution class. Options are 'TruncatedNormal' and 'RescaledLogitNormal'.
 
 #Load parameterization of priors.
-priors_file = 'generated_data/SCON-SS_CO2_logit_alt_2021_09_27_18_54_sample_y_t_1000_dt_0-01_sd_scale_0-333_rsample.pt'
+priors_file = 'generated_data/SCON-SS_CO2_logit_alt_2021_09_27_18_54_sample_y_t_1000_dt_0-01_sd_scale_0-333_hyperparams.pt'
 SCON_SS_priors_details = {k: v.to(active_device) for k, v in torch.load(priors_file).items()}
 
 #Initial condition prior means
