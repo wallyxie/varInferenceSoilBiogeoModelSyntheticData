@@ -16,7 +16,7 @@ import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
 
-#Model-specific module imports
+#Module imports
 from SBM_SDE_classes import *
 from obs_and_flow import *
 from training import *

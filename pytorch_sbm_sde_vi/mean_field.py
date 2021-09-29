@@ -6,7 +6,7 @@ from TruncatedNormal import *
 from LogitNormal import *
 from torch.autograd import Function
 
-#Model-specific imports
+#Module imports
 from obs_and_flow import LowerBound
 
 '''
