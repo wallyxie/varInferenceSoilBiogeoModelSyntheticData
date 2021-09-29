@@ -17,7 +17,7 @@ import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
 
-#Module module imports
+#Module imports
 from SBM_SDE_classes import *
 from obs_and_flow import *
 from training import *
@@ -37,7 +37,7 @@ if torch.cuda.is_available():
     torch.set_default_tensor_type('torch.cuda.FloatTensor')
 torch.set_printoptions(precision = 8)
 
-#Neural SDE parameters
+#IAF SSM time parameters
 dt_flow = 1.0 #Increased from 0.1 to reduce memory.
 t = 1000 #In hours.
 n = int(t / dt_flow) + 1
