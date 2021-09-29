@@ -46,10 +46,12 @@ eval_batch_size = 45
 obs_error_scale = 0.1 #Observation (y) standard deviation.
 prior_scale_factor = 0.333 #Proportion of prior standard deviation to prior means.
 num_layers = 5 #5 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
+learn_CO2 = True
 
 now_string = 'SCON-SS_CO2_trunc_2021_09_28_11_32_36'
 outputs_folder = 'training_pt_outputs/'
-save_string = 'iter_250000_t_1000_dt_1.0_batch_45_layers_5_lr_2e-05_sd_scale_0.333_SCON-SS_CO2_trunc_2021_09_28_11_32_36'
+plots_folder = 'training_plots/'
+save_string = '_iter_250000_t_1000_dt_1.0_batch_45_layers_5_lr_2e-05_sd_scale_0.333_SCON-SS_CO2_trunc_2021_09_28_11_32_36.pt'
 
 net_save_string = os.path.join(outputs_folder, 'net' + save_string)
 q_theta_save_string = os.path.join(outputs_folder, 'q_theta' + save_string)
@@ -65,11 +67,12 @@ q_theta = torch.load(q_theta_save_string)
 q_theta.to(active_device)
 obs_model = torch.load(obs_model_save_string)
 obs_model.to(active_device)
+SBM_SDE_instance = torch.load(SBM_SDE_instance_save_string)
 true_theta = torch.load('generated_data/SCON-SS_CO2_trunc_2021_09_27_18_01_sample_y_t_1000_dt_0-01_sd_scale_0-333_rsample.pt', map_location = active_device)
 
 #Plot training posterior results and ELBO history.
 net.eval()
 x, _ = net(eval_batch_size)
 
-plot_states_post(x, q_theta, obs_model, SBM_SDE_instance, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, learn_CO2, ymin_list = [0, 0, 0, 0], ymax_list = [100., 15., 15., 0.1])
+plot_states_post(x, q_theta, obs_model, SBM_SDE_instance, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, learn_CO2, ymin_list = [0, 0, 0, 0], ymax_list = [100., 20., 16., 0.12])
 plot_theta(p_theta, q_theta, true_theta, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string)
