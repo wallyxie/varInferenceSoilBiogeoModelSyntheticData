@@ -141,7 +141,7 @@ class SCON(SBM_SDE):
         i_D_tensor_drift_diffusion = self.i_D[:, 1:, :]
         temp_tensor_drift_diffusion = self.temps[:, 1:, :]
         #Partition SOC, DOC, MBC values. Split based on final c_path_drift_diffusion dim, which specifies state variables and is also indexed as dim #2 in tensor. 
-        SOC, DOC, MBC =  torch.chunk(c_path_drift_diffusion, self.state_dim, -1)
+        SOC, DOC, MBC = torch.chunk(c_path_drift_diffusion, self.state_dim, -1)
         #Repeat and permute parameter values to match dimension sizes.
         SCON_params_dict_rep = dict((k, v.repeat(1, t_span_tensor_drift_diffusion.size(1), 1).permute(2, 1, 0)) for k, v in SCON_params_dict.items())
         #Initiate tensor with same dims as c_path_drift_diffusion to assign drift.
@@ -187,7 +187,7 @@ class SCON(SBM_SDE):
         i_S_tensor_drift_diffusion = self.i_S[:, 1:, :]
         i_D_tensor_drift_diffusion = self.i_D[:, 1:, :]
         #Partition SOC, DOC, MBC values. Split based on final C_PATH dim, which specifies state variables and is also indexed as dim #2 in tensor. 
-        SOC_full, DOC_full, MBC_full =  torch.chunk(C_PATH, self.state_dim, -1)
+        SOC_full, DOC_full, MBC_full = torch.chunk(C_PATH, self.state_dim, -1)
         SOC = SOC_full[:, :-1, :]
         DOC = DOC_full[:, :-1, :]
         MBC = MBC_full[:, :-1, :]
@@ -241,7 +241,7 @@ class SCON(SBM_SDE):
         Returns matrix (re-sized from x) that not only includes states, but added CO2 values in expanded third dimension of tensor.
         '''
         #Partition SOC, DOC, MBC values. Split based on final C_PATH dim, which specifies state variables and is also indexed as dim #2 in tensor. 
-        SOC, DOC, MBC =  torch.chunk(C_PATH, self.state_dim, -1)
+        SOC, DOC, MBC = torch.chunk(C_PATH, self.state_dim, -1)
         #Repeat and permute parameter values to match dimension sizes.
         SCON_params_dict_rep = dict((k, v.repeat(1, self.times.size(1), 1).permute(2, 1, 0)) for k, v in SCON_params_dict.items())
         #Decay parameters are forced by temperature changes.
@@ -295,7 +295,7 @@ class SAWB(SBM_SDE):
         i_D_tensor_drift_diffusion = self.i_D[:, 1:, :]
         temp_tensor_drift_diffusion = self.temps[:, 1:, :]
         #Partition SOC, DOC, MBC, EEC values. Split based on final c_path_drift_diffusion dim, which specifies state variables and is also indexed as dim #2 in tensor.
-        SOC, DOC, MBC, EEC =  torch.chunk(c_path_drift_diffusion, self.state_dim, -1)
+        SOC, DOC, MBC, EEC = torch.chunk(c_path_drift_diffusion, self.state_dim, -1)
         #Repeat and permute parameter values to match dimension sizes.
         SAWB_params_dict_rep = dict((k, v.repeat(1, t_span_tensor_drift_diffusion.size(1), 1).permute(2, 1, 0)) for k, v in SAWB_params_dict.items())
         #Initiate tensor with same dims as c_path_drift_diffusion to assign drift.
@@ -344,7 +344,7 @@ class SAWB(SBM_SDE):
         i_S_tensor_drift_diffusion = self.i_S[:, 1:, :]
         i_D_tensor_drift_diffusion = self.i_D[:, 1:, :]
         #Partition SOC, DOC, MBC, EEC values. Split based on final C_PATH dim, which specifies state variables and is also indexed as dim #2 in tensor.
-        SOC_full, DOC_full, MBC_full, EEC_full =  torch.chunk(C_PATH, self.state_dim, -1)
+        SOC_full, DOC_full, MBC_full, EEC_full = torch.chunk(C_PATH, self.state_dim, -1)
         SOC = SOC_full[:, :-1, :]
         DOC = DOC_full[:, :-1, :]
         MBC = MBC_full[:, :-1, :]
@@ -402,7 +402,7 @@ class SAWB(SBM_SDE):
         Returns matrix (re-sized from x) that not only includes states, but added CO2 values in expanded third dimension of tensor.
         '''
         #Partition SOC, DOC, MBC, and EEC values. Split based on final C_PATH dim, which specifies state variables and is also indexed as dim #2 in tensor. 
-        SOC, DOC, MBC, EEC =  torch.chunk(C_PATH, self.state_dim, -1)
+        SOC, DOC, MBC, EEC = torch.chunk(C_PATH, self.state_dim, -1)
         #Repeat and permute parameter values to match dimension sizes.
         SAWB_params_dict_rep = dict((k, v.repeat(1, self.times.size(1), 1).permute(2, 1, 0)) for k, v in SAWB_params_dict.items())
         #Decay parameters are forced by temperature changes.
@@ -456,7 +456,7 @@ class SAWB_ECA(SBM_SDE):
         i_D_tensor_drift_diffusion = self.i_D[:, 1:, :]
         temp_tensor_drift_diffusion = self.temps[:, 1:, :]
         #Partition SOC, DOC, MBC, EEC values. Split based on final c_path_drift_diffusion dim, which specifies state variables and is also indexed as dim #2 in tensor.
-        SOC, DOC, MBC, EEC =  torch.chunk(c_path_drift_diffusion, self.state_dim, -1)
+        SOC, DOC, MBC, EEC = torch.chunk(c_path_drift_diffusion, self.state_dim, -1)
         #Repeat and permute parameter values to match dimension sizes.
         SAWB_ECA_params_dict_rep = dict((k, v.repeat(1, t_span_tensor_drift_diffusion.size(1), 1).permute(2, 1, 0)) for k, v in SAWB_ECA_params_dict.items())
         #Initiate tensor with same dims as c_path_drift_diffusion to assign drift.
@@ -507,7 +507,7 @@ class SAWB_ECA(SBM_SDE):
         i_D_tensor_drift_diffusion = self.i_D[:, 1:, :]
         temp_tensor_drift_diffusion = self.temps[:, 1:, :]
         #Partition SOC, DOC, MBC, EEC values. Split based on final C_PATH dim, which specifies state variables and is also indexed as dim #2 in tensor.
-        SOC_full, DOC_full, MBC_full, EEC_full =  torch.chunk(C_PATH, self.state_dim, -1)
+        SOC_full, DOC_full, MBC_full, EEC_full = torch.chunk(C_PATH, self.state_dim, -1)
         SOC = SOC_full[:, :-1, :]
         DOC = DOC_full[:, :-1, :]
         MBC = MBC_full[:, :-1, :]
@@ -566,7 +566,7 @@ class SAWB_ECA(SBM_SDE):
         Returns matrix (re-sized from x) that not only includes states, but added CO2 values in expanded third dimension of tensor.
         '''
         #Partition SOC, DOC, MBC, and EEC values. Split based on final C_PATH dim, which specifies state variables and is also indexed as dim #2 in tensor. 
-        SOC, DOC, MBC, EEC =  torch.chunk(C_PATH, self.state_dim, -1)
+        SOC, DOC, MBC, EEC = torch.chunk(C_PATH, self.state_dim, -1)
         #Repeat and permute parameter values to match dimension sizes.
         SAWB_ECA_params_dict_rep = dict((k, v.repeat(1, self.times.size(1), 1).permute(2, 1, 0)) for k, v in SAWB_ECA_params_dict.items())
         #Decay parameters are forced by temperature changes.
