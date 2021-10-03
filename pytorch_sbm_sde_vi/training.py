@@ -86,6 +86,7 @@ def train1(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
             'SCON': SCON,
             'SCON_fix_u_M': SCON_fix_u_M,
             'SCON_fix_u_M_a_MSC': SCON_fix_u_M_a_MSC,
+            'SCON_fix_u_M_a_MSC_a_M': SCON_fix_u_M_a_MSC_a_M,
             'SAWB': SAWB,
             'SAWB-ECA': SAWB_ECA
             }
@@ -252,6 +253,7 @@ def train2(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
             'SCON': SCON,
             'SCON_fix_u_M': SCON_fix_u_M,
             'SCON_fix_u_M_a_MSC': SCON_fix_u_M_a_MSC,
+            'SCON_fix_u_M_a_MSC_a_M': SCON_fix_u_M_a_MSC_a_M,
             'SAWB': SAWB,
             'SAWB-ECA': SAWB_ECA
             }
