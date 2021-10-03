@@ -84,6 +84,8 @@ def train1(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
     #Instantiate SBM_SDE object based on specified model and diffusion type.
     SBM_SDE_class_dict = {
             'SCON': SCON,
+            'SCON_fix_u_M': SCON_fix_u_M,
+            'SCON_fix_u_M_a_MSC': SCON_fix_u_M_a_MSC
             'SAWB': SAWB,
             'SAWB-ECA': SAWB_ECA
             }
@@ -248,6 +250,8 @@ def train2(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
     #Instantiate SBM_SDE object based on specified model and diffusion type.
     SBM_SDE_class_dict = {
             'SCON': SCON,
+            'SCON_fix_u_M': SCON_fix_u_M,
+            'SCON_fix_u_M_a_MSC': SCON_fix_u_M_a_MSC
             'SAWB': SAWB,
             'SAWB-ECA': SAWB_ECA
             }

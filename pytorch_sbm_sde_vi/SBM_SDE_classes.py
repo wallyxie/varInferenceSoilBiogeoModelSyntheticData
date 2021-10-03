@@ -324,7 +324,7 @@ class SCON_fix_u_M(SBM_SDE):
         '''
         Accepts states x and dictionary of parameter samples.
         Returns SCON drift and diffusion tensors corresponding to state values and parameter samples, along with tensor of states x concatenated with CO2.  
-        Expected SCON_params_dict = {'u_M': u_M, 'a_SD': a_SD, 'a_DS': a_DS, 'a_M': a_M, 'a_MSC': a_MSC, 'k_S_ref': k_S_ref, 'k_D_ref': k_D_ref, 'k_M_ref': k_M_ref, 'Ea_S': Ea_S, 'Ea_D': Ea_D, 'Ea_M': Ea_M, '[cs]_SOC': [cs]_SOC, '[cs]_DOC': [cs]_DOC, '[cs]_MBC': [cs]_MBC}
+        Expected SCON_params_dict = {'a_SD': a_SD, 'a_DS': a_DS, 'a_M': a_M, 'a_MSC': a_MSC, 'k_S_ref': k_S_ref, 'k_D_ref': k_D_ref, 'k_M_ref': k_M_ref, 'Ea_S': Ea_S, 'Ea_D': Ea_D, 'Ea_M': Ea_M, '[cs]_SOC': [cs]_SOC, '[cs]_DOC': [cs]_DOC, '[cs]_MBC': [cs]_MBC}
         '''
         c_path_drift_diffusion = C_PATH[:, :-1, :]
         i_S_tensor_drift_diffusion = self.i_S[:, 1:, :]
@@ -353,6 +353,119 @@ class SCON_fix_u_M(SBM_SDE):
         #Drift is calculated.
         drift_SOC = i_S_tensor_drift_diffusion + SCON_params_dict_res['a_DS'] * k_D * DOC + SCON_params_dict_res['a_M'] * SCON_params_dict_res['a_MSC'] * k_M * MBC - k_S * SOC
         drift_DOC = i_D_tensor_drift_diffusion + SCON_params_dict_res['a_SD'] * k_S * SOC + SCON_params_dict_res['a_M'] * (1 - SCON_params_dict_res['a_MSC']) * k_M * MBC - (0.0016 + k_D) * DOC
+        drift_MBC = 0.0016 * DOC - k_M * MBC
+        
+        #Assign elements to drift vector.
+        drift[:, :, 0 : 1] = drift_SOC
+        drift[:, :, 1 : 2] = drift_DOC
+        drift[:, :, 2 : 3] = drift_MBC
+        
+        #Diffusion matrix is computed based on diffusion type.
+        if self.DIFFUSION_TYPE == 'C':
+            #Create tensor to assign diffusion matrix elements.
+            diffusion_sqrt = torch.zeros([drift.size(0), 1, self.state_dim, self.state_dim], device = drift.device) 
+
+            diffusion_sqrt[:, :, 0 : 1, 0] = torch.sqrt(LowerBound.apply(SCON_params_dict_res['c_SOC'], 1e-8)) #SOC diffusion standard deviation
+            diffusion_sqrt[:, :, 1 : 2, 1] = torch.sqrt(LowerBound.apply(SCON_params_dict_res['c_DOC'], 1e-8)) #DOC diffusion standard deviation
+            diffusion_sqrt[:, :, 2 : 3, 2] = torch.sqrt(LowerBound.apply(SCON_params_dict_res['c_MBC'], 1e-8)) #MBC diffusion standard deviation
+            #diffusion_sqrt_single = torch.diag_embed(torch.sqrt(torch.stack([LowerBound.apply(SCON_params_dict['c_SOC'], 1e-8), LowerBound.apply(SCON_params_dict['c_DOC'], 1e-8), LowerBound.apply(SCON_params_dict['c_MBC'], 1e-8)], 1))) #Create single diffusion matrix by diagonalizing constant noise scale parameters. 
+            #diffusion_sqrt = diffusion_sqrt_single.unsqueeze(1).expand(-1, T_SPAN_TENSOR.size(1), -1, -1) #Expand diffusion matrices across all paths and across discretized time steps.           
+        elif self.DIFFUSION_TYPE == 'SS':
+            #Create tensor to assign diffusion matrix elements.
+            diffusion_sqrt = torch.zeros([drift.size(0), drift.size(1), self.state_dim, self.state_dim], device = drift.device)
+
+            diffusion_sqrt[:, :, 0 : 1, 0] = torch.sqrt(LowerBound.apply(SOC * SCON_params_dict_res['s_SOC'], 1e-8)) #SOC diffusion standard deviation
+            diffusion_sqrt[:, :, 1 : 2, 1] = torch.sqrt(LowerBound.apply(DOC * SCON_params_dict_res['s_DOC'], 1e-8)) #DOC diffusion standard deviation
+            diffusion_sqrt[:, :, 2 : 3, 2] = torch.sqrt(LowerBound.apply(MBC * SCON_params_dict_res['s_MBC'], 1e-8)) #MBC diffusion standard deviation
+
+        #Compute CO2.
+        CO2 = (k_S_full * SOC_full * (1 - SCON_params_dict_res['a_SD'])) + (k_D_full * DOC_full * (1 - SCON_params_dict_res['a_DS'])) + (k_M_full * MBC_full * (1 - SCON_params_dict_res['a_M']))
+        
+        #Add CO2 as additional dimension to original x matrix.
+        x_add_CO2 = torch.cat([C_PATH, CO2], -1)
+
+        return drift, diffusion_sqrt, x_add_CO2
+
+    def add_CO2(
+        self,
+        C_PATH: torch.Tensor,
+        SCON_params_dict: DictOfTensors,
+        ) -> TupleOfTensors:
+        '''
+        Not implemented presently.
+        '''
+        raise NotImplementedError('Not implemented because only `train2` function being used for fix u_M experiment.')
+
+class SCON_fix_u_M_a_MSC(SBM_SDE):
+    '''
+    Class contains SCON SDE drift (alpha) and diffusion (beta) equations.
+    Constant (C) and state-scaling (SS) diffusion paramterizations are included. DIFFUSION_TYPE must thereby be specified as 'C' or 'SS'. 
+    Other diffusion parameterizations are not included.
+    '''
+    def __init__(
+            self,
+            T_SPAN_TENSOR: torch.Tensor,
+            I_S_TENSOR: torch.Tensor,
+            I_D_TENSOR: torch.Tensor,
+            TEMP_TENSOR: torch.Tensor,
+            TEMP_REF: Number,
+            DIFFUSION_TYPE: str
+            ):
+        super().__init__(T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF)
+
+        if DIFFUSION_TYPE not in {'C', 'SS'}:
+            raise NotImplementedError('Other diffusion parameterizations aside from constant (c) or state-scaling (ss) have not been implemented.')
+
+        self.DIFFUSION_TYPE = DIFFUSION_TYPE
+        self.state_dim = 3
+
+    def drift_diffusion(
+        self,
+        C_PATH: torch.Tensor, 
+        SCON_params_dict: DictOfTensors,
+        ) -> TupleOfTensors:
+        '''
+        Not implemented presently.
+        '''
+        raise NotImplementedError('Not implemented because only `train2` function being used for fix u_M experiment.')
+
+    def drift_diffusion_add_CO2(
+        self,
+        C_PATH: torch.Tensor, 
+        SCON_params_dict: DictOfTensors,
+        ) -> TupleOfTensors:
+        '''
+        Accepts states x and dictionary of parameter samples.
+        Returns SCON drift and diffusion tensors corresponding to state values and parameter samples, along with tensor of states x concatenated with CO2.  
+        Expected SCON_params_dict = {'a_SD': a_SD, 'a_DS': a_DS, 'a_M': a_M, 'k_S_ref': k_S_ref, 'k_D_ref': k_D_ref, 'k_M_ref': k_M_ref, 'Ea_S': Ea_S, 'Ea_D': Ea_D, 'Ea_M': Ea_M, '[cs]_SOC': [cs]_SOC, '[cs]_DOC': [cs]_DOC, '[cs]_MBC': [cs]_MBC}
+        '''
+        c_path_drift_diffusion = C_PATH[:, :-1, :]
+        i_S_tensor_drift_diffusion = self.i_S[:, 1:, :]
+        i_D_tensor_drift_diffusion = self.i_D[:, 1:, :]
+        
+        #Partition SOC, DOC, MBC values. Split based on final C_PATH dim, which specifies state variables and is also indexed as dim #2 in tensor. 
+        SOC_full, DOC_full, MBC_full = torch.chunk(C_PATH, self.state_dim, -1)
+        SOC = SOC_full[:, :-1, :]
+        DOC = DOC_full[:, :-1, :]
+        MBC = MBC_full[:, :-1, :]
+        
+        #Repeat and permute parameter values to match dimension sizes.
+        SCON_params_dict_res = dict((k, v.reshape(-1, 1, 1)) for k, v in SCON_params_dict.items()) # (batch_size) -> (batch_size, 1, 1)
+
+        #Initiate tensor with same dims as C_PATH to assign drift.
+        drift = torch.empty_like(c_path_drift_diffusion, device = C_PATH.device)
+        
+        #Decay parameters are forced by temperature changes.
+        k_S_full = arrhenius_temp_dep(SCON_params_dict_res['k_S_ref'], self.temps, SCON_params_dict_res['Ea_S'], self.temp_ref) #Apply vectorized temperature-dependent transformation to k_S_ref.
+        k_S = k_S_full[:, 1:, :]
+        k_D_full = arrhenius_temp_dep(SCON_params_dict_res['k_D_ref'], self.temps, SCON_params_dict_res['Ea_D'], self.temp_ref) #Apply vectorized temperature-dependent transformation to k_D_ref.
+        k_D = k_D_full[:, 1:, :]
+        k_M_full = arrhenius_temp_dep(SCON_params_dict_res['k_M_ref'], self.temps, SCON_params_dict_res['Ea_M'], self.temp_ref) #Apply vectorized temperature-dependent transformation to k_M_ref.
+        k_M = k_M_full[:, 1:, :]
+        
+        #Drift is calculated.
+        drift_SOC = i_S_tensor_drift_diffusion + SCON_params_dict_res['a_DS'] * k_D * DOC + SCON_params_dict_res['a_M'] * 0.5 * k_M * MBC - k_S * SOC
+        drift_DOC = i_D_tensor_drift_diffusion + SCON_params_dict_res['a_SD'] * k_S * SOC + SCON_params_dict_res['a_M'] * 0.5 * k_M * MBC - (0.0016 + k_D) * DOC
         drift_MBC = 0.0016 * DOC - k_M * MBC
         
         #Assign elements to drift vector.
