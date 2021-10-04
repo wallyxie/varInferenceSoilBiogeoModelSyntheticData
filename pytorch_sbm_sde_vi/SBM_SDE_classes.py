@@ -392,9 +392,27 @@ class SCON_fix_u_M(SBM_SDE):
         SCON_params_dict: DictOfTensors,
         ) -> TupleOfTensors:
         '''
-        Not implemented presently.
+        Accepts input of states x and dictionary of parameter samples.
+        Returns matrix (re-sized from x) that not only includes states, but added CO2 values in expanded third dimension of tensor.
         '''
-        raise NotImplementedError('Not implemented because only `train2` function being used for fix u_M experiment.')
+        #Partition SOC, DOC, MBC values. Split based on final C_PATH dim, which specifies state variables and is also indexed as dim #2 in tensor. 
+        SOC, DOC, MBC = torch.chunk(C_PATH, self.state_dim, -1)
+        
+        #Repeat and permute parameter values to match dimension sizes.
+        SCON_params_dict_res = dict((k, v.reshape(-1, 1, 1)) for k, v in SCON_params_dict.items())
+
+        #Decay parameters are forced by temperature changes.
+        k_S = arrhenius_temp_dep(SCON_params_dict_res['k_S_ref'], self.temps, SCON_params_dict_res['Ea_S'], self.temp_ref) #Apply vectorized temperature-dependent transformation to k_S_ref.
+        k_D = arrhenius_temp_dep(SCON_params_dict_res['k_D_ref'], self.temps, SCON_params_dict_res['Ea_D'], self.temp_ref) #Apply vectorized temperature-dependent transformation to k_D_ref.
+        k_M = arrhenius_temp_dep(SCON_params_dict_res['k_M_ref'], self.temps, SCON_params_dict_res['Ea_M'], self.temp_ref) #Apply vectorized temperature-dependent transformation to k_M_ref.
+        
+        #Compute CO2.
+        CO2 = (k_S * SOC * (1 - SCON_params_dict_res['a_SD'])) + (k_D * DOC * (1 - SCON_params_dict_res['a_DS'])) + (k_M * MBC * (1 - SCON_params_dict_res['a_M']))
+        
+        #Add CO2 as additional dimension to original x matrix.
+        x_add_CO2 = torch.cat([C_PATH, CO2], -1)
+        
+        return x_add_CO2
 
 class SCON_fix_u_M_a_MSC(SBM_SDE):
     '''
@@ -505,9 +523,27 @@ class SCON_fix_u_M_a_MSC(SBM_SDE):
         SCON_params_dict: DictOfTensors,
         ) -> TupleOfTensors:
         '''
-        Not implemented presently.
+        Accepts input of states x and dictionary of parameter samples.
+        Returns matrix (re-sized from x) that not only includes states, but added CO2 values in expanded third dimension of tensor.
         '''
-        raise NotImplementedError('Not implemented because only `train2` function being used for fix u_M experiment.')
+        #Partition SOC, DOC, MBC values. Split based on final C_PATH dim, which specifies state variables and is also indexed as dim #2 in tensor. 
+        SOC, DOC, MBC = torch.chunk(C_PATH, self.state_dim, -1)
+        
+        #Repeat and permute parameter values to match dimension sizes.
+        SCON_params_dict_res = dict((k, v.reshape(-1, 1, 1)) for k, v in SCON_params_dict.items())
+
+        #Decay parameters are forced by temperature changes.
+        k_S = arrhenius_temp_dep(SCON_params_dict_res['k_S_ref'], self.temps, SCON_params_dict_res['Ea_S'], self.temp_ref) #Apply vectorized temperature-dependent transformation to k_S_ref.
+        k_D = arrhenius_temp_dep(SCON_params_dict_res['k_D_ref'], self.temps, SCON_params_dict_res['Ea_D'], self.temp_ref) #Apply vectorized temperature-dependent transformation to k_D_ref.
+        k_M = arrhenius_temp_dep(SCON_params_dict_res['k_M_ref'], self.temps, SCON_params_dict_res['Ea_M'], self.temp_ref) #Apply vectorized temperature-dependent transformation to k_M_ref.
+        
+        #Compute CO2.
+        CO2 = (k_S * SOC * (1 - SCON_params_dict_res['a_SD'])) + (k_D * DOC * (1 - SCON_params_dict_res['a_DS'])) + (k_M * MBC * (1 - SCON_params_dict_res['a_M']))
+        
+        #Add CO2 as additional dimension to original x matrix.
+        x_add_CO2 = torch.cat([C_PATH, CO2], -1)
+        
+        return x_add_CO2
 
 class SCON_fix_u_M_a_MSC_a_M(SBM_SDE):
     '''
@@ -618,9 +654,27 @@ class SCON_fix_u_M_a_MSC_a_M(SBM_SDE):
         SCON_params_dict: DictOfTensors,
         ) -> TupleOfTensors:
         '''
-        Not implemented presently.
+        Accepts input of states x and dictionary of parameter samples.
+        Returns matrix (re-sized from x) that not only includes states, but added CO2 values in expanded third dimension of tensor.
         '''
-        raise NotImplementedError('Not implemented because only `train2` function being used for fix u_M experiment.')
+        #Partition SOC, DOC, MBC values. Split based on final C_PATH dim, which specifies state variables and is also indexed as dim #2 in tensor. 
+        SOC, DOC, MBC = torch.chunk(C_PATH, self.state_dim, -1)
+        
+        #Repeat and permute parameter values to match dimension sizes.
+        SCON_params_dict_res = dict((k, v.reshape(-1, 1, 1)) for k, v in SCON_params_dict.items())
+
+        #Decay parameters are forced by temperature changes.
+        k_S = arrhenius_temp_dep(SCON_params_dict_res['k_S_ref'], self.temps, SCON_params_dict_res['Ea_S'], self.temp_ref) #Apply vectorized temperature-dependent transformation to k_S_ref.
+        k_D = arrhenius_temp_dep(SCON_params_dict_res['k_D_ref'], self.temps, SCON_params_dict_res['Ea_D'], self.temp_ref) #Apply vectorized temperature-dependent transformation to k_D_ref.
+        k_M = arrhenius_temp_dep(SCON_params_dict_res['k_M_ref'], self.temps, SCON_params_dict_res['Ea_M'], self.temp_ref) #Apply vectorized temperature-dependent transformation to k_M_ref.
+        
+        #Compute CO2.
+        CO2 = (k_S * SOC * (1 - SCON_params_dict_res['a_SD'])) + (k_D * DOC * (1 - SCON_params_dict_res['a_DS'])) + (k_M * MBC * 0.5)
+        
+        #Add CO2 as additional dimension to original x matrix.
+        x_add_CO2 = torch.cat([C_PATH, CO2], -1)
+        
+        return x_add_CO2
 
 class SAWB(SBM_SDE):
     '''
