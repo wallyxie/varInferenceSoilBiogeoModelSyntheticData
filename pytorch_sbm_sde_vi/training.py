@@ -74,7 +74,7 @@ def train1(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
         OBS_CSV_STR, OBS_ERROR_SCALE, T, DT, N,
         T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF,
         SBM_SDE_CLASS: str, DIFFUSION_TYPE: str,
-        INIT_PRIOR, PRIOR_DIST_DETAILS_DICT, LEARN_CO2 = False,
+        INIT_PRIOR, PRIOR_DIST_DETAILS_DICT, FIX_THETA_DICT = None, LEARN_CO2 = False,
         THETA_DIST = None, THETA_POST_DIST = None, THETA_POST_INIT = None,
         BYPASS_NAN = False, LR_DECAY = 0.8, DECAY_STEP_SIZE = 50000, PRINT_EVERY = 100):
 
@@ -84,9 +84,6 @@ def train1(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
     #Instantiate SBM_SDE object based on specified model and diffusion type.
     SBM_SDE_class_dict = {
             'SCON': SCON,
-            'SCON_fix_u_M': SCON_fix_u_M,
-            'SCON_fix_u_M_a_MSC': SCON_fix_u_M_a_MSC,
-            'SCON_fix_u_M_a_MSC_a_M': SCON_fix_u_M_a_MSC_a_M,
             'SAWB': SAWB,
             'SAWB-ECA': SAWB_ECA
             }
@@ -198,6 +195,9 @@ def train1(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
             log_p_theta = priors.log_prob(theta).sum(-1)
             list_parent_loc_scale.append(parent_loc_scale_dict)
 
+            if FIX_THETA_DICT:
+                theta_dict = theta_dict | FIX_THETA_DICT
+
             log_lik, drift, diffusion_sqrt = calc_log_lik1(C_PATH, theta_dict, DT, SBM_SDE, INIT_PRIOR)
 
             if LEARN_CO2:
@@ -241,7 +241,7 @@ def train2(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
         OBS_CSV_STR, OBS_ERROR_SCALE, T, DT, N,
         T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF,
         SBM_SDE_CLASS: str, DIFFUSION_TYPE: str,
-        INIT_PRIOR, PRIOR_DIST_DETAILS_DICT, LEARN_CO2 = False,
+        INIT_PRIOR, PRIOR_DIST_DETAILS_DICT, FIX_THETA_DICT = None, LEARN_CO2 = False,
         THETA_DIST = None, THETA_POST_DIST = None, THETA_POST_INIT = None,
         BYPASS_NAN = False, LR_DECAY = 0.8, DECAY_STEP_SIZE = 50000, PRINT_EVERY = 100):
 
@@ -251,9 +251,6 @@ def train2(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
     #Instantiate SBM_SDE object based on specified model and diffusion type.
     SBM_SDE_class_dict = {
             'SCON': SCON,
-            'SCON_fix_u_M': SCON_fix_u_M,
-            'SCON_fix_u_M_a_MSC': SCON_fix_u_M_a_MSC,
-            'SCON_fix_u_M_a_MSC_a_M': SCON_fix_u_M_a_MSC_a_M,
             'SAWB': SAWB,
             'SAWB-ECA': SAWB_ECA
             }
@@ -364,6 +361,9 @@ def train2(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
             theta_dict, theta, log_q_theta, parent_loc_scale_dict = q_theta(BATCH_SIZE)
             log_p_theta = priors.log_prob(theta).sum(-1)
             list_parent_loc_scale.append(parent_loc_scale_dict)
+
+            if FIX_THETA_DICT:
+                theta_dict = theta_dict | FIX_THETA_DICT
 
             if LEARN_CO2:
                 log_lik, drift, diffusion_sqrt, x_add_CO2 = calc_log_lik2(C_PATH, theta_dict, DT, SBM_SDE, INIT_PRIOR, LEARN_CO2)
