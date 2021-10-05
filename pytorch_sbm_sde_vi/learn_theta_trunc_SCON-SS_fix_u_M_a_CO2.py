@@ -59,44 +59,14 @@ num_layers = 5 #5 - number needed to fit UCI HPC3 RAM requirements with 16 GB RA
 
 #Specify desired SBM SDE model type and details.
 state_dim_SCON = 3
-SBM_SDE_class = 'SCON_fix_u_M'
+SBM_SDE_class = 'SCON'
 diffusion_type = 'SS'
 learn_CO2 = True
 theta_dist = 'TruncatedNormal' #String needs to be exact name of the distribution class. Options are 'TruncatedNormal' and 'RescaledLogitNormal'.
 
-#Parameter prior means
-a_SD_mean = 0.5
-a_DS_mean = 0.5
-a_M_mean = 0.5
-a_MSC_mean = 0.5
-k_S_ref_mean = 0.0005
-k_D_ref_mean = 0.0008
-k_M_ref_mean = 0.0007
-Ea_S_mean = 55
-Ea_D_mean = 48
-Ea_M_mean = 48
-s_SOC_mean = 0.01
-s_DOC_mean = 0.01
-s_MBC_mean = 0.01
+SCON_SS_priors_details = {k: v.to(active_device) for k, v in torch.load('generated_data/SCON-SS_fix_u_M_a_CO2_trunc_2021_10_04_17_08_sample_y_t_1000_dt_0-01_sd_scale_0-333_hyperparams.pt').items()}
 
-#SCON theta truncated normal prior distribution parameter details in order of mean, lower, and upper. Distribution sdev assumed to be some proportion of the mean. 
-a_SD_details = torch.Tensor([a_SD_mean, a_SD_mean * prior_scale_factor, 0, 1])
-a_DS_details = torch.Tensor([a_DS_mean, a_DS_mean * prior_scale_factor, 0, 1])
-a_M_details = torch.Tensor([a_M_mean, a_M_mean * prior_scale_factor, 0, 1])
-a_MSC_details = torch.Tensor([a_MSC_mean, a_MSC_mean * prior_scale_factor, 0, 1])
-k_S_ref_details = torch.Tensor([k_S_ref_mean, k_S_ref_mean * prior_scale_factor, 0, 1])
-k_D_ref_details = torch.Tensor([k_D_ref_mean, k_D_ref_mean * prior_scale_factor, 0, 1])
-k_M_ref_details = torch.Tensor([k_M_ref_mean, k_M_ref_mean * prior_scale_factor, 0, 1])
-Ea_S_details = torch.Tensor([Ea_S_mean, Ea_S_mean * prior_scale_factor, 10, 100])
-Ea_D_details = torch.Tensor([Ea_D_mean, Ea_D_mean * prior_scale_factor, 10, 100])
-Ea_M_details = torch.Tensor([Ea_M_mean, Ea_M_mean * prior_scale_factor, 10, 100])
-
-#SCON-SS diffusion matrix parameter truncated normal prior distribution parameter details in order of mean, lower, and upper. 
-s_SOC_details = torch.Tensor([s_SOC_mean, s_SOC_mean * prior_scale_factor, 0, 1])
-s_DOC_details = torch.Tensor([s_DOC_mean, s_DOC_mean * prior_scale_factor, 0, 1])
-s_MBC_details = torch.Tensor([s_MBC_mean, s_MBC_mean * prior_scale_factor, 0, 1])
-
-SCON_SS_priors_details = {'a_SD': a_SD_details, 'a_DS': a_DS_details, 'a_M': a_M_details, 'a_MSC': a_MSC_details, 'k_S_ref': k_S_ref_details, 'k_D_ref': k_D_ref_details, 'k_M_ref': k_M_ref_details, 'Ea_S': Ea_S_details, 'Ea_D': Ea_D_details, 'Ea_M': Ea_M_details, 's_SOC': s_SOC_details, 's_DOC': s_DOC_details, 's_MBC': s_MBC_details}
+SCON_SS_fix_u_M_a_dict = {k: v.to(active_device) for k, v in torch.load('generated_data/SCON-SS_fix_u_M_a_CO2_trunc_2021_10_04_17_08_sample_y_t_1000_dt_0-01_sd_scale_0-333_fix_dict.pt').items()}
 
 #Initial condition prior means
 x0_SCON = [65, 0.4, 2.5]
@@ -112,19 +82,19 @@ i_s_tensor = i_s(t_span_tensor).to(active_device) #Exogenous SOC input function
 i_d_tensor = i_d(t_span_tensor).to(active_device) #Exogenous DOC input function
 
 #Generate observation model.
-csv_data_path = os.path.join('generated_data/', 'SCON-SS_fix_u_M_CO2_trunc_2021_10_03_15_09_sample_y_t_1000_dt_0-01_sd_scale_0-333.csv')
+csv_data_path = os.path.join('generated_data/', 'SCON-SS_fix_u_M_a_CO2_trunc_2021_10_04_17_08_sample_y_t_1000_dt_0-01_sd_scale_0-333.csv')
 
 #Call training loop function for SCON-SS.
 net, q_theta, p_theta, obs_model, ELBO_hist, list_parent_loc_scale, SBM_SDE_instance = train2(
         active_device, train_lr, niter, batch_size, num_layers,
         csv_data_path, obs_error_scale, t, dt_flow, n, 
         t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
-        SBM_SDE_class, diffusion_type, x0_prior_SCON, SCON_SS_priors_details, learn_CO2,
+        SBM_SDE_class, diffusion_type, x0_prior_SCON, SCON_SS_priors_details, SCON_SS_fix_u_M_a_dict, learn_CO2,
         theta_dist, BYPASS_NAN = False, LR_DECAY = 0.9, DECAY_STEP_SIZE = 25000, PRINT_EVERY = 50)
 
 #Save net and ELBO files.
 now = datetime.now()
-now_string = 'SCON-SS_fix_u_M_CO2_trunc' + now.strftime('_%Y_%m_%d_%H_%M_%S')
+now_string = 'SCON-SS_CO2_trunc' + now.strftime('_%Y_%m_%d_%H_%M_%S')
 save_string = f'_iter_{niter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_lr_{train_lr}_sd_scale_{prior_scale_factor}_{now_string}.pt'
 outputs_folder = 'training_pt_outputs/'
 net_save_string = os.path.join(outputs_folder, 'net' + save_string)
@@ -155,12 +125,12 @@ obs_model = torch.load(obs_model_save_string)
 obs_model.to(active_device)
 ELBO_hist = torch.load(ELBO_save_string)
 SBM_SDE_instance = torch.load(SBM_SDE_instance_save_string)
-true_theta = torch.load('generated_data/SCON-SS_fix_u_M_CO2_trunc_2021_10_03_15_09_sample_y_t_1000_dt_0-01_sd_scale_0-333_rsample.pt', map_location = active_device)
+true_theta = torch.load('generated_data/SCON-SS_fix_u_M_a_CO2_trunc_2021_10_04_17_08_sample_y_t_1000_dt_0-01_sd_scale_0-333_rsample.pt', map_location = active_device)
 
 #Plot training posterior results and ELBO history.
 net.eval()
 x, _ = net(eval_batch_size)
 plots_folder = 'training_plots/'
 plot_elbo(ELBO_hist, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, xmin = int(niter * 0.2))
-plot_states_post(x, q_theta, obs_model, SBM_SDE_instance, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, learn_CO2, ymin_list = [0, 0, 0, 0], ymax_list = [90., 25., 20., 0.1])
+plot_states_post(x, q_theta, obs_model, SBM_SDE_instance, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, SCON_SS_fix_u_M_a_dict, learn_CO2, ymin_list = [0, 0, 0, 0], ymax_list = [90., 15., 30., 0.07])
 plot_theta(p_theta, q_theta, true_theta, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string)

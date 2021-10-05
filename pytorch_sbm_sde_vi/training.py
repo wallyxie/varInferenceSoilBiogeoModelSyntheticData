@@ -196,7 +196,7 @@ def train1(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
             list_parent_loc_scale.append(parent_loc_scale_dict)
 
             if FIX_THETA_DICT:
-                theta_dict = theta_dict | FIX_THETA_DICT
+                theta_dict = {**theta_dict, **FIX_THETA_DICT}
 
             log_lik, drift, diffusion_sqrt = calc_log_lik1(C_PATH, theta_dict, DT, SBM_SDE, INIT_PRIOR)
 
@@ -363,7 +363,7 @@ def train2(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
             list_parent_loc_scale.append(parent_loc_scale_dict)
 
             if FIX_THETA_DICT:
-                theta_dict = theta_dict | FIX_THETA_DICT
+                theta_dict = {**theta_dict, **FIX_THETA_DICT}
 
             if LEARN_CO2:
                 log_lik, drift, diffusion_sqrt, x_add_CO2 = calc_log_lik2(C_PATH, theta_dict, DT, SBM_SDE, INIT_PRIOR, LEARN_CO2)

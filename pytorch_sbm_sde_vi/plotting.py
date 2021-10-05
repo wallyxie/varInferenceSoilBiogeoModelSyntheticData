@@ -25,7 +25,7 @@ def plot_elbo(elbo_hist, niter, t, dt, batch_size, eval_batch_size, num_layers, 
     plt.title(f'ELBO history after {xmin} iterations')
     plt.savefig(os.path.join(plots_folder, f'ELBO_iter_{niter}_t_{t}_dt_{dt}_batch_{batch_size}_samples_{eval_batch_size}_layers_{num_layers}_lr_{train_lr}_sd_scale_{sd_scale}_{now_string}.png'), dpi = 300)
     
-def plot_states_post(x, q_theta, obs_model, SBM_SDE_CLASS, niter, t, dt, batch_size, eval_batch_size, num_layers, train_lr, sd_scale, plots_folder, now_string, LEARN_CO2 = False, ymin_list = None, ymax_list = None):
+def plot_states_post(x, q_theta, obs_model, SBM_SDE_CLASS, niter, t, dt, batch_size, eval_batch_size, num_layers, train_lr, sd_scale, plots_folder, now_string, FIX_THETA_DICT = None, LEARN_CO2 = False, ymin_list = None, ymax_list = None):
 
     state_list = []
 
@@ -42,6 +42,7 @@ def plot_states_post(x, q_theta, obs_model, SBM_SDE_CLASS, niter, t, dt, batch_s
 
     if LEARN_CO2:
         q_theta_sample_dict, _, _, _ = q_theta(x.size(0))
+        q_theta_sample_dict = {**q_theta_sample_dict, **FIX_THETA_DICT}
         x = SBM_SDE_CLASS.add_CO2(x, q_theta_sample_dict) #Add CO2 to x tensor if CO2 is being fit.
 
     fig, axs = plt.subplots(x.size(-1))
