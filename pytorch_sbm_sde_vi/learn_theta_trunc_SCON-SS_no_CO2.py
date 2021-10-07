@@ -63,6 +63,7 @@ SBM_SDE_class = 'SCON'
 diffusion_type = 'SS'
 learn_CO2 = False
 theta_dist = 'TruncatedNormal' #String needs to be exact name of the distribution class. Options are 'TruncatedNormal' and 'RescaledLogitNormal'.
+fix_dict = None
 
 SCON_SS_priors_details = {k: v.to(active_device) for k, v in torch.load('SCON-SS_CO2_trunc_2021_09_27_18_01_sample_y_t_1000_dt_0-01_sd_scale_0-333_hyperparams.pt').items()}
 
@@ -87,7 +88,7 @@ net, q_theta, p_theta, obs_model, ELBO_hist, list_parent_loc_scale, SBM_SDE_inst
         active_device, train_lr, niter, batch_size, num_layers,
         csv_data_path, obs_error_scale, t, dt_flow, n, 
         t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
-        SBM_SDE_class, diffusion_type, x0_prior_SCON, SCON_SS_priors_details, learn_CO2,
+        SBM_SDE_class, diffusion_type, x0_prior_SCON, SCON_SS_priors_details, fix_dict, learn_CO2,
         theta_dist, BYPASS_NAN = False, LR_DECAY = 0.95, DECAY_STEP_SIZE = 25000, PRINT_EVERY = 50)
 
 #Save net and ELBO files.
