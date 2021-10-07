@@ -49,7 +49,7 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-niter = 300000
+niter = 220000
 train_lr = 2e-5 #ELBO learning rate
 batch_size = 50 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
 eval_batch_size = 50
@@ -65,7 +65,7 @@ learn_CO2 = True
 theta_dist = 'TruncatedNormal' #String needs to be exact name of the distribution class. Options are 'TruncatedNormal' and 'RescaledLogitNormal'.
 fix_dict = None
 
-SCON_SS_priors_details = {k: v.to(active_device) for k, v in torch.load('generated_data/SCON-SS_CO2_trunc_2021_09_27_18_01_sample_y_t_1000_dt_0-01_sd_scale_0-333_hyperparams.pt').items()}
+SCON_SS_priors_details = {k: v.to(active_device) for k, v in torch.load('generated_data/SCON-SS_CO2_trunc_seed_100_2021_10_07_13_21_sample_y_t_1000_dt_0-01_sd_scale_0-333_hyperparams.pt').items()}
 
 #Initial condition prior means
 x0_SCON = [65, 0.4, 2.5]
@@ -81,7 +81,7 @@ i_s_tensor = i_s(t_span_tensor).to(active_device) #Exogenous SOC input function
 i_d_tensor = i_d(t_span_tensor).to(active_device) #Exogenous DOC input function
 
 #Generate observation model.
-csv_data_path = os.path.join('generated_data/', 'SCON-SS_CO2_trunc_2021_09_27_18_01_sample_y_t_1000_dt_0-01_sd_scale_0-333.csv')
+csv_data_path = os.path.join('generated_data/', 'SCON-SS_CO2_trunc_seed_100_2021_10_07_13_21_sample_y_t_1000_dt_0-01_sd_scale_0-333.csv')
 
 #Call training loop function for SCON-SS.
 net, q_theta, p_theta, obs_model, ELBO_hist, list_parent_loc_scale, SBM_SDE_instance = train2(
@@ -93,7 +93,7 @@ net, q_theta, p_theta, obs_model, ELBO_hist, list_parent_loc_scale, SBM_SDE_inst
 
 #Save net and ELBO files.
 now = datetime.now()
-now_string = 'SCON-SS_CO2_trunc' + now.strftime('_%Y_%m_%d_%H_%M_%S')
+now_string = 'SCON-SS_CO2_trunc_seed_100' + now.strftime('_%Y_%m_%d_%H_%M_%S')
 save_string = f'_iter_{niter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_lr_{train_lr}_sd_scale_{prior_scale_factor}_{now_string}.pt'
 outputs_folder = 'training_pt_outputs/'
 net_save_string = os.path.join(outputs_folder, 'net' + save_string)
@@ -124,7 +124,7 @@ obs_model = torch.load(obs_model_save_string)
 obs_model.to(active_device)
 ELBO_hist = torch.load(ELBO_save_string)
 SBM_SDE_instance = torch.load(SBM_SDE_instance_save_string)
-true_theta = torch.load('generated_data/SCON-SS_CO2_trunc_2021_09_27_18_01_sample_y_t_1000_dt_0-01_sd_scale_0-333_rsample.pt', map_location = active_device)
+true_theta = torch.load('generated_data/SCON-SS_CO2_trunc_seed_100_2021_10_07_13_21_sample_y_t_1000_dt_0-01_sd_scale_0-333_rsample.pt', map_location = active_device)
 
 #Plot training posterior results and ELBO history.
 net.eval()
