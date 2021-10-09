@@ -323,7 +323,7 @@ class SAWB_ECA_multi(SBM_SDE):
         u_Q = linear_temp_dep(SAWB_ECA_params_dict_res['u_Q_ref'], temp_tensor_drift_diffusion, SAWB_ECA_params_dict_res['Q'], self.temp_ref) #Apply linear temperature-dependence to u_Q.
         V_DE = arrhenius_temp_dep(SAWB_ECA_params_dict_res['V_DE_ref'], temp_tensor_drift_diffusion, SAWB_ECA_params_dict_res['Ea_V_DE'], self.temp_ref) #Apply vectorized temperature-dependent transformation to V_DE.
         V_UE = arrhenius_temp_dep(SAWB_ECA_params_dict_res['V_UE_ref'], temp_tensor_drift_diffusion, SAWB_ECA_params_dict_res['Ea_V_UE'], self.temp_ref) #Apply vectorized temperature-dependent transformation to V_UE.
-        
+
         #Drift is calculated.
         drift_SOC = i_S_tensor_drift_diffusion + SAWB_ECA_params_dict_res['a_MSA'] * SAWB_ECA_params_dict_res['r_M'] * MBC - ((V_DE * EEC * SOC) / (SAWB_ECA_params_dict_res['K_DE'] + EEC + SOC))
         drift_DOC = i_D_tensor_drift_diffusion + (1 - SAWB_ECA_params_dict_res['a_MSA']) * SAWB_ECA_params_dict_res['r_M'] * MBC + ((V_DE * EEC * SOC) / (SAWB_ECA_params_dict_res['K_DE'] + EEC + SOC)) + SAWB_ECA_params_dict_res['r_L'] * EEC - ((V_UE * MBC * DOC) / (SAWB_ECA_params_dict_res['K_UE'] + MBC + DOC))
@@ -345,6 +345,7 @@ class SAWB_ECA_multi(SBM_SDE):
             diffusion_sqrt[:, :, :, 0 : 1, 0] = torch.sqrt(LowerBound.apply(SAWB_ECA_params_dict_res['c_SOC'], 1e-8)) #SOC diffusion standard deviation
             diffusion_sqrt[:, :, :, 1 : 2, 1] = torch.sqrt(LowerBound.apply(SAWB_ECA_params_dict_res['c_DOC'], 1e-8)) #DOC diffusion standard deviation
             diffusion_sqrt[:, :, :, 2 : 3, 2] = torch.sqrt(LowerBound.apply(SAWB_ECA_params_dict_res['c_MBC'], 1e-8)) #MBC diffusion standard deviation
+            diffusion_sqrt[:, :, :, 3 : 4, 3] = torch.sqrt(LowerBound.apply(SAWB_ECA_params_dict_res['c_EEC'], 1e-8)) #EEC diffusion standard deviation
         elif self.DIFFUSION_TYPE == 'SS':
             #Create tensor to assign diffusion matrix elements.     
             diffusion_sqrt = torch.zeros([drift.size(0), drift.size(1), drift.size(2), self.state_dim, self.state_dim], device = drift.device) 
