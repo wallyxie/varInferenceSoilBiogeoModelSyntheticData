@@ -101,7 +101,7 @@ class SBM_SDE:
         self.temp_ref = TEMP_REF
         
 
-class SCON_multi_optim(SBM_SDE):
+class SCON_multi(SBM_SDE):
     '''
     Class contains SCON SDE drift (alpha) and diffusion (beta) equations.
     Constant (C) and state-scaling (SS) diffusion paramterizations are included. DIFFUSION_TYPE must thereby be specified as 'C' or 'SS'. 
@@ -148,7 +148,7 @@ class SCON_multi_optim(SBM_SDE):
         SCON_params_dict_res = dict((k, v.reshape(-1, 1, 1, 1)) for k, v in SCON_params_dict.items()) # (batch_size) -> (batch_size, 1, 1, 1)
         
         #Initiate tensor with same dims as c_path_drift_diffusion to assign drift.
-        drift = torch.empty_like(c_path_drift_diffusion, device = C_PATH.device) # (batch_size, num_seqs, N-1, state_dim)
+        #drift = torch.empty_like(c_path_drift_diffusion, device = C_PATH.device) # (batch_size, num_seqs, N-1, state_dim)
         
         #Decay parameters are forced by temperature changes.
         k_S = arrhenius_temp_dep(SCON_params_dict_res['k_S_ref'], temp_tensor_drift_diffusion, SCON_params_dict_res['Ea_S'], self.temp_ref) #Apply vectorized temperature-dependent transformation to k_S_ref.
@@ -158,12 +158,13 @@ class SCON_multi_optim(SBM_SDE):
         #Drift is calculated.
         drift_SOC = i_S_tensor_drift_diffusion + SCON_params_dict_res['a_DS'] * k_D * DOC + SCON_params_dict_res['a_M'] * SCON_params_dict_res['a_MSC'] * k_M * MBC - k_S * SOC
         drift_DOC = i_D_tensor_drift_diffusion + SCON_params_dict_res['a_SD'] * k_S * SOC + SCON_params_dict_res['a_M'] * (1 - SCON_params_dict_res['a_MSC']) * k_M * MBC - (SCON_params_dict_res['u_M'] + k_D) * DOC
-        drift_MBC = SCON_params_dict_res['u_M'] * DOC - k_M * MBC# (batch_size, N-1, 1)
+        drift_MBC = SCON_params_dict_res['u_M'] * DOC - k_M * MBC # (batch_size, num_seqs, N-1, 1)
         
         #Assign elements to drift vector.
-        drift[:, :, :, 0 : 1] = drift_SOC
-        drift[:, :, :, 1 : 2] = drift_DOC
-        drift[:, :, :, 2 : 3] = drift_MBC
+        #drift[:, :, :, 0 : 1] = drift_SOC
+        #drift[:, :, :, 1 : 2] = drift_DOC
+        #drift[:, :, :, 2 : 3] = drift_MBC
+        drift = torch.cat((drift_SOC, drift_DOC, drift_MBC), -1)
         
         if self.DIFFUSION_TYPE == 'C':
             #Allocate diffusion tensor based on diffusion type.
@@ -182,7 +183,7 @@ class SCON_multi_optim(SBM_SDE):
         
         return drift, diffusion_sqrt
 
-class SAWB_multi_optim(SBM_SDE):
+class SAWB_multi(SBM_SDE):
     '''
     Class contains SAWB SDE drift (alpha) and diffusion (beta) equations.
     Constant (C) and state-scaling (SS) diffusion paramterizations are included. DIFFUSION_TYPE must thereby be specified as 'C' or 'SS'. 
@@ -229,7 +230,7 @@ class SAWB_multi_optim(SBM_SDE):
         SAWB_params_dict_res = dict((k, v.reshape(-1, 1, 1, 1)) for k, v in SAWB_params_dict.items())
 
         #Initiate tensor with same dims as c_path_drift_diffusion to assign drift.
-        drift = torch.empty_like(c_path_drift_diffusion, device = C_PATH.device)
+        #drift = torch.empty_like(c_path_drift_diffusion, device = C_PATH.device)
         
         #Decay parameters are forced by temperature changes.
         u_Q = linear_temp_dep(SAWB_params_dict_res['u_Q_ref'], temp_tensor_drift_diffusion, SAWB_params_dict_res['Q'], self.temp_ref) #Apply linear temperature-dependence to u_Q.
@@ -243,10 +244,11 @@ class SAWB_multi_optim(SBM_SDE):
         drift_EEC = SAWB_params_dict_res['r_E'] * MBC - SAWB_params_dict_res['r_L'] * EEC
         
         #Assign elements to drift vector.
-        drift[:, :, :, 0 : 1] = drift_SOC
-        drift[:, :, :, 1 : 2] = drift_DOC
-        drift[:, :, :, 2 : 3] = drift_MBC
-        drift[:, :, :, 3 : 4] = drift_EEC
+        #drift[:, :, :, 0 : 1] = drift_SOC
+        #drift[:, :, :, 1 : 2] = drift_DOC
+        #drift[:, :, :, 2 : 3] = drift_MBC
+        #drift[:, :, :, 3 : 4] = drift_EEC
+        drift = torch.cat((drift_SOC, drift_DOC, drift_MBC, drift_EEC), -1)
         
         #Diffusion matrix is computed based on diffusion type.
         if self.DIFFUSION_TYPE == 'C':
@@ -268,7 +270,7 @@ class SAWB_multi_optim(SBM_SDE):
         
         return drift, diffusion_sqrt
 
-class SAWB_ECA_multi_optim(SBM_SDE):
+class SAWB_ECA_multi(SBM_SDE):
     '''
     Class contains SAWB-ECA SDE drift (alpha) and diffusion (beta) equations.
     Constant (C) and state-scaling (SS) diffusion paramterizations are included. DIFFUSION_TYPE must thereby be specified as 'C' or 'SS'. 
@@ -315,7 +317,7 @@ class SAWB_ECA_multi_optim(SBM_SDE):
         SAWB_ECA_params_dict_res = dict((k, v.reshape(-1, 1, 1, 1)) for k, v in SAWB_ECA_params_dict.items())
 
         #Initiate tensor with same dims as c_path_drift_diffusion to assign drift.
-        drift = torch.empty_like(c_path_drift_diffusion, device = C_PATH.device)
+        #drift = torch.empty_like(c_path_drift_diffusion, device = C_PATH.device)
         
         #Decay parameters are forced by temperature changes.
         u_Q = linear_temp_dep(SAWB_ECA_params_dict_res['u_Q_ref'], temp_tensor_drift_diffusion, SAWB_ECA_params_dict_res['Q'], self.temp_ref) #Apply linear temperature-dependence to u_Q.
@@ -329,10 +331,11 @@ class SAWB_ECA_multi_optim(SBM_SDE):
         drift_EEC = SAWB_ECA_params_dict_res['r_E'] * MBC - SAWB_ECA_params_dict_res['r_L'] * EEC
         
         #Assign elements to drift vector.
-        drift[:, :, :, 0 : 1] = drift_SOC
-        drift[:, :, :, 1 : 2] = drift_DOC
-        drift[:, :, :, 2 : 3] = drift_MBC
-        drift[:, :, :, 3 : 4] = drift_EEC
+        #drift[:, :, :, 0 : 1] = drift_SOC
+        #drift[:, :, :, 1 : 2] = drift_DOC
+        #drift[:, :, :, 2 : 3] = drift_MBC
+        #drift[:, :, :, 3 : 4] = drift_EEC
+        drift = torch.cat((drift_SOC, drift_DOC, drift_MBC, drift_EEC), -1)
         
         #Diffusion matrix is computed based on diffusion type.
         if self.DIFFUSION_TYPE == 'C':
