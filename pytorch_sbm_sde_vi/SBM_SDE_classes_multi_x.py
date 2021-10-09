@@ -333,6 +333,7 @@ class SAWB_ECA_multi(SBM_SDE):
             diffusion_sqrt[:, :, :, 0 : 1, 0] = torch.sqrt(LowerBound.apply(SAWB_ECA_params_dict_rep['c_SOC'], 1e-8)) #SOC diffusion standard deviation
             diffusion_sqrt[:, :, :, 1 : 2, 1] = torch.sqrt(LowerBound.apply(SAWB_ECA_params_dict_rep['c_DOC'], 1e-8)) #DOC diffusion standard deviation
             diffusion_sqrt[:, :, :, 2 : 3, 2] = torch.sqrt(LowerBound.apply(SAWB_ECA_params_dict_rep['c_MBC'], 1e-8)) #MBC diffusion standard deviation
+            diffusion_sqrt[:, :, :, 3 : 4, 3] = torch.sqrt(LowerBound.apply(SAWB_ECA_params_dict_rep['c_EEC'], 1e-8)) #EEC diffusion standard deviation
         elif self.DIFFUSION_TYPE == 'SS':
             diffusion_sqrt[:, :, :, 0 : 1, 0] = torch.sqrt(LowerBound.apply(SOC * SAWB_ECA_params_dict_rep['s_SOC'], 1e-8)) #SOC diffusion standard deviation
             diffusion_sqrt[:, :, :, 1 : 2, 1] = torch.sqrt(LowerBound.apply(DOC * SAWB_ECA_params_dict_rep['s_DOC'], 1e-8)) #DOC diffusion standard deviation

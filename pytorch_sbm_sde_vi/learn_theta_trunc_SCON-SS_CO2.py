@@ -49,10 +49,10 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-niter = 250000
+niter = 300000
 train_lr = 2e-5 #ELBO learning rate
-batch_size = 45 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
-eval_batch_size = 45
+batch_size = 50 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
+eval_batch_size = 50
 obs_error_scale = 0.1 #Observation (y) standard deviation.
 prior_scale_factor = 0.333 #Proportion of prior standard deviation to prior means.
 num_layers = 5 #5 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
@@ -64,41 +64,7 @@ diffusion_type = 'SS'
 learn_CO2 = True
 theta_dist = 'TruncatedNormal' #String needs to be exact name of the distribution class. Options are 'TruncatedNormal' and 'RescaledLogitNormal'.
 
-#Parameter prior means
-u_M_mean = 0.0016
-a_SD_mean = 0.5
-a_DS_mean = 0.5
-a_M_mean = 0.5
-a_MSC_mean = 0.5
-k_S_ref_mean = 0.0005
-k_D_ref_mean = 0.0008
-k_M_ref_mean = 0.0007
-Ea_S_mean = 55
-Ea_D_mean = 48
-Ea_M_mean = 48
-s_SOC_mean = 0.01
-s_DOC_mean = 0.01
-s_MBC_mean = 0.01
-
-#SCON theta truncated normal prior distribution parameter details in order of mean, lower, and upper. Distribution sdev assumed to be some proportion of the mean. 
-u_M_details = torch.Tensor([u_M_mean, u_M_mean * prior_scale_factor, 0, 1])
-a_SD_details = torch.Tensor([a_SD_mean, a_SD_mean * prior_scale_factor, 0, 1])
-a_DS_details = torch.Tensor([a_DS_mean, a_DS_mean * prior_scale_factor, 0, 1])
-a_M_details = torch.Tensor([a_M_mean, a_M_mean * prior_scale_factor, 0, 1])
-a_MSC_details = torch.Tensor([a_MSC_mean, a_MSC_mean * prior_scale_factor, 0, 1])
-k_S_ref_details = torch.Tensor([k_S_ref_mean, k_S_ref_mean * prior_scale_factor, 0, 1])
-k_D_ref_details = torch.Tensor([k_D_ref_mean, k_D_ref_mean * prior_scale_factor, 0, 1])
-k_M_ref_details = torch.Tensor([k_M_ref_mean, k_M_ref_mean * prior_scale_factor, 0, 1])
-Ea_S_details = torch.Tensor([Ea_S_mean, Ea_S_mean * prior_scale_factor, 10, 100])
-Ea_D_details = torch.Tensor([Ea_D_mean, Ea_D_mean * prior_scale_factor, 10, 100])
-Ea_M_details = torch.Tensor([Ea_M_mean, Ea_M_mean * prior_scale_factor, 10, 100])
-
-#SCON-SS diffusion matrix parameter truncated normal prior distribution parameter details in order of mean, lower, and upper. 
-s_SOC_details = torch.Tensor([s_SOC_mean, s_SOC_mean * prior_scale_factor, 0, 1])
-s_DOC_details = torch.Tensor([s_DOC_mean, s_DOC_mean * prior_scale_factor, 0, 1])
-s_MBC_details = torch.Tensor([s_MBC_mean, s_MBC_mean * prior_scale_factor, 0, 1])
-
-SCON_SS_priors_details = {'u_M': u_M_details, 'a_SD': a_SD_details, 'a_DS': a_DS_details, 'a_M': a_M_details, 'a_MSC': a_MSC_details, 'k_S_ref': k_S_ref_details, 'k_D_ref': k_D_ref_details, 'k_M_ref': k_M_ref_details, 'Ea_S': Ea_S_details, 'Ea_D': Ea_D_details, 'Ea_M': Ea_M_details, 's_SOC': s_SOC_details, 's_DOC': s_DOC_details, 's_MBC': s_MBC_details}
+SCON_SS_priors_details = {k: v.to(active_device) for k, v in torch.load('SCON-SS_CO2_trunc_2021_09_27_18_01_sample_y_t_1000_dt_0-01_sd_scale_0-333_hyperparams.pt').items()}
 
 #Initial condition prior means
 x0_SCON = [65, 0.4, 2.5]
