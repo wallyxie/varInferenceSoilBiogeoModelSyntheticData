@@ -39,7 +39,7 @@ torch.set_printoptions(precision = 8)
 
 #IAF SSM time parameters
 dt_flow = 1.0 #Increased from 0.1 to reduce memory.
-t = 5000 #In hours.
+t = 1000 #In hours.
 n = int(t / dt_flow) + 1
 t_span = np.linspace(0, t, n)
 t_span_tensor = torch.reshape(torch.Tensor(t_span), [1, n, 1]).to(active_device) #T_span needs to be converted to tensor object. Additionally, facilitates conversion of I_S and I_D to tensor objects.
@@ -49,7 +49,7 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-niter = 230000
+niter = 360000
 train_lr = 2e-5 #ELBO learning rate
 batch_size = 32 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
 eval_batch_size = 32
@@ -68,7 +68,7 @@ fix_dict = None
 SCON_SS_priors_details = {k: v.to(active_device) for k, v in torch.load('generated_data/SCON-SS_CO2_trunc_5000_diff_theta_2021_10_12_16_48_sample_y_t_5000_dt_0-01_sd_scale_0-333_hyperparams.pt').items()}
 
 #Initial condition prior means
-x0_SCON = [65, 0.4, 2.5]
+x0_SCON = [50, 15, 5]
 x0_SCON_tensor = torch.tensor(x0_SCON).to(active_device)
 x0_prior_SCON = D.multivariate_normal.MultivariateNormal(x0_SCON_tensor, scale_tril = torch.eye(state_dim_SCON).to(active_device) * obs_error_scale * x0_SCON_tensor)
 
