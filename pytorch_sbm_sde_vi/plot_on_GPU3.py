@@ -74,5 +74,5 @@ true_theta = torch.load('generated_data/SCON-SS_CO2_trunc_5000_diff_theta_2021_1
 net.eval()
 x, _ = net(eval_batch_size)
 
-plot_states_post(x, q_theta, obs_model, SBM_SDE_instance, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, FIX_THETA_DICT = None, LEARN_CO2 = learn_CO2, ymin_list = [0, 0, 0, 0], ymax_list = [150., 20., 40., 0.25])
+plot_states_post(x, q_theta, obs_model, SBM_SDE_instance, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, FIX_THETA_DICT = None, LEARN_CO2 = learn_CO2, ymin_list = [0, 0, 0, 0], ymax_list = [150., 20., 40., 0.025])
 plot_theta(p_theta, q_theta, true_theta, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string)
