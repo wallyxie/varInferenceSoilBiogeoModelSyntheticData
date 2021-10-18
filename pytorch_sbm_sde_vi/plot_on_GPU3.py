@@ -36,7 +36,7 @@ torch.set_printoptions(precision = 8)
 
 #IAF SSM time parameters
 dt_flow = 1.0 #Increased from 0.1 to reduce memory.
-t = 5000 #In hours.
+t = 1000 #In hours.
 
 #Training parameters
 niter = 230000
@@ -48,10 +48,10 @@ prior_scale_factor = 0.333 #Proportion of prior standard deviation to prior mean
 num_layers = 5 #5 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
 learn_CO2 = True
 
-now_string = 'SCON-SS_CO2_trunc_5000_diff_theta_2021_10_15_12_53_43'
+now_string = 'SCON-SS_CO2_trunc_5000_diff_theta_2021_10_14_03_15_47'
 outputs_folder = 'training_pt_outputs/'
 plots_folder = 'training_plots/'
-save_string = '_iter_230000_t_5000_dt_1.0_batch_32_layers_5_lr_2e-05_sd_scale_0.333_SCON-SS_CO2_trunc_5000_diff_theta_2021_10_15_12_53_43.pt'
+save_string = '_iter_230000_t_1000_dt_1.0_batch_32_layers_5_lr_2e-05_sd_scale_0.333_SCON-SS_CO2_trunc_5000_diff_theta_2021_10_14_03_15_47.pt'
 
 net_save_string = os.path.join(outputs_folder, 'net' + save_string)
 q_theta_save_string = os.path.join(outputs_folder, 'q_theta' + save_string)
