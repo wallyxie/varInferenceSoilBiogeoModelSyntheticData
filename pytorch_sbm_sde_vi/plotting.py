@@ -42,7 +42,8 @@ def plot_states_post(x, q_theta, obs_model, SBM_SDE_CLASS, niter, t, dt, batch_s
 
     if LEARN_CO2:
         q_theta_sample_dict, _, _, _ = q_theta(x.size(0))
-        q_theta_sample_dict = {**q_theta_sample_dict, **FIX_THETA_DICT}
+        if FIX_THETA_DICT:
+            q_theta_sample_dict = {**q_theta_sample_dict, **FIX_THETA_DICT}
         x = SBM_SDE_CLASS.add_CO2(x, q_theta_sample_dict) #Add CO2 to x tensor if CO2 is being fit.
 
     fig, axs = plt.subplots(x.size(-1))
