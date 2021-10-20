@@ -63,9 +63,10 @@ SBM_SDE_class = 'SCON'
 diffusion_type = 'SS'
 learn_CO2 = True
 theta_dist = 'TruncatedNormal' #String needs to be exact name of the distribution class. Options are 'TruncatedNormal' and 'RescaledLogitNormal'.
-fix_dict = None
 
-SCON_SS_priors_details = {k: v.to(active_device) for k, v in torch.load('generated_data/SCON-SS_CO2_trunc_5000_diff_theta_2021_10_19_17_14_sample_y_t_5000_dt_0-01_sd_scale_0-333_hyperparams.pt').items()}
+SCON_SS_priors_details = {k: v.to(active_device) for k, v in torch.load('generated_data/SCON-SS_fix_u_M_a_Ea_CO2_trunc_5000_diff_theta_2021_10_19_17_24_sample_y_t_5000_dt_0-01_sd_scale_0-333_hyperparams.pt').items()}
+
+SCON_SS_fix_u_M_a_Ea_dict = {k: v.to(active_device) for k, v in torch.load('generated_data/SCON-SS_fix_u_M_a_Ea_CO2_trunc_5000_diff_theta_2021_10_19_17_24_sample_y_t_5000_dt_0-01_sd_scale_0-333_fix_dict.pt').items()}
 
 #Initial condition prior means
 x0_SCON = [60, 18, 8]
@@ -81,19 +82,19 @@ i_s_tensor = i_s(t_span_tensor).to(active_device) #Exogenous SOC input function
 i_d_tensor = i_d(t_span_tensor).to(active_device) #Exogenous DOC input function
 
 #Generate observation model.
-csv_data_path = os.path.join('generated_data/', 'SCON-SS_CO2_trunc_5000_diff_theta_2021_10_19_17_14_sample_y_t_5000_dt_0-01_sd_scale_0-333.csv')
+csv_data_path = os.path.join('generated_data/', 'SCON-SS_fix_u_M_a_Ea_CO2_trunc_5000_diff_theta_2021_10_19_17_24_sample_y_t_5000_dt_0-01_sd_scale_0-333.csv')
 
 #Call training loop function for SCON-SS.
 net, q_theta, p_theta, obs_model, ELBO_hist, list_parent_loc_scale, SBM_SDE_instance = train2(
         active_device, train_lr, niter, batch_size, num_layers,
         csv_data_path, obs_error_scale, t, dt_flow, n, 
         t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
-        SBM_SDE_class, diffusion_type, x0_prior_SCON, SCON_SS_priors_details, fix_dict, learn_CO2,
+        SBM_SDE_class, diffusion_type, x0_prior_SCON, SCON_SS_priors_details, SCON_SS_fix_u_M_a_Ea_dict, learn_CO2,
         theta_dist, BYPASS_NAN = False, LR_DECAY = 0.92, DECAY_STEP_SIZE = 25000, PRINT_EVERY = 50)
 
 #Save net and ELBO files.
 now = datetime.now()
-now_string = 'SCON-SS_CO2_trunc_5000_diff_theta' + now.strftime('_%Y_%m_%d_%H_%M_%S')
+now_string = 'SCON-SS_fix_u_M_a_Ea_CO2_trunc' + now.strftime('_%Y_%m_%d_%H_%M_%S')
 save_string = f'_iter_{niter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_lr_{train_lr}_sd_scale_{prior_scale_factor}_{now_string}.pt'
 outputs_folder = 'training_pt_outputs/'
 net_save_string = os.path.join(outputs_folder, 'net' + save_string)
@@ -124,12 +125,12 @@ obs_model = torch.load(obs_model_save_string)
 obs_model.to(active_device)
 ELBO_hist = torch.load(ELBO_save_string)
 SBM_SDE_instance = torch.load(SBM_SDE_instance_save_string)
-true_theta = torch.load('generated_data/SCON-SS_CO2_trunc_5000_diff_theta_2021_10_19_17_14_sample_y_t_5000_dt_0-01_sd_scale_0-333_rsample.pt', map_location = active_device)
+true_theta = torch.load('generated_data/SCON-SS_fix_u_M_a_Ea_CO2_trunc_5000_diff_theta_2021_10_19_17_24_sample_y_t_5000_dt_0-01_sd_scale_0-333_rsample.pt', map_location = active_device)
 
 #Plot training posterior results and ELBO history.
 net.eval()
 x, _ = net(eval_batch_size)
 plots_folder = 'training_plots/'
 plot_elbo(ELBO_hist, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, xmin = int(niter * 0.1))
-plot_states_post(x, q_theta, obs_model, SBM_SDE_instance, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, FIX_THETA_DICT = None, LEARN_CO2 = learn_CO2, ymin_list = [0, 0, 0, 0], ymax_list = [100., 25., 20., 0.04])
+plot_states_post(x, q_theta, obs_model, SBM_SDE_instance, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, SCON_SS_fix_u_M_a_Ea_dict, learn_CO2, ymin_list = [0, 0, 0, 0], ymax_list = [100., 25., 15., 0.04])
 plot_theta(p_theta, q_theta, true_theta, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string)
