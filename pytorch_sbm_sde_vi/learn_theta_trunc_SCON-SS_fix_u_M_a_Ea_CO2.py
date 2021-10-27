@@ -66,7 +66,7 @@ theta_dist = 'TruncatedNormal' #String needs to be exact name of the distributio
 
 SCON_SS_priors_details = {k: v.to(active_device) for k, v in torch.load('generated_data/SCON-SS_fix_u_M_a_Ea_CO2_trunc_2021_10_04_18_22_sample_y_t_1000_dt_0-01_sd_scale_0-333_hyperparams.pt').items()}
 
-SCON_SS_fix_u_M_a_dict = {k: v.to(active_device) for k, v in torch.load('generated_data/SCON-SS_fix_u_M_a_Ea_CO2_trunc_2021_10_04_18_22_sample_y_t_1000_dt_0-01_sd_scale_0-333_fix_dict.pt').items()}
+SCON_SS_fix_u_M_a_Ea_dict = {k: v.to(active_device) for k, v in torch.load('generated_data/SCON-SS_fix_u_M_a_Ea_CO2_trunc_2021_10_04_18_22_sample_y_t_1000_dt_0-01_sd_scale_0-333_fix_dict.pt').items()}
 
 #Initial condition prior means
 x0_SCON = [65, 0.4, 2.5]
@@ -89,7 +89,7 @@ net, q_theta, p_theta, obs_model, ELBO_hist, list_parent_loc_scale, SBM_SDE_inst
         active_device, train_lr, niter, batch_size, num_layers,
         csv_data_path, obs_error_scale, t, dt_flow, n, 
         t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
-        SBM_SDE_class, diffusion_type, x0_prior_SCON, SCON_SS_priors_details, SCON_SS_fix_u_M_a_dict, learn_CO2,
+        SBM_SDE_class, diffusion_type, x0_prior_SCON, SCON_SS_priors_details, SCON_SS_fix_u_M_a_Ea_dict, learn_CO2,
         theta_dist, BYPASS_NAN = False, LR_DECAY = 0.95, DECAY_STEP_SIZE = 25000, PRINT_EVERY = 50)
 
 #Save net and ELBO files.
@@ -132,5 +132,5 @@ net.eval()
 x, _ = net(eval_batch_size)
 plots_folder = 'training_plots/'
 plot_elbo(ELBO_hist, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, xmin = int(niter * 0.1))
-plot_states_post(x, q_theta, obs_model, SBM_SDE_instance, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, SCON_SS_fix_u_M_a_dict, learn_CO2, ymin_list = [0, 0, 0, 0], ymax_list = [90., 22., 22., 0.075])
+plot_states_post(x, q_theta, obs_model, SBM_SDE_instance, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, SCON_SS_fix_u_M_a_Ea_dict, learn_CO2, ymin_list = [0, 0, 0, 0], ymax_list = [90., 22., 22., 0.075])
 plot_theta(p_theta, q_theta, true_theta, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string)

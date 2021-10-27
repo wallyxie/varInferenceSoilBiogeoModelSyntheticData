@@ -51,7 +51,7 @@ temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 #Training parameters
 niter = 300000
 train_lr = 2e-5 #ELBO learning rate
-batch_size = 50 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
+batch_size = 50
 eval_batch_size = 50
 obs_error_scale = 0.1 #Observation (y) standard deviation.
 prior_scale_factor = 0.333 #Proportion of prior standard deviation to prior means.
@@ -63,8 +63,9 @@ SBM_SDE_class = 'SCON'
 diffusion_type = 'SS'
 learn_CO2 = True
 theta_dist = 'TruncatedNormal' #String needs to be exact name of the distribution class. Options are 'TruncatedNormal' and 'RescaledLogitNormal'.
+fix_dict = None
 
-SCON_SS_priors_details = {k: v.to(active_device) for k, v in torch.load('SCON-SS_CO2_trunc_2021_09_27_18_01_sample_y_t_1000_dt_0-01_sd_scale_0-333_hyperparams.pt').items()}
+SCON_SS_priors_details = {k: v.to(active_device) for k, v in torch.load('generated_data/SCON-SS_CO2_trunc_2021_09_27_18_01_sample_y_t_1000_dt_0-01_sd_scale_0-333_hyperparams.pt').items()}
 
 #Initial condition prior means
 x0_SCON = [65, 0.4, 2.5]
@@ -87,7 +88,7 @@ net, q_theta, p_theta, obs_model, ELBO_hist, list_parent_loc_scale, SBM_SDE_inst
         active_device, train_lr, niter, batch_size, num_layers,
         csv_data_path, obs_error_scale, t, dt_flow, n, 
         t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
-        SBM_SDE_class, diffusion_type, x0_prior_SCON, SCON_SS_priors_details, learn_CO2,
+        SBM_SDE_class, diffusion_type, x0_prior_SCON, SCON_SS_priors_details, fix_dict, learn_CO2,
         theta_dist, BYPASS_NAN = False, LR_DECAY = 0.9, DECAY_STEP_SIZE = 25000, PRINT_EVERY = 50)
 
 #Save net and ELBO files.
@@ -130,5 +131,5 @@ net.eval()
 x, _ = net(eval_batch_size)
 plots_folder = 'training_plots/'
 plot_elbo(ELBO_hist, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, xmin = int(niter * 0.2))
-plot_states_post(x, q_theta, obs_model, SBM_SDE_instance, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, learn_CO2, ymin_list = [0, 0, 0, 0], ymax_list = [100., 12., 12., 0.08])
+plot_states_post(x, q_theta, obs_model, SBM_SDE_instance, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, FIX_THETA_DICT = None, LEARN_CO2 = learn_CO2, ymin_list = [0, 0, 0, 0], ymax_list = [100., 12., 12., 0.08])
 plot_theta(p_theta, q_theta, true_theta, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string)

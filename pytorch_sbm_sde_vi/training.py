@@ -74,9 +74,10 @@ def train1(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
         OBS_CSV_STR, OBS_ERROR_SCALE, T, DT, N,
         T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF,
         SBM_SDE_CLASS: str, DIFFUSION_TYPE: str,
-        INIT_PRIOR, PRIOR_DIST_DETAILS_DICT, FIX_THETA_DICT = None, LEARN_CO2 = False,
+        INIT_PRIOR, PRIOR_DIST_DETAILS_DICT, FIX_THETA_DICT = None, LEARN_CO2: bool = False,
         THETA_DIST = None, THETA_POST_DIST = None, THETA_POST_INIT = None,
-        BYPASS_NAN = False, LR_DECAY = 0.8, DECAY_STEP_SIZE = 50000, PRINT_EVERY = 100):
+        BYPASS_NAN: bool = False, LR_DECAY: float = 0.8, DECAY_STEP_SIZE: int = 50000, PRINT_EVERY: int = 100,
+        DEBUG_SAVE_DIR: str = None):
 
     # if PRETRAIN_ITER >= NITER:
     #     raise ValueError('PRETRAIN_ITER must be < NITER.')
@@ -103,6 +104,10 @@ def train1(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
 
     #Establish neural network.
     net = SDEFlow(DEVICE, obs_model, SBM_SDE.state_dim, T, DT, N, num_layers = NUM_LAYERS).to(DEVICE)
+
+    #Initiate model debugging saver.
+    if DEBUG_SAVE_DIR:
+        debug_saver = ModelSaver(save_dir = DEBUG_SAVE_DIR)
 
     param_names = list(PRIOR_DIST_DETAILS_DICT.keys())
 
@@ -214,8 +219,8 @@ def train1(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
                 #print('log_prob.mean() =', log_prob.mean())
                 #print('log_lik.mean() =', log_lik.mean())
                 #print('obs_model(C_PATH, theta_dict) =', obs_model(C_PATH, theta_dict))                    
-                #print('drift = ', drift)
-                #print('diffusion_sqrt = ', diffusion_sqrt)
+                print(f'drift at {it + 1} iterations: {drift}')
+                print(f'diffusion_sqrt at {it + 1} iterations = {diffusion_sqrt}')
                 print(f'\nMoving average ELBO loss at {it + 1} iterations is: {sum(ELBO_losses[-10:]) / len(ELBO_losses[-10:])}. Best ELBO loss value is: {best_loss_ELBO}.')
                 if LEARN_CO2:
                     print('\nC_PATH with CO2 mean =', x_add_CO2.mean(-2))
@@ -233,6 +238,10 @@ def train1(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
             if it % DECAY_STEP_SIZE == 0:
                 ELBO_optimizer.param_groups[0]['lr'] *= LR_DECAY
 
+            if DEBUG_SAVE_DIR:
+                to_save = {'model': net, 'model state_dict': net.state_dict(), 'Optimizer state_dict': ELBO_optimizer.state_dict()}
+                debug_saver.save(to_save, it + 1)
+
             tq.update()
     
     return net, q_theta, priors, obs_model, ELBO_losses, list_parent_loc_scale, SBM_SDE
@@ -241,9 +250,10 @@ def train2(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
         OBS_CSV_STR, OBS_ERROR_SCALE, T, DT, N,
         T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF,
         SBM_SDE_CLASS: str, DIFFUSION_TYPE: str,
-        INIT_PRIOR, PRIOR_DIST_DETAILS_DICT, FIX_THETA_DICT = None, LEARN_CO2 = False,
+        INIT_PRIOR, PRIOR_DIST_DETAILS_DICT, FIX_THETA_DICT = None, LEARN_CO2: bool = False,
         THETA_DIST = None, THETA_POST_DIST = None, THETA_POST_INIT = None,
-        BYPASS_NAN = False, LR_DECAY = 0.8, DECAY_STEP_SIZE = 50000, PRINT_EVERY = 100):
+        BYPASS_NAN: bool = False, LR_DECAY: float = 0.8, DECAY_STEP_SIZE: int = 50000, PRINT_EVERY: int = 100,
+        DEBUG_SAVE_DIR: str = None):
 
     # if PRETRAIN_ITER >= NITER:
     #     raise ValueError('PRETRAIN_ITER must be < NITER.')
@@ -270,6 +280,10 @@ def train2(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
 
     #Establish neural network.
     net = SDEFlow(DEVICE, obs_model, SBM_SDE.state_dim, T, DT, N, num_layers = NUM_LAYERS).to(DEVICE)
+
+    #Initiate model debugging saver.
+    if DEBUG_SAVE_DIR:
+        debug_saver = ModelSaver(save_dir = DEBUG_SAVE_DIR)
 
     param_names = list(PRIOR_DIST_DETAILS_DICT.keys())
 
@@ -380,8 +394,8 @@ def train2(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
                 #print('log_prob.mean() =', log_prob.mean())
                 #print('log_lik.mean() =', log_lik.mean())
                 #print('obs_model(C_PATH, theta_dict) =', obs_model(C_PATH, theta_dict))                    
-                #print('drift = ', drift)
-                #print('diffusion_sqrt = ', diffusion_sqrt)
+                print(f'drift at {it + 1} iterations: {drift}')
+                print(f'diffusion_sqrt at {it + 1} iterations = {diffusion_sqrt}')
                 print(f'\nMoving average ELBO loss at {it + 1} iterations is: {sum(ELBO_losses[-10:]) / len(ELBO_losses[-10:])}. Best ELBO loss value is: {best_loss_ELBO}.')
                 if LEARN_CO2:
                     print('\nC_PATH with CO2 mean =', x_add_CO2.mean(-2))
@@ -398,6 +412,10 @@ def train2(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
         
             if it % DECAY_STEP_SIZE == 0:
                 ELBO_optimizer.param_groups[0]['lr'] *= LR_DECAY
+
+            if DEBUG_SAVE_DIR:
+                to_save = {'model': net, 'model state_dict': net.state_dict(), 'Optimizer state_dict': ELBO_optimizer.state_dict()}
+                debug_saver.save(to_save, it + 1)
 
             tq.update()
     

@@ -1,11 +1,17 @@
+#Torch-related imports
 import torch
 from torch.autograd import Function
 from torch import nn
 import torch.distributions as D
 import torch.nn.functional as F
 import torch.optim as optim
+
+#PyData imports
 import numpy as np
 import pandas as pd
+
+#Python-related imports
+import os
 
 '''
 This module contains the constituent classes for the generative flow used to represent the neural differential equations corresponding to the soil biogeochemical model SDE systems, along with the observation model class and miscellanious data processing functions.
@@ -291,108 +297,6 @@ class SDEFlow(nn.Module):
         #return eps.reshape(BATCH_SIZE, self.state_dim, -1).permute(0, 2, 1) + 1e-6, log_prob
         return eps, log_prob # (batch_size, n, state_dim), (batch_size, 1)
 
-##################################################
-#NORMALIZING FLOW RELATED CLASSES AND WITH PARAMS#
-##################################################
-       
-class AffineLayerWP(nn.Module):
-    
-    def __init__(self, cond_inputs, params_dims, stride, h_cha = 96):
-        # cond_inputs = cond_inputs + obs_dim = 1 + obs_dim = 4 by default (w/o CO2)
-        super().__init__()
-        cond_inputs += params_dims
-        self.feature_net = nn.Sequential(ResNetBlockUnMasked(cond_inputs, h_cha), ResNetBlockUnMasked(h_cha, cond_inputs))
-        self.first_block = ResNetBlock(1, h_cha, first = True)
-        self.second_block = nn.Sequential(ResNetBlock(h_cha + cond_inputs, h_cha, first = False), MaskedConv1d('B', h_cha,  2, 3, stride, 1, bias = False))
-        self.unpack = True if cond_inputs > 1 else False
-
-    def forward(self, x, cond_inputs, theta_sample): # x.shape == (batch_size, 1, n * state_dim)
-        if self.unpack:
-            theta_sample = theta_sample[:, :, None].repeat(1, 1, cond_inputs[0].size(-1))
-            cond_inputs = torch.cat([*cond_inputs, theta_sample], 1) # (batch_size, obs_dim + 1, n * state_dim)
-        #print(cond_inputs[0, :, 0], cond_inputs[0, :, 60], cond_inputs[0, :, 65])
-        cond_inputs = self.feature_net(cond_inputs) # (batch_size, obs_dim + 1, n * state_dim)
-        first_block = self.first_block(x) # (batch_size, h_cha, n * state_dim)
-        #print(first_block.shape, cond_inputs.shape)
-        feature_vec = torch.cat([first_block, cond_inputs], 1) # (batch_size, h_cha + obs_dim + 1, n * state_dim)
-        output = self.second_block(feature_vec) # (batch_size, 2, n * state_dim)
-        mu, sigma = torch.chunk(output, 2, 1) # (batch_size, 1, n * state_dim)
-        #print('mu and sigma shapes:', mu.shape, sigma.shape)
-        sigma = LowerBound.apply(sigma, 1e-8)
-        x = mu + sigma * x # (batch_size, 1, n * state_dim)
-        return x, -torch.log(sigma) # each of shape (batch_size, 1, n * state_dim)
-
-class SDEFlowWP(nn.Module):
-
-    def __init__(self, DEVICE, OBS_MODEL, Q_THETA, STATE_DIM, T, DT, N,
-                 I_S_TENSOR = None, I_D_TENSOR = None, cond_inputs = 1, num_layers = 5):
-        super().__init__()
-        self.device = DEVICE
-        self.obs_model = OBS_MODEL
-        self.q_theta = Q_THETA
-        self.state_dim = STATE_DIM
-        self.t = T
-        self.dt = DT
-        self.n = N
-        if cond_inputs == 3:
-            self.i_tensor = torch.stack((I_S_TENSOR.reshape(-1), I_D_TENSOR.reshape(-1)))[None, :, :].repeat_interleave(3, -1)
-
-        self.base_dist = D.normal.Normal(loc = 0., scale = 1.)
-        self.cond_inputs = cond_inputs        
-        self.num_layers = num_layers
-
-        self.affine = nn.ModuleList([AffineLayerWP(cond_inputs + self.obs_model.obs_dim, self.q_theta.loc.size(0), 1) for _ in range(num_layers)])
-        self.permutation = [PermutationLayer(STATE_DIM) for _ in range(num_layers)]
-        self.batch_norm = nn.ModuleList([BatchNormLayer(STATE_DIM * N) for _ in range(num_layers - 1)])
-        self.SP = SoftplusLayer()
-        
-    def forward(self, BATCH_SIZE, *args, **kwargs):
-        eps = self.base_dist.sample([BATCH_SIZE, 1, self.state_dim * self.n]).to(self.device)
-        #print('Base layer', eps)
-        log_prob = self.base_dist.log_prob(eps).sum(-1) # (batch_size, 1)
-        
-        #obs_tile = self.obs_model.mu[None, :, 1:, None].repeat(self.batch_size, self.state_dim, 1, 50).reshape(self.batch_size, self.state_dim, -1)
-        #times = torch.arange(self.dt, self.t + self.dt, self.dt, device = eps.device)[(None,) * 2].repeat(self.batch_size, self.state_dim, 1).transpose(-2, -1).reshape(self.batch_size, 1, -1)
-
-        # NOTE: This currently assumes a regular time gap between observations!
-        steps_bw_obs = self.obs_model.idx[1] - self.obs_model.idx[0]
-        reps = torch.ones(len(self.obs_model.idx), dtype=torch.long).to(self.device) * self.state_dim
-        reps[1:] *= np.long(steps_bw_obs)
-        obs_tile = self.obs_model.mu[None, :, :].repeat_interleave(reps, -1).repeat( \
-            BATCH_SIZE, 1, 1) # (batch_size, obs_dim, state_dim * n)
-        times = torch.arange(0, self.t + self.dt, self.dt, device = eps.device)[None, None, :].repeat( \
-            BATCH_SIZE, self.state_dim, 1).transpose(-2, -1).reshape(BATCH_SIZE, 1, -1)
-        
-        theta_sample = self.q_theta.rsample([BATCH_SIZE])
-
-        if self.cond_inputs == 3:
-            i_tensor = self.i_tensor.repeat(BATCH_SIZE, 1, 1)
-            features = (obs_tile, times, i_tensor)
-        else:
-            features = (obs_tile, times)
-
-        ildjs = []
-    
-        for i in range(self.num_layers):
-            eps, cl_ildj = self.affine[i](self.permutation[i](eps), features, theta_sample) # (batch_size, 1, n * state_dim)
-            #print('Coupling layer {}'.format(i), eps, cl_ildj)
-            if i < (self.num_layers - 1):
-                eps, bn_ildj = self.batch_norm[i](eps) # (batch_size, 1, n * state_dim), (1, 1, n * state_dim)
-                ildjs.append(bn_ildj)
-                #print('BatchNorm layer {}'.format(i), eps, bn_ildj)
-            ildjs.append(cl_ildj)
-                
-        eps, sp_ildj = self.SP(eps) # (batch_size, 1, n * state_dim)
-        ildjs.append(sp_ildj)
-        #print('Softplus layer', eps, sp_ildj)
-        
-        eps = eps.reshape(BATCH_SIZE, -1, self.state_dim) + 1e-6 # (batch_size, n, state_dim)
-        for ildj in ildjs:
-            log_prob += ildj.sum(-1) # (batch_size, 1)
-    
-        #return eps.reshape(BATCH_SIZE, self.state_dim, -1).permute(0, 2, 1) + 1e-6, log_prob
-        return eps, log_prob # (batch_size, n, state_dim), (batch_size, 1)
-    
 ###################################################
 ##OBSERVATION MODEL RELATED CLASSES AND FUNCTIONS##
 ###################################################
@@ -418,3 +322,30 @@ class ObsModel(nn.Module):
     
     def plt_dat(self):
         return self.mu, self.times
+
+########################
+##MISC MODEL DEBUGGING##
+########################
+
+class ModelSaver():
+    "rolling window model saver"
+    
+    def __init__(self, win=5, save_dir="./model_saves/", cleanup=True):
+        #save last win models
+        self.win = win
+        self.save_dir = save_dir
+        
+        #WARNING: will wipe models in save_dir - use a diff save_dir for every experiment
+        if cleanup:
+            [os.remove(f"{self.save_dir}{n}") for n in os.listdir(self.save_dir) if n.split(".")[-1] == "pt"]
+    
+    def save(self, models, train_iter):
+        saved_models = [n for n in os.listdir(self.save_dir) if n.split(".")[-1] == "pt"]
+        if len(saved_models) >= self.win:
+            self._delete(saved_models)
+        torch.save(models, f"{self.save_dir}model_{train_iter}.pt")
+            
+    def _delete(self, saved_models):
+        mod_idx = np.array([int(f.split(".")[0]) for f in [f.split("_")[1] for f in saved_models]]).min()
+        del_fname = f"{self.save_dir}model_{mod_idx}.pt"
+        os.remove(del_fname)
