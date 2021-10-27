@@ -85,7 +85,7 @@ i_d_tensor = i_d(t_span_tensor).to(active_device) #Exogenous DOC input function
 csv_data_path = os.path.join('generated_data/', 'SCON-SS_fix_u_M_a_Ea_CO2_trunc_5000_diff_theta_2021_10_20_00_16_sample_y_t_5000_dt_0-01_sd_scale_0-333.csv')
 
 #Turn on model debugging saving and specify debugging storage folder.
-debug_save_dir = '/debug_fix_u_M_a_Ea_CO2_5000_diff_theta/'
+debug_save_dir = 'debug_fix_u_M_a_Ea_CO2_5000_diff_theta/'
 
 #Call training loop function for SCON-SS.
 net, q_theta, p_theta, obs_model, ELBO_hist, list_parent_loc_scale, SBM_SDE_instance = train2(
