@@ -104,14 +104,16 @@ class SBM_SDE:
         self,
         C_PATH: torch.Tensor, 
         params_dict: DictOfTensors,
+        start_idx=0, end_idx=None,
         ) -> TupleOfTensors:
 
         #Appropriately index tensors based on order of operations in data generating process.
-        c_path_drift_diffusion = C_PATH[:, :-1, :] # (batch_size, N-1, state_dim)
+        if end_idx is None: end_idx = C_PATH.shape[1]
+        c_path_drift_diffusion = C_PATH[:, start_idx:end_idx-1, :] # (batch_size, minibatch_size-1, state_dim)
         #t_span_tensor_drift_diffusion = self.times[:, 1:, :]
-        i_S_tensor_drift_diffusion = self.i_S[:, 1:, :]
-        i_D_tensor_drift_diffusion = self.i_D[:, 1:, :]
-        temp_tensor_drift_diffusion = self.temps[:, 1:, :]
+        i_S_tensor_drift_diffusion = self.i_S[:, start_idx+1:end_idx, :]
+        i_D_tensor_drift_diffusion = self.i_D[:, start_idx+1:end_idx, :]
+        temp_tensor_drift_diffusion = self.temps[:, start_idx+1:end_idx, :]
 
         #Reshape parameter values to match dimension sizes.
         params_dict_res = dict((k, v.reshape(-1, 1, 1)) for k, v in params_dict.items()) # (batch_size) -> (batch_size, 1, 1)
