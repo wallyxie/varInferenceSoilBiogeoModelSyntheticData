@@ -439,7 +439,7 @@ class ModelSaver():
         
         #WARNING: will wipe models in save_dir - use a diff save_dir for every experiment
         if cleanup:
-            [os.remove(f"{self.save_dir}{n}") for n in os.listdir("./model_saves/") if n.split(".")[-1] == "pth"]
+            [os.remove(f"{self.save_dir}{n}") for n in os.listdir(self.save_dir) if n.split(".")[-1] == "pth"]
     
     def save(self, models, train_iter):
         saved_models = [n for n in os.listdir(self.save_dir) if n.split(".")[-1] == "pth"]
