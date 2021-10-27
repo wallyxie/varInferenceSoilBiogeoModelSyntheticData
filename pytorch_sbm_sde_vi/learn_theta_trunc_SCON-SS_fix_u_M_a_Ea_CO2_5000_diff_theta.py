@@ -49,7 +49,7 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-niter = 250000
+niter = 5
 train_lr = 2e-5 #ELBO learning rate
 batch_size = 32 #32 is presently max batch_size with 16 GB VRAM at t = 5000 so far.
 eval_batch_size = 32
@@ -85,7 +85,7 @@ i_d_tensor = i_d(t_span_tensor).to(active_device) #Exogenous DOC input function
 csv_data_path = os.path.join('generated_data/', 'SCON-SS_fix_u_M_a_Ea_CO2_trunc_5000_diff_theta_2021_10_20_00_16_sample_y_t_5000_dt_0-01_sd_scale_0-333.csv')
 
 #Turn on model debugging saving and specify debugging storage folder.
-debugg_save_dir = 
+debug_save_dir = '/debug_fix_u_M_a_Ea_CO2_5000_diff_theta/'
 
 #Call training loop function for SCON-SS.
 net, q_theta, p_theta, obs_model, ELBO_hist, list_parent_loc_scale, SBM_SDE_instance = train2(
@@ -93,8 +93,8 @@ net, q_theta, p_theta, obs_model, ELBO_hist, list_parent_loc_scale, SBM_SDE_inst
         csv_data_path, obs_error_scale, t, dt_flow, n, 
         t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
         SBM_SDE_class, diffusion_type, x0_prior_SCON, SCON_SS_priors_details, fix_dict, learn_CO2,
-        theta_dist, BYPASS_NAN = False, LR_DECAY = 0.92, DECAY_STEP_SIZE = 25000, PRINT_EVERY = 50,
-        DEBUG_SAVE_DIR = '/debug_fix_u_M_a_Ea_CO2_5000_diff_theta/')
+        theta_dist, BYPASS_NAN = False, LR_DECAY = 0.92, DECAY_STEP_SIZE = 25000, PRINT_EVERY = 1,
+        DEBUG_SAVE_DIR = debug_save_dir)
 
 #Save net and ELBO files.
 now = datetime.now()
