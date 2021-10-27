@@ -39,7 +39,7 @@ torch.set_printoptions(precision = 8)
 
 #IAF SSM time parameters
 dt_flow = 1.0 #Increased from 0.1 to reduce memory.
-t = 250000 #In hours.
+t = 5000 #In hours.
 n = int(t / dt_flow) + 1
 t_span = np.linspace(0, t, n)
 t_span_tensor = torch.reshape(torch.Tensor(t_span), [1, n, 1]).to(active_device) #T_span needs to be converted to tensor object. Additionally, facilitates conversion of I_S and I_D to tensor objects.
@@ -49,7 +49,7 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-niter = 5
+niter = 250000
 train_lr = 2e-5 #ELBO learning rate
 batch_size = 32 #32 is presently max batch_size with 16 GB VRAM at t = 5000 so far.
 eval_batch_size = 32
