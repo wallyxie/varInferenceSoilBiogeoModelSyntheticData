@@ -439,15 +439,15 @@ class ModelSaver():
         
         #WARNING: will wipe models in save_dir - use a diff save_dir for every experiment
         if cleanup:
-            [os.remove(f"{self.save_dir}{n}") for n in os.listdir(self.save_dir) if n.split(".")[-1] == "pth"]
+            [os.remove(f"{self.save_dir}{n}") for n in os.listdir(self.save_dir) if n.split(".")[-1] == "pt"]
     
     def save(self, models, train_iter):
-        saved_models = [n for n in os.listdir(self.save_dir) if n.split(".")[-1] == "pth"]
+        saved_models = [n for n in os.listdir(self.save_dir) if n.split(".")[-1] == "pt"]
         if len(saved_models) >= self.win:
             self._delete(saved_models)
-        torch.save(models, f"{self.save_dir}model_{train_iter}.pth")
+        torch.save(models, f"{self.save_dir}model_{train_iter}.pt")
             
     def _delete(self, saved_models):
         mod_idx = np.array([int(f.split(".")[0]) for f in [f.split("_")[1] for f in saved_models]]).min()
-        del_fname = f"{self.save_dir}model_{mod_idx}.pth"
+        del_fname = f"{self.save_dir}model_{mod_idx}.pt"
         os.remove(del_fname)
