@@ -239,7 +239,8 @@ def train1(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
                 ELBO_optimizer.param_groups[0]['lr'] *= LR_DECAY
 
             if DEBUG_SAVE_DIR:
-                to_save = {'model': net, 'model state_dict': net.state_dict(), 'Optimizer state_dict': ELBO_optimizer.state_dict()}
+                to_save = {'model': net, 'model_state_dict': net.state_dict(), 'optimizer_state_dict': ELBO_optimizer.state_dict(),
+                        'q_theta': q_theta, 'list_parent_loc_scale': list_parent_loc_scale}
                 debug_saver.save(to_save, it + 1)
 
             tq.update()
@@ -414,7 +415,8 @@ def train2(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
                 ELBO_optimizer.param_groups[0]['lr'] *= LR_DECAY
 
             if DEBUG_SAVE_DIR:
-                to_save = {'model': net, 'model state_dict': net.state_dict(), 'Optimizer state_dict': ELBO_optimizer.state_dict()}
+                to_save = {'model': net, 'model_state_dict': net.state_dict(), 'optimizer_state_dict': ELBO_optimizer.state_dict(),
+                        'q_theta': q_theta, 'list_parent_loc_scale': list_parent_loc_scale}
                 debug_saver.save(to_save, it + 1)
 
             tq.update()
