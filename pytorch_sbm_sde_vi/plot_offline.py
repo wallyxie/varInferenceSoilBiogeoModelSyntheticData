@@ -38,12 +38,12 @@ def plot_theta(p_theta_file, q_theta_file, true_theta_file, fig_file,
     #print(q_dist, q_dist.loc, q_dist.scale, q_dist.mean, q_dist.stddev)
     #print(p_dist, p_dist.loc, p_dist.scale, p_dist.mean, p_dist.stddev)
 
-    x0 = torch.min(q_dist.mean - 4*q_dist.stddev, p_dist.mean - 4*p_dist.stddev)
-    x0 = torch.max(x0, lower).detach()
+    x0 = torch.fmin(q_dist.mean - 4*q_dist.stddev, p_dist.mean - 4*p_dist.stddev)
+    x0 = torch.fmax(x0, lower).detach()
     #print(x0)
     
-    x1 = torch.max(q_dist.mean + 4*q_dist.stddev, p_dist.mean + 4*p_dist.stddev)
-    x1 = torch.min(x1, upper).detach()
+    x1 = torch.fmax(q_dist.mean + 4*q_dist.stddev, p_dist.mean + 4*p_dist.stddev)
+    x1 = torch.fmin(x1, upper).detach()
     #print(x1)
     
     # Compute prior and posterior densities at points x

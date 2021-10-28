@@ -143,7 +143,7 @@ class SCON(SBM_SDE):
         
         #Partition SOC, DOC, MBC values. Split based on final c_path_drift_diffusion dim, which specifies state variables and is also indexed as dim #2 in tensor. 
         SOC, DOC, MBC = torch.chunk(c_path_drift_diffusion, self.state_dim, -1)
-        
+
         #Repeat and permute parameter values to match dimension sizes.
         SCON_params_dict_res = dict((k, v.reshape(-1, 1, 1)) for k, v in SCON_params_dict.items()) # (batch_size) -> (batch_size, 1, 1)
 
@@ -266,7 +266,7 @@ class SCON(SBM_SDE):
         '''
         #Partition SOC, DOC, MBC values. Split based on final C_PATH dim, which specifies state variables and is also indexed as dim #2 in tensor. 
         SOC, DOC, MBC = torch.chunk(C_PATH, self.state_dim, -1)
-        
+
         #Repeat and permute parameter values to match dimension sizes.
         SCON_params_dict_res = dict((k, v.reshape(-1, 1, 1)) for k, v in SCON_params_dict.items())
 
@@ -325,7 +325,7 @@ class SAWB(SBM_SDE):
         
         #Partition SOC, DOC, MBC, EEC values. Split based on final c_path_drift_diffusion dim, which specifies state variables and is also indexed as dim #2 in tensor.
         SOC, DOC, MBC, EEC = torch.chunk(c_path_drift_diffusion, self.state_dim, -1)
-        
+
         #Repeat and permute parameter values to match dimension sizes.
         SAWB_params_dict_res = dict((k, v.reshape(-1, 1, 1)) for k, v in SAWB_params_dict.items())
         
@@ -457,7 +457,7 @@ class SAWB(SBM_SDE):
         '''
         #Partition SOC, DOC, MBC, and EEC values. Split based on final C_PATH dim, which specifies state variables and is also indexed as dim #2 in tensor. 
         SOC, DOC, MBC, EEC = torch.chunk(C_PATH, self.state_dim, -1)
-        
+
         #Repeat and permute parameter values to match dimension sizes.
         SAWB_params_dict_res = dict((k, v.reshape(-1, 1, 1)) for k, v in SAWB_params_dict.items())
         
@@ -516,7 +516,7 @@ class SAWB_ECA(SBM_SDE):
         
         #Partition SOC, DOC, MBC, EEC values. Split based on final c_path_drift_diffusion dim, which specifies state variables and is also indexed as dim #2 in tensor.
         SOC, DOC, MBC, EEC = torch.chunk(c_path_drift_diffusion, self.state_dim, -1)
-        
+
         #Repeat and permute parameter values to match dimension sizes.
         SAWB_ECA_params_dict_res = dict((k, v.reshape(-1, 1, 1)) for k, v in SAWB_ECA_params_dict.items())
         
@@ -646,7 +646,7 @@ class SAWB_ECA(SBM_SDE):
         '''
         #Partition SOC, DOC, MBC, and EEC values. Split based on final C_PATH dim, which specifies state variables and is also indexed as dim #2 in tensor. 
         SOC, DOC, MBC, EEC = torch.chunk(C_PATH, self.state_dim, -1)
-        
+
         #Repeat and permute parameter values to match dimension sizes.
         SAWB_ECA_params_dict_res = dict((k, v.reshape(-1, 1, 1)) for k, v in SAWB_ECA_params_dict.items())
         
