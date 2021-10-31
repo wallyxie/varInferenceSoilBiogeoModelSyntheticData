@@ -22,7 +22,7 @@ from SBM_SDE_classes import *
 from obs_and_flow import *
 from training import *
 from plotting import *
-from mean_field import *
+from mean_field_bound_mean import *
 from TruncatedNormal import *
 from LogitNormal import *
 
