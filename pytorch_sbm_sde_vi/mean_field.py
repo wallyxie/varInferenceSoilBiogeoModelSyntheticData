@@ -70,7 +70,7 @@ class MeanField(nn.Module):
             parent_scale = torch.diag(parent_scale_tril) # this is incorrect unless indep, but not used in inference
             q_dist = self.dist(parent_loc, scale_tril=parent_scale_tril, a = self.lowers, b = self.uppers)
         else:
-            if DIST_CLASS == TruncatedNormal:
+            if self.dist == TruncatedNormal:
                 parent_loc = LowerBound.apply(self.means, self.lowers)
             parent_scale = LowerBound.apply(self.sds, 1e-8)
             q_dist = self.dist(parent_loc, parent_scale, a = self.lowers, b = self.uppers)
