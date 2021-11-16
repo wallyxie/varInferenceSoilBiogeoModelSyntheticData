@@ -40,7 +40,7 @@ class RescaledLogitNormal(Distribution):
     def variance(self):
         return self.approx_moment(2) - self.mean**2
 
-    def approx_moment(self, d=1, num_partitions=10000, eps=1e-8):
+    def approx_moment(self, d=1, num_partitions=100000, eps=1e-8):
         lower, upper = self.sigmoid.lower + eps, self.sigmoid.upper - eps
         x = torch.from_numpy(np.linspace(lower, upper, num_partitions)) # (num_partitions, batch_shape)
         y = x**d * torch.exp(self.log_prob(x))
