@@ -140,7 +140,7 @@ def plot_theta(p_theta, q_theta, true_theta, niter, t, dt, batch_size, eval_batc
                 ax.axvline(true_theta[key], color='gray', label='True $\\theta$')
                 ax.set_xlabel(key)
                 ax.set_ylabel('Density')
-                ax.ticklabel_format(style='sci', scilimits=(-2,4), axis='x', useMathText='True')
+                ax.ticklabel_format(style='sci', scilimits=(-2,4), axis='both', useMathText='True')
             elif param_index == num_params:
                 handles, labels = axes[0, 0].get_legend_handles_labels()
                 ax.legend(handles, labels, loc='center')
