@@ -25,8 +25,8 @@ class TruncatedStandardNormal(Distribution):
     """
 
     arg_constraints = {
-        'a': constraints.real,
-        'b': constraints.real,
+        'loc': constraints.real, 'scale': constraints.positive,
+        'a': constraints.real, 'b': constraints.real,
     }
     has_rsample = True
 
