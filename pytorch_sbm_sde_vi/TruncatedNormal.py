@@ -105,6 +105,23 @@ class TruncatedStandardNormal(Distribution):
         p = torch.empty(shape, device=self.a.device).uniform_(self._dtype_min_gt_0, self._dtype_max_lt_1)
         return self.icdf(p)
 
+    def compute_gradient_injection(self, x):
+        with torch.no_grad():
+            log_pdf = self.log_prob(x)
+        cdf = self.cdf(x)
+
+        gradient_injection_value = -cdf * torch.exp(-log_pdf).detach()
+        gradient_injection_value = gradient_injection_value - gradient_injection_value.detach()
+        return gradient_injection_value
+
+    def irsample(self, sample_shape=torch.Size()):
+        # Sample x using the inverse cdf method and detach
+        x = self.sample(sample_shape).detach()
+
+        # Inject the gradient
+        x = x + self.compute_gradient_injection(x)
+
+        return x
 
 class TruncatedNormal(TruncatedStandardNormal):
     """
