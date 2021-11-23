@@ -70,7 +70,7 @@ class RescaledLogitNormal(Distribution):
 
     def approx_moment(self, d=1, num_partitions=100000, eps=1e-8):
         lower, upper = self.sigmoid.lower + eps, self.sigmoid.upper - eps
-        #x = torch.from_numpy(np.linspace(lower, upper, num_partitions)) # (num_partitions, batch_shape) #detach().cpu() slightly faster than .cpu().detach()
+        #x = torch.from_numpy(np.linspace(lower, upper, num_partitions)) # (num_partitions, batch_shape)
         x = linspace(lower, upper, num_partitions)
         y = x**d * torch.exp(self.log_prob(x))
         y[torch.isnan(y)] = 0.0
