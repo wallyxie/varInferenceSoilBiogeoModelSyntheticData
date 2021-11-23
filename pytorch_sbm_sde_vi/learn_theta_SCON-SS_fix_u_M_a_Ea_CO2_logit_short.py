@@ -44,7 +44,7 @@ torch.manual_seed(0)
 
 #IAF SSM time parameters
 dt_flow = 1.0 #Increased from 0.1 to reduce memory.
-t = 1000 #In hours.
+t = 5000 #In hours.
 n = int(t / dt_flow) + 1
 t_span = np.linspace(0, t, n)
 t_span_tensor = torch.reshape(torch.Tensor(t_span), [1, n, 1]).to(active_device) #T_span needs to be converted to tensor object. Additionally, facilitates conversion of I_S and I_D to tensor objects.
@@ -58,8 +58,8 @@ niter = 410000
 ptrain_iter = 0
 train_lr = 1.5e-5 #ELBO learning rate
 ptrain_lr = 1e-5
-batch_size = 30
-eval_batch_size = 30
+batch_size = 31
+eval_batch_size = 31
 obs_error_scale = 0.1 #Observation (y) standard deviation.
 prior_scale_factor = 0.25 #Proportion of prior standard deviation to prior means.
 num_layers = 5 #5 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
