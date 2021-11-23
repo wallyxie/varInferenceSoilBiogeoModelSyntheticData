@@ -47,7 +47,7 @@ def plot_theta(p_theta_file, q_theta_file, true_theta_file, fig_file,
     #print(x1)
     
     # Compute prior and posterior densities at points x
-    num_pts = 1000
+    num_pts = 1000000
     x = torch.from_numpy(np.linspace(x0, x1, num_pts))
     pdf_prior = torch.exp(p_dist.log_prob(x)).detach()
     pdf_post = torch.exp(q_dist.log_prob(x)).detach()
@@ -66,7 +66,8 @@ def plot_theta(p_theta_file, q_theta_file, true_theta_file, fig_file,
                 ax.plot(x[:, k], pdf_post[:, k], label='Approximate posterior $q(\\theta)$')
                 ax.axvline(true_theta[key], color='gray', label='True $\\theta$')
                 ax.set_xlabel(key)
-                ax.set_ylabel('density')
+                ax.set_ylabel('Density')
+                ax.ticklabel_format(style='sci', scilimits=(-2,4), axis='both', useMathText='True')                
             elif k == num_params:
                 handles, labels = axes[0, 0].get_legend_handles_labels()
                 ax.legend(handles, labels, loc='center')
