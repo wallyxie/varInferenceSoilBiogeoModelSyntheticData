@@ -4,7 +4,7 @@ import sys
 from datetime import datetime
 import os.path
 
-#Torch-related imports
+#Torch imports
 import torch
 import torch.distributions as D
 import torch.nn.functional as F
@@ -55,8 +55,8 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-niter = 8 #300250
-ptrain_iter = 3 #250
+niter = 21 #300250
+ptrain_iter = 10 #250
 train_lr = 2e-5 #ELBO learning rate
 ptrain_lr = 5e-5
 batch_size = 32
@@ -99,6 +99,7 @@ net, q_theta, p_theta, obs_model, norm_hist, ELBO_hist, list_parent_loc_scale, S
         SBM_SDE_class, diffusion_type, x0_prior_SCON, SCON_SS_priors_details, fix_dict, learn_CO2,
         THETA_DIST = theta_dist, BYPASS_NAN = False, LR_DECAY = 0.9, DECAY_STEP_SIZE = 25000, PRINT_EVERY = 20,
         DEBUG_SAVE_DIR = None, PTRAIN_ITER = ptrain_iter, PTRAIN_LR = ptrain_lr, PTRAIN_ALG = 'L2')
+print('Training finished. Moving to saving of output files.')
 
 #Save net and ELBO files.
 now = datetime.now()
@@ -123,6 +124,7 @@ torch.save(norm_hist, norm_save_string)
 torch.save(ELBO_hist, ELBO_save_string)
 torch.save(list_parent_loc_scale, list_parent_loc_scale_save_string)
 torch.save(SBM_SDE_instance, SBM_SDE_instance_save_string)
+print('Output files saving finished. Moving to plotting.')
 
 #Release some CUDA memory and load .pt files.
 torch.cuda.empty_cache()
@@ -142,5 +144,8 @@ net.eval()
 x, _ = net(eval_batch_size)
 plots_folder = 'training_plots/'
 plot_elbo(ELBO_hist, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, xmin = int(niter * 0.2))
-plot_states_post(x, q_theta, obs_model, SBM_SDE_instance, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, learn_CO2, ymin_list = [0, 0, 0, 0], ymax_list = [60., 5., 10., 0.025])
+print('ELBO plotting finished.')
+plot_states_post(x, q_theta, obs_model, SBM_SDE_instance, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, learn_CO2, ymin_list = [0, 0, 0, 0], ymax_list = [60., 5., 8., 0.025])
+print('States fit plotting finished.')
 plot_theta(p_theta, q_theta, true_theta, niter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string)
+print('Prior-posterior pair plotting finished.')
