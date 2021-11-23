@@ -71,13 +71,13 @@ SBM_SDE_class = 'SCON'
 diffusion_type = 'SS'
 learn_CO2 = True
 theta_dist = 'RescaledLogitNormal' #String needs to be exact name of the distribution class. Options are 'TruncatedNormal' and 'RescaledLogitNormal'.
-fix_dict = None
+fix_dict = {k: v.to(active_device) for k, v in torch.load(os.path.join('generated_data/', 'SCON-SS_CO2_logit_short_fix_u_M_a_Ea_2021_11_21_14_46_sample_y_t_5000_dt_0-01_sd_scale_0-25_fix_dict.pt')).items()}
 
 #Load parameterization of priors.
-SCON_SS_priors_details = {k: v.to(active_device) for k, v in torch.load(os.path.join('generated_data/', 'SCON-SS_CO2_logit_short_2021_11_17_20_16_sample_y_t_5000_dt_0-01_sd_scale_0-25_hyperparams.pt')).items()}
+SCON_SS_priors_details = {k: v.to(active_device) for k, v in torch.load(os.path.join('generated_data/', 'SCON-SS_CO2_logit_short_fix_u_M_a_Ea_2021_11_21_14_46_sample_y_t_5000_dt_0-01_sd_scale_0-25_hyperparams.pt')).items()}
 
 #Initial condition prior means
-x0_SCON_tensor = torch.load(os.path.join('generated_data/', 'SCON-SS_CO2_logit_short_2021_11_17_20_16_sample_y_t_5000_dt_0-01_sd_scale_0-25_x0_SCON_tensor.pt')).to(active_device)
+x0_SCON_tensor = torch.load(os.path.join('generated_data/', 'SCON-SS_CO2_logit_short_fix_u_M_a_Ea_2021_11_21_14_46_sample_y_t_5000_dt_0-01_sd_scale_0-25_x0_SCON_tensor.pt')).to(active_device)
 x0_prior_SCON = D.multivariate_normal.MultivariateNormal(x0_SCON_tensor, scale_tril = torch.eye(state_dim_SCON).to(active_device) * obs_error_scale * x0_SCON_tensor)
 
 #Generate exogenous input vectors.
@@ -89,7 +89,7 @@ i_s_tensor = i_s(t_span_tensor).to(active_device) #Exogenous SOC input function
 i_d_tensor = i_d(t_span_tensor).to(active_device) #Exogenous DOC input function
 
 #Generate observation model.
-csv_data_path = os.path.join('generated_data/', 'SCON-SS_CO2_logit_short_2021_11_17_20_16_sample_y_t_5000_dt_0-01_sd_scale_0-25.csv')
+csv_data_path = os.path.join('generated_data/', 'SCON-SS_CO2_logit_short_fix_u_M_a_Ea_2021_11_21_14_46_sample_y_t_5000_dt_0-01_sd_scale_0-25.csv')
 
 #Call training loop function for SCON-SS.
 net, q_theta, p_theta, obs_model, norm_hist, ELBO_hist, list_parent_loc_scale, SBM_SDE_instance = train2(
@@ -103,7 +103,7 @@ print('Training finished. Moving to saving of output files.')
 
 #Save net and ELBO files.
 now = datetime.now()
-now_string = 'SCON-SS_CO2_logit_short' + now.strftime('_%Y_%m_%d_%H_%M_%S')
+now_string = 'SCON-SS_fix_u_M_a_Ea_CO2_logit_short' + now.strftime('_%Y_%m_%d_%H_%M_%S')
 save_string = f'_iter_{niter}_piter_{ptrain_iter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_lr_{train_lr}_sd_scale_{prior_scale_factor}_{now_string}.pt'
 outputs_folder = 'training_pt_outputs/'
 net_save_string = os.path.join(outputs_folder, 'net' + save_string)
@@ -137,7 +137,7 @@ obs_model = torch.load(obs_model_save_string)
 obs_model.to(active_device)
 ELBO_hist = torch.load(ELBO_save_string)
 SBM_SDE_instance = torch.load(SBM_SDE_instance_save_string)
-true_theta = torch.load(os.path.join('generated_data/', 'SCON-SS_CO2_logit_short_2021_11_17_20_16_sample_y_t_5000_dt_0-01_sd_scale_0-25_rsample.pt'), map_location = active_device)
+true_theta = torch.load(os.path.join('generated_data/', 'SCON-SS_CO2_logit_short_fix_u_M_a_Ea_2021_11_21_14_46_sample_y_t_5000_dt_0-01_sd_scale_0-25_rsample.pt'), map_location = active_device)
 
 #Plot training posterior results and ELBO history.
 net.eval()
@@ -145,7 +145,7 @@ x, _ = net(eval_batch_size)
 plots_folder = 'training_plots/'
 plot_elbo(ELBO_hist, niter, ptrain_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, xmin = int(niter * 0.2))
 print('ELBO plotting finished.')
-plot_states_post(x, q_theta, obs_model, SBM_SDE_instance, niter, ptrain_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, learn_CO2, ymin_list = [0, 0, 0, 0], ymax_list = [60., 5., 8., 0.025])
+plot_states_post(x, q_theta, obs_model, SBM_SDE_instance, niter, ptrain_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, learn_CO2, ymin_list = [0, 0, 0, 0], ymax_list = [50., 7., 10., 0.025])
 print('States fit plotting finished.')
 plot_theta(p_theta, q_theta, true_theta, niter, ptrain_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string)
 print('Prior-posterior pair plotting finished.')
