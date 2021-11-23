@@ -15,7 +15,7 @@ from SBM_SDE_classes import *
 from TruncatedNormal import *
 from LogitNormal import *
 
-def plot_elbo(elbo_hist, niter, t, dt, batch_size, eval_batch_size, num_layers, train_lr, sd_scale, plots_folder, now_string, xmin = 0, ymax = None, yscale = 'linear'):
+def plot_elbo(elbo_hist, niter, piter, t, dt, batch_size, eval_batch_size, num_layers, train_lr, sd_scale, plots_folder, now_string, xmin = 0, ymax = None, yscale = 'linear'):
     iters = torch.arange(xmin + 1, len(elbo_hist) + 1).detach().cpu().numpy()
     plt.plot(iters, elbo_hist[xmin:])
     plt.ylim((None, ymax))
@@ -23,9 +23,9 @@ def plot_elbo(elbo_hist, niter, t, dt, batch_size, eval_batch_size, num_layers, 
     plt.ylabel('ELBO')
     plt.xlabel('Iteration')
     plt.title(f'ELBO history after {xmin} iterations')
-    plt.savefig(os.path.join(plots_folder, f'ELBO_iter_{niter}_t_{t}_dt_{dt}_batch_{batch_size}_samples_{eval_batch_size}_layers_{num_layers}_lr_{train_lr}_sd_scale_{sd_scale}_{now_string}.png'), dpi = 300)
+    plt.savefig(os.path.join(plots_folder, f'ELBO_iter_{niter}_piter_{piter}_t_{t}_dt_{dt}_batch_{batch_size}_samples_{eval_batch_size}_layers_{num_layers}_lr_{train_lr}_sd_scale_{sd_scale}_{now_string}.png'), dpi = 300)
     
-def plot_states_post(x, q_theta, obs_model, SBM_SDE_CLASS, niter, t, dt, batch_size, eval_batch_size, num_layers, train_lr, sd_scale, plots_folder, now_string, FIX_THETA_DICT = None, LEARN_CO2 = False, ymin_list = None, ymax_list = None):
+def plot_states_post(x, q_theta, obs_model, SBM_SDE_CLASS, niter, piter, t, dt, batch_size, eval_batch_size, num_layers, train_lr, sd_scale, plots_folder, now_string, FIX_THETA_DICT = None, LEARN_CO2 = False, ymin_list = None, ymax_list = None):
 
     state_list = []
 
@@ -68,9 +68,9 @@ def plot_states_post(x, q_theta, obs_model, SBM_SDE_CLASS, niter, t, dt, batch_s
     plt.xlabel('Hour')
     #plt.tight_layout()
     fig.set_size_inches(15, 15)
-    fig.savefig(os.path.join(plots_folder, f'net_iter_{niter}_t_{t}_dt_{dt}_batch_{batch_size}_samples_{eval_batch_size}_layers_{num_layers}_lr_{train_lr}_sd_scale_{sd_scale}_{now_string}.png'), dpi = 300)
+    fig.savefig(os.path.join(plots_folder, f'net_iter_{niter}_piter_{piter}_t_{t}_dt_{dt}_batch_{batch_size}_samples_{eval_batch_size}_layers_{num_layers}_lr_{train_lr}_sd_scale_{sd_scale}_{now_string}.png'), dpi = 300)
 
-def plot_theta(p_theta, q_theta, true_theta, niter, t, dt, batch_size, eval_batch_size, num_layers, train_lr, sd_scale, plots_folder, now_string, ncols=4):
+def plot_theta(p_theta, q_theta, true_theta, niter, piter, t, dt, batch_size, eval_batch_size, num_layers, train_lr, sd_scale, plots_folder, now_string, ncols=4):
     # Prior distribution object
     p_dist = p_theta
 
@@ -150,4 +150,4 @@ def plot_theta(p_theta, q_theta, true_theta, niter, t, dt, batch_size, eval_batc
             param_index += 1
             
     plt.tight_layout()
-    fig.savefig(os.path.join(plots_folder, f'theta_iter_{niter}_t_{t}_dt_{dt}_batch_{batch_size}_samples_{eval_batch_size}_layers_{num_layers}_lr_{train_lr}_sd_scale_{sd_scale}_{now_string}.png'), dpi = 300)
+    fig.savefig(os.path.join(plots_folder, f'theta_iter_{niter}_piter_{piter}_t_{t}_dt_{dt}_batch_{batch_size}_samples_{eval_batch_size}_layers_{num_layers}_lr_{train_lr}_sd_scale_{sd_scale}_{now_string}.png'), dpi = 300)

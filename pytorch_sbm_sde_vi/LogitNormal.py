@@ -1,10 +1,38 @@
+#Python-related imports
+from typing import Dict, Tuple, Union
+
+#PyData imports
+import numpy as np
+
+#Torch imports
 import torch
 from torch import nn
-from obs_and_flow import LowerBound
 import torch.distributions as D
 from torch.distributions import Distribution, constraints
 from torch.distributions.utils import broadcast_all, lazy_property
-import numpy as np
+
+#Module imports
+from obs_and_flow import LowerBound
+
+@torch.jit.script
+def linspace(start: torch.Tensor, stop: torch.Tensor, num: int):
+    '''
+    Credit to @martin-marek: https://github.com/pytorch/pytorch/issues/61292
+    Creates a tensor of shape [num, *start.shape] whose values are evenly spaced from start to end, inclusive.
+    Replicates the multi-dimensional behaviour of numpy.linspace in PyTorch.
+    '''
+    # create a tensor of 'num' steps from 0 to 1
+    steps = torch.arange(num, device=start.device) / (num - 1)
+    # reshape the 'steps' tensor to [-1, *([1]*start.ndim)] to allow for broadcastings
+    # - using 'steps.reshape([-1, *([1]*start.ndim)])' would be nice here but torchscript
+    #   "cannot statically infer the expected size of a list in this contex", hence the code below
+    for i in range(start.ndim):
+        steps = steps.unsqueeze(-1)
+    
+    # the output starts at 'start' and increments until 'stop' in each dimension
+    out = start[None] + steps*(stop - start)[None]
+    
+    return out
 
 def logit(x, lower=0, upper=1):
     rescaled_x = 1.0 * (x - lower) / (upper - lower)
@@ -42,7 +70,8 @@ class RescaledLogitNormal(Distribution):
 
     def approx_moment(self, d=1, num_partitions=100000, eps=1e-8):
         lower, upper = self.sigmoid.lower + eps, self.sigmoid.upper - eps
-        x = torch.from_numpy(np.linspace(lower, upper, num_partitions)) # (num_partitions, batch_shape)
+        #x = torch.from_numpy(np.linspace(lower, upper, num_partitions)) # (num_partitions, batch_shape)
+        x = linspace(lower, upper, num_partitions)
         y = x**d * torch.exp(self.log_prob(x))
         y[torch.isnan(y)] = 0.0
         return torch.trapz(y, x, dim=0)
