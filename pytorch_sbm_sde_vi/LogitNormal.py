@@ -19,7 +19,7 @@ def linspace(start: torch.Tensor, stop: torch.Tensor, num: int):
     '''
     Credit to @martin-marek: https://github.com/pytorch/pytorch/issues/61292
     Creates a tensor of shape [num, *start.shape] whose values are evenly spaced from start to end, inclusive.
-    Replicates but the multi-dimensional bahaviour of numpy.linspace in PyTorch.
+    Replicates the multi-dimensional behaviour of numpy.linspace in PyTorch.
     '''
     # create a tensor of 'num' steps from 0 to 1
     steps = torch.arange(num, device=start.device) / (num - 1)
