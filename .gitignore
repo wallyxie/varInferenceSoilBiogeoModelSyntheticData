@@ -10,10 +10,6 @@ notes/
 *.sub
 pytorch_sbm_sde_vi/python_notebooks/Plots.ipynb
 *plot_on_GPU*
-*learn_theta_trunc*
 *test*
 *SCON-SS_CO2_trunc*
-pytorch_sbm_sde_vi/python_notebooks/SAWB-ECA-SS_CO2_trunc_gen_y.ipynb
-pytorch_sbm_sde_vi/python_notebooks/SCON-C_CO2_trunc_gen_y.ipynb
-pytorch_sbm_sde_vi/python_notebooks/SCON_C_trunc_gen_y.ipynb
 pytorch_sbm_sde_vi/python_notebooks/Plots_fix_u_M_a_Ea.ipynb
