@@ -346,6 +346,9 @@ def train2(DEVICE, ELBO_LR, N_ITER, BATCH_SIZE, NUM_LAYERS,
                 else:
                     raise ValueError(f'nan in x at niter: {it}. Check gradient clipping and learning rate to start.')
             
+            list_theta = []
+            list_parent_loc_scale = []
+
             if it <= PTRAIN_ITER:
                 pretrain_optimizer.zero_grad()
 
@@ -378,8 +381,6 @@ def train2(DEVICE, ELBO_LR, N_ITER, BATCH_SIZE, NUM_LAYERS,
             else:
                 ELBO_optimizer.zero_grad()                
                 
-                list_theta = []
-                list_parent_loc_scale = []
                 theta_dict = None #Initiate theta_dict variable for loop operations.
                 theta = None #Initiate theta variable for loop operations.
                 log_q_theta = None #Initiate log_q_theta variable for loop operations.
