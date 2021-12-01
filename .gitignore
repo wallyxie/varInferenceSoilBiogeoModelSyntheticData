@@ -12,3 +12,5 @@ pytorch_sbm_sde_vi/python_notebooks/Plots.ipynb
 *plot_on_GPU*
 *test*
 pytorch_sbm_sde_vi/python_notebooks/Plots_fix_u_M_a_Ea.ipynb
+pytorch_sbm_sde_vi/generated_data/SCON-SS_CO2_logit_fix_Ea_minibatch_2021_11_30_16_28_sample_y_t_100000_dt_0-01_sd_scale_0-25_y_dict.pt
+pytorch_sbm_sde_vi/generated_data/SCON-SS_CO2_logit_minibatch_2021_11_30_16_27_sample_y_t_100000_dt_0-01_sd_scale_0-25_y_dict.pt
