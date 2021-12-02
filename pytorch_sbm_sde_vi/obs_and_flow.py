@@ -306,11 +306,11 @@ class ObsModel(nn.Module):
     def __init__(self, DEVICE, TIMES, DT, MU, SCALE):
         super().__init__()
         self.device = DEVICE
-        self.times = TIMES
+        self.times = TIMES # (num_obs, )
         self.dt = DT
         self.idx = self.get_idx(TIMES, DT)        
-        self.mu = torch.Tensor(MU).to(DEVICE)
-        self.scale = SCALE
+        self.mu = torch.Tensor(MU).to(DEVICE) # (state_dim, num_obs)
+        self.scale = SCALE # (1, state_dim)
         self.obs_dim = self.mu.shape[0]
         
     def forward(self, x, theta):
@@ -322,6 +322,23 @@ class ObsModel(nn.Module):
     
     def plt_dat(self):
         return self.mu, self.times
+
+class ObsModelMinibatch(ObsModel):
+    def __init__(self, DEVICE, TIMES, DT, MU, SCALE):
+        super().__init__(DEVICE, TIMES, DT, MU, SCALE)
+
+        # NOTE: Assumes regular obs_every interval, otherwise not sure how to 
+        # convert from lidx/ridx to obs_lidx/obs_lidx
+        self.obs_every = self.obs_model.idx[1] - self.obs_model.idx[0]
+        
+    def forward(self, x, theta, lidx, ridx):
+        obs_lidx = int(torch.ceil(lidx / self.obs_every))
+        obs_ridx = int(torch.ceil(ridx / self.obs_every))
+        
+        loc = self.mu.permute(1, 0)[obs_lidx:obs_ridx, :] # (obs_minibatch_size, state_dim)
+        idx = self.idx[obs_lidx:obs_ridx]
+        obs_ll = D.normal.Normal(loc, self.scale).log_prob(x[:, idx, :]) # (batch_size, obs_minibatch_size, state_dim)
+        return torch.sum(obs_ll, [-1, -2]).mean() # scalar
 
 ########################
 ##MISC MODEL DEBUGGING##
