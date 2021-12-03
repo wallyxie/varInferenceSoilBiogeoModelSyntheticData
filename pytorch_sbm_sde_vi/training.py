@@ -55,6 +55,10 @@ def calc_log_lik2(C_PATH: torch.Tensor,
 
         return ll, drift, diffusion_sqrt
 
+def calc_log_lik_minibatch_CO2(...)
+
+def calc_log_lik_minibatch(...)
+
 def train2(DEVICE, ELBO_LR, N_ITER, BATCH_SIZE, NUM_LAYERS,
         OBS_CSV_STR, OBS_ERROR_SCALE, T, DT, N,
         T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF,
@@ -242,3 +246,5 @@ def train2(DEVICE, ELBO_LR, N_ITER, BATCH_SIZE, NUM_LAYERS,
             tq.update()
     
     return net, q_theta, priors, obs_model, norm_losses, ELBO_losses, list_parent_loc_scale, SBM_SDE
+
+def train_minibatch(...)
