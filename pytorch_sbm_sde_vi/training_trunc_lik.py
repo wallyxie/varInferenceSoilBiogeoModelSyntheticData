@@ -226,7 +226,7 @@ def train1(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
                 ridx = min(N, batch_indices[it] + MINIBATCH_SIZE) # v
             else:
                 lidx, ridx = 0, N
-            C_PATH, log_prob = net(BATCH_SIZE, lidx, ridx, theta=theta_dict) #Obtain paths with solutions to times including t0.
+            C_PATH, log_prob = net(BATCH_SIZE, lidx, ridx, theta=theta) #Obtain paths with solutions to times including t0.
             
             #NaN handling            
             nan_count = 0
@@ -419,7 +419,7 @@ def train2(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
                 ridx = min(N, batch_indices[it] + MINIBATCH_SIZE) # v
             else:
                 lidx, ridx = 0, N
-            C_PATH, log_prob = net(BATCH_SIZE) #Obtain paths with solutions to times including t0.
+            C_PATH, log_prob = net(BATCH_SIZE, lidx, ridx, theta=theta) #Obtain paths with solutions to times including t0.
             
             #NaN handling            
             nan_count = 0
