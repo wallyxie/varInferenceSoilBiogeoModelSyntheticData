@@ -420,7 +420,7 @@ def train2(DEVICE, ELBO_LR, NITER, BATCH_SIZE, NUM_LAYERS,
             else:
                 lidx, ridx = 0, N
             C_PATH, log_prob = net(BATCH_SIZE, lidx, ridx, theta=theta) #Obtain paths with solutions to times including t0.
-            
+
             #NaN handling            
             nan_count = 0
             #Check for NaNs in x.
