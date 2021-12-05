@@ -48,62 +48,25 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-niter = 250000 #550000
+niter = 310000
 train_lr = 5e-4 #ELBO learning rate
-batch_size = 45 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
-eval_batch_size = 45
+batch_size = 40 #3 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
+eval_batch_size = 40
 obs_error_scale = 0.1 #Observation (y) standard deviation.
 prior_scale_factor = 0.333 #Proportion of prior standard deviation to prior means.
 num_layers = 5 #5 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
 
 #Specify desired SBM SDE model type and details.
+state_dim_SCON = 3 #Not including CO2 in STATE_DIM, because CO2 is an observation.
 SBM_SDE_class = 'SCON'
 diffusion_type = 'C'
 learn_CO2 = False
-state_dim_SCON = 3 #Not including CO2 in STATE_DIM, because CO2 is an observation.
-theta_dist = 'TruncatedNormal' #String needs to be exact name of the distribution class. Other option is 'RescaledLogitNormal'.
+theta_dist = 'RescaledLogitNormal' #String needs to be exact name of the distribution class. Other option is 'RescaledLogitNormal'.
 theta_post_dist = 'MultivariateLogitNormal'
 
-#Parameter prior means
-u_M_mean = 0.0016
-a_SD_mean = 0.5
-a_DS_mean = 0.5
-a_M_mean = 0.5
-a_MSC_mean = 0.5
-k_S_ref_mean = 0.0005
-k_D_ref_mean = 0.0008
-k_M_ref_mean = 0.0007
-Ea_S_mean = 55
-Ea_D_mean = 48
-Ea_M_mean = 48
-c_SOC_mean = 0.5
-c_DOC_mean = 0.01
-c_MBC_mean = 0.01
-
-#SCON theta truncated normal prior distribution parameter details in order of mean, lower, and upper. Distribution sdev assumed to be some proportion of the mean. 
-u_M_details = torch.Tensor([u_M_mean, u_M_mean * prior_scale_factor, 0, 1])
-a_SD_details = torch.Tensor([a_SD_mean, a_SD_mean * prior_scale_factor, 0, 1])
-a_DS_details = torch.Tensor([a_DS_mean, a_DS_mean * prior_scale_factor, 0, 1])
-a_M_details = torch.Tensor([a_M_mean, a_M_mean * prior_scale_factor, 0, 1])
-a_MSC_details = torch.Tensor([a_MSC_mean, a_MSC_mean * prior_scale_factor, 0, 1])
-k_S_ref_details = torch.Tensor([k_S_ref_mean, k_S_ref_mean * prior_scale_factor, 0, 1])
-k_D_ref_details = torch.Tensor([k_D_ref_mean, k_D_ref_mean * prior_scale_factor, 0, 1])
-k_M_ref_details = torch.Tensor([k_M_ref_mean, k_M_ref_mean * prior_scale_factor, 0, 1])
-Ea_S_details = torch.Tensor([Ea_S_mean, Ea_S_mean * prior_scale_factor, 10, 100])
-Ea_D_details = torch.Tensor([Ea_D_mean, Ea_D_mean * prior_scale_factor, 10, 100])
-Ea_M_details = torch.Tensor([Ea_M_mean, Ea_M_mean * prior_scale_factor, 10, 100])
-
-#SCON-C diffusion matrix parameter truncated normal prior distribution parameter details in order of mean, lower, and upper. 
-c_SOC_details = torch.Tensor([c_SOC_mean, c_SOC_mean * prior_scale_factor, 0, 1])
-c_DOC_details = torch.Tensor([c_DOC_mean, c_DOC_mean * prior_scale_factor, 0, 1])
-c_MBC_details = torch.Tensor([c_MBC_mean, c_MBC_mean * prior_scale_factor, 0, 1])
-
-# Theta priors
-SCON_C_priors_details = {'u_M': u_M_details, 'a_SD': a_SD_details, 'a_DS': a_DS_details, 'a_M': a_M_details, 'a_MSC': a_MSC_details, 'k_S_ref': k_S_ref_details, 'k_D_ref': k_D_ref_details, 'k_M_ref': k_M_ref_details, 'Ea_S': Ea_S_details, 'Ea_D': Ea_D_details, 'Ea_M': Ea_M_details, 'c_SOC': c_SOC_details, 'c_DOC': c_DOC_details, 'c_MBC': c_MBC_details}
-
-# Init theta posteriors
-init_file = 'generated_data/SCON-C_CO2_logit_alt_sample_y_t_1000_dt_0-01_sd_scale_0-333_hyperparams.pt'
-theta_post_init = {k: v.to(active_device) for k, v in torch.load(init_file).items()}
+#Load logit-normal priors
+priors_file = 'generated_data/SCON-C_CO2_logit_alt_sample_y_t_1000_dt_0-01_sd_scale_0-333_hyperparams.pt'
+SCON_C_priors_details = {k: v.to(active_device) for k, v in torch.load(priors_file).items()}
 
 #Initial condition prior means
 x0_SCON = [65, 0.4, 2.5]
@@ -120,7 +83,7 @@ i_s_tensor = i_s(t_span_tensor).to(active_device) #Exogenous SOC input function
 i_d_tensor = i_d(t_span_tensor).to(active_device) #Exogenous DOC input function
 
 #Generate observation model.
-csv_data_path = os.path.join('generated_data/', 'SCON-C_no_CO2_trunc_sample_y_t_1000_dt_0-01_sd_scale_0-333.csv')
+csv_data_path = os.path.join('generated_data/', 'SCON-C_no_CO2_logit_alt_sample_y_t_1000_dt_0-01_sd_scale_0-333.csv')
 
 #Call training loop function for SCON-C.
 net, q_theta, p_theta, obs_model, ELBO_hist, SBM_SDE_instance = train2(
@@ -128,12 +91,12 @@ net, q_theta, p_theta, obs_model, ELBO_hist, SBM_SDE_instance = train2(
         csv_data_path, obs_error_scale, t, dt_flow, n, 
         t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
         SBM_SDE_class, diffusion_type, x0_prior_SCON, SCON_C_priors_details, learn_CO2,
-        THETA_DIST=theta_dist, THETA_POST_DIST=theta_post_dist, THETA_POST_INIT=theta_post_init,
+        THETA_DIST=theta_dist, THETA_POST_DIST=theta_post_dist,
         BYPASS_NAN = False, LR_DECAY = 0.9, DECAY_STEP_SIZE = 25000, PRINT_EVERY = 50)
 
 #Save net and ELBO files.
 now = datetime.now()
-now_string = 'SCON-C_trunc_multi' + now.strftime('_%Y_%m_%d_%H_%M_%S')
+now_string = 'SCON-C_multi_logit' + now.strftime('_%Y_%m_%d_%H_%M_%S')
 save_string = f'_iter_{niter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_lr_{train_lr}_sd_scale_{prior_scale_factor}_{now_string}.pt'
 outputs_folder = 'training_pt_outputs/'
 net_save_string = os.path.join(outputs_folder, 'net' + save_string)
@@ -162,7 +125,7 @@ obs_model = torch.load(obs_model_save_string)
 obs_model.to(active_device)
 ELBO_hist = torch.load(ELBO_save_string)
 SBM_SDE_instance = torch.load(SBM_SDE_instance_save_string)
-true_theta = torch.load('generated_data/SCON-C_CO2_trunc_sample_y_t_1000_dt_0-01_sd_scale_0-333_rsample.pt', map_location = active_device)
+true_theta = torch.load('generated_data/SCON-C_CO2_logit_alt_sample_y_t_1000_dt_0-01_sd_scale_0-333_rsample.pt', map_location = active_device)
 
 #Plot training posterior results and ELBO history.
 net.eval()
