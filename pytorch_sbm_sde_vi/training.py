@@ -139,6 +139,7 @@ def train1(DEVICE, ELBO_LR, N_ITER, BATCH_SIZE, NUM_LAYERS,
     best_loss_ELBO = 1e15
     norm_losses = []
     ELBO_losses = []
+    list_parent_loc_scale = []    
 
     #Initiate optimizers.
     pretrain_optimizer = optim.Adam(net.parameters(), lr = PTRAIN_LR)
@@ -195,8 +196,6 @@ def train1(DEVICE, ELBO_LR, N_ITER, BATCH_SIZE, NUM_LAYERS,
             else:
                 ELBO_optimizer.zero_grad()                
 
-                list_theta = []
-                list_parent_loc_scale = []
                 theta_dict = None #Initiate theta_dict variable for loop operations.
                 theta = None #Initiate theta variable for loop operations.
                 log_q_theta = None #Initiate log_q_theta variable for loop operations.
@@ -321,6 +320,7 @@ def train2(DEVICE, ELBO_LR, N_ITER, BATCH_SIZE, NUM_LAYERS,
     best_loss_ELBO = 1e15
     norm_losses = []
     ELBO_losses = []
+    list_parent_loc_scale = []    
 
     #Initiate optimizers.
     if PTRAIN_ALG:
@@ -346,9 +346,6 @@ def train2(DEVICE, ELBO_LR, N_ITER, BATCH_SIZE, NUM_LAYERS,
                 else:
                     raise ValueError(f'nan in x at niter: {it}. Check gradient clipping and learning rate to start.')
             
-            list_theta = []
-            list_parent_loc_scale = []
-
             if it <= PTRAIN_ITER:
                 pretrain_optimizer.zero_grad()
 
