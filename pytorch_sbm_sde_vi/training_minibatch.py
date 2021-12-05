@@ -179,7 +179,7 @@ def train_minibatch(DEVICE, ELBO_LR, N_ITER, BATCH_SIZE, NUM_LAYERS,
             net.train()
 
             # Sample (unknown) theta
-            theta_dict, theta, log_q_theta, _ = q_theta(BATCH_SIZE)
+            theta_dict, theta, log_q_theta, parent_loc_scale_dict = q_theta(BATCH_SIZE)
             log_p_theta = priors.log_prob(theta).sum(-1)
 
             # Fix known theta

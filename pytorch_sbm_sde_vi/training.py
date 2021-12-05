@@ -139,7 +139,6 @@ def train1(DEVICE, ELBO_LR, N_ITER, BATCH_SIZE, NUM_LAYERS,
     best_loss_ELBO = 1e15
     norm_losses = []
     ELBO_losses = []
-    list_parent_loc_scale = []    
 
     #Initiate optimizers.
     pretrain_optimizer = optim.Adam(net.parameters(), lr = PTRAIN_LR)
@@ -196,14 +195,8 @@ def train1(DEVICE, ELBO_LR, N_ITER, BATCH_SIZE, NUM_LAYERS,
             else:
                 ELBO_optimizer.zero_grad()                
 
-                theta_dict = None #Initiate theta_dict variable for loop operations.
-                theta = None #Initiate theta variable for loop operations.
-                log_q_theta = None #Initiate log_q_theta variable for loop operations.
-                parent_loc_scale_dict = None #Initiate parent_loc_scale_dict variable for loop operations.
-
                 theta_dict, theta, log_q_theta, parent_loc_scale_dict = q_theta(BATCH_SIZE)
                 log_p_theta = priors.log_prob(theta).sum(-1)
-                list_parent_loc_scale.append(parent_loc_scale_dict)
 
                 if FIX_THETA_DICT:
                     if platform.python_version() >= '3.9.0':
@@ -245,12 +238,12 @@ def train1(DEVICE, ELBO_LR, N_ITER, BATCH_SIZE, NUM_LAYERS,
 
             if DEBUG_SAVE_DIR:
                 to_save = {'model': net, 'model_state_dict': net.state_dict(), 'optimizer_state_dict': ELBO_optimizer.state_dict(),
-                        'q_theta': q_theta, 'list_parent_loc_scale': list_parent_loc_scale}
+                        'q_theta': q_theta}
                 debug_saver.save(to_save, it + 1)
 
             tq.update()
 
-    return net, q_theta, priors, obs_model, ELBO_losses, list_parent_loc_scale, SBM_SDE
+    return net, q_theta, priors, obs_model, ELBO_losses, SBM_SDE
 
 def train2(DEVICE, ELBO_LR, N_ITER, BATCH_SIZE, NUM_LAYERS,
         OBS_CSV_STR, OBS_ERROR_SCALE, T, DT, N,
@@ -320,7 +313,6 @@ def train2(DEVICE, ELBO_LR, N_ITER, BATCH_SIZE, NUM_LAYERS,
     best_loss_ELBO = 1e15
     norm_losses = []
     ELBO_losses = []
-    list_parent_loc_scale = []    
 
     #Initiate optimizers.
     if PTRAIN_ALG:
@@ -381,11 +373,9 @@ def train2(DEVICE, ELBO_LR, N_ITER, BATCH_SIZE, NUM_LAYERS,
                 theta_dict = None #Initiate theta_dict variable for loop operations.
                 theta = None #Initiate theta variable for loop operations.
                 log_q_theta = None #Initiate log_q_theta variable for loop operations.
-                parent_loc_scale_dict = None #Initiate parent_loc_scale_dict variable for loop operations.
 
                 theta_dict, theta, log_q_theta, parent_loc_scale_dict = q_theta(BATCH_SIZE)
                 log_p_theta = priors.log_prob(theta).sum(-1)
-                list_parent_loc_scale.append(parent_loc_scale_dict)
 
                 if FIX_THETA_DICT:
                     if platform.python_version() >= '3.9.0':
@@ -426,9 +416,9 @@ def train2(DEVICE, ELBO_LR, N_ITER, BATCH_SIZE, NUM_LAYERS,
 
             if DEBUG_SAVE_DIR:
                 to_save = {'model': net, 'model_state_dict': net.state_dict(), 'ELBO_optimizer_state_dict': ELBO_optimizer.state_dict(), 
-                        'pretrain_optimizer_state_dict': pretrain_optimizer.state_dict(), 'q_theta': q_theta, 'list_parent_loc_scale': list_parent_loc_scale}
+                        'pretrain_optimizer_state_dict': pretrain_optimizer.state_dict(), 'q_theta': q_theta}
                 debug_saver.save(to_save, it + 1)
 
             tq.update()
     
-    return net, q_theta, priors, obs_model, norm_losses, ELBO_losses, list_parent_loc_scale, SBM_SDE
+    return net, q_theta, priors, obs_model, norm_losses, ELBO_losses, SBM_SDE
