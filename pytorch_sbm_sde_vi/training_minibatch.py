@@ -31,31 +31,58 @@ Arguments = namedtuple('args', 'device T dt n state_dim num_layers kernel num_re
 ##TRAINING AND ELBO FUNCTIONS##
 ###############################
 
-def calc_log_lik2(C_PATH: torch.Tensor,
+def calc_log_lik_minibatch_CO2(C_PATH: torch.Tensor,
         PARAMS_DICT: DictOfTensors,
         DT: float, 
         SBM_SDE_CLASS, 
         INIT_PRIOR,
-        LEARN_CO2
+        LIDX, RIDX
         ):
-    if LEARN_CO2:
-        drift, diffusion_sqrt, x_add_CO2 = SBM_SDE_CLASS.drift_diffusion_add_CO2(C_PATH, PARAMS_DICT) #Appropriate indexing of tensors corresponding to data generating process now handled in `drift_diffusion` class method. Recall that drift diffusion will use C_PATH[:, :-1, :], I_S_TENSOR[:, 1:, :], I_D_TENSOR[:, 1:, :], TEMP_TENSOR[:, 1:, :]. 
+    #if LEARN_CO2:
+    if LIK_DIST == 'Normal':
+        drift, diffusion_sqrt, x_add_CO2 = SBM_SDE_CLASS.drift_diffusion_add_CO2(C_PATH, PARAMS_DICT, LIDX, RIDX) #Appropriate indexing of tensors corresponding to data generating process now handled in `drift_diffusion` class method. Recall that drift diffusion will use C_PATH[:, :-1, :], I_S_TENSOR[:, 1:, :], I_D_TENSOR[:, 1:, :], TEMP_TENSOR[:, 1:, :]. 
         euler_maruyama_state_sample_object = D.multivariate_normal.MultivariateNormal(loc = C_PATH[:, :-1, :] + drift * DT, scale_tril = diffusion_sqrt * math.sqrt(DT)) #C_PATH[:, :-1, :] + drift * DT will diverge from C_PATH if C_PATH values not compatible with x0 and theta. Algorithm aims to minimize gap between computed drift and actual gradient between x_n and x_{n+1}. 
-
+    
         # Compute log p(x|theta) = log p(x|x0, theta) + log p(x0|theta)
         ll = euler_maruyama_state_sample_object.log_prob(C_PATH[:, 1:, :]).sum(-1) # log p(x|x0, theta)
-        ll += INIT_PRIOR.log_prob(C_PATH[:, 0, :]) # log p(x0|theta)
-
-        return ll, drift, diffusion_sqrt, x_add_CO2
-    else:
-        drift, diffusion_sqrt = SBM_SDE_CLASS.drift_diffusion(C_PATH, PARAMS_DICT) #Appropriate indexing of tensors corresponding to data generating process now handled in `drift_diffusion` class method. Recall that drift diffusion will use C_PATH[:, :-1, :], I_S_TENSOR[:, 1:, :], I_D_TENSOR[:, 1:, :], TEMP_TENSOR[:, 1:, :]. 
-        euler_maruyama_state_sample_object = D.multivariate_normal.MultivariateNormal(loc = C_PATH[:, :-1, :] + drift * DT, scale_tril = diffusion_sqrt * math.sqrt(DT)) #C_PATH[:, :-1, :] + drift * DT will diverge from C_PATH if C_PATH values not compatible with x0 and theta. Algorithm aims to minimize gap between computed drift and actual gradient between x_n and x_{n+1}. 
+        if LIDX == 0:
+            ll += INIT_PRIOR.log_prob(C_PATH[:, 0, :]) # log p(x0|theta)
+    elif LIK_DIST == 'TruncatedNormal':
+        drift, diffusion_sqrt, x_add_CO2 = SBM_SDE_CLASS.drift_diffusion_add_CO2(C_PATH, PARAMS_DICT, LIDX, RIDX, diffusion_matrix=False)
+        euler_maruyama_state_sample_object = TruncatedNormal(loc = C_PATH[:, :-1, :] + drift * DT, scale = diffusion_sqrt * math.sqrt(DT), a = 0, b = float('inf'))
 
         # Compute log p(x|theta) = log p(x|x0, theta) + log p(x0|theta)
-        ll = euler_maruyama_state_sample_object.log_prob(C_PATH[:, 1:, :]).sum(-1) # log p(x|x0, theta)
-        ll += INIT_PRIOR.log_prob(C_PATH[:, 0, :]) # log p(x0|theta)
+        ll = euler_maruyama_state_sample_object.log_prob(C_PATH[:, 1:, :]).sum((-2, -1)) # log p(x|x0, theta)
+        if LIDX == 0:
+            ll += INIT_PRIOR.log_prob(C_PATH[:, 0, :]).sum(-1) # log p(x0|theta)        
 
-        return ll, drift, diffusion_sqrt
+    return ll, drift, diffusion_sqrt, x_add_CO2
+
+def calc_log_lik_minibatch(C_PATH: torch.Tensor, # (batch_size, minibatch_size + 1, state_dim)
+        PARAMS_DICT: DictOfTensors,
+        DT: float, 
+        SBM_SDE_CLASS, 
+        INIT_PRIOR,
+        LIDX, RIDX
+        ):
+    if LIK_DIST == 'Normal':
+        drift, diffusion_sqrt = SBM_SDE_CLASS.drift_diffusion(C_PATH, PARAMS_DICT, LIDX, RIDX) #Appropriate indexing of tensors corresponding to data generating process now handled in `drift_diffusion` class method. Recall that drift diffusion will use C_PATH[:, :-1, :], I_S_TENSOR[:, 1:, :], I_D_TENSOR[:, 1:, :], TEMP_TENSOR[:, 1:, :]. 
+        euler_maruyama_state_sample_object = D.multivariate_normal.MultivariateNormal(loc = C_PATH[:, :-1, :] + drift * DT, scale_tril = diffusion_sqrt * math.sqrt(DT)) #C_PATH[:, :-1, :] + drift * DT will diverge from C_PATH if C_PATH values not compatible with x0 and theta. Algorithm aims to minimize gap between computed drift and actual gradient between x_n and x_{n+1}. 
+        
+        # Compute log p(x|theta) = log p(x|x0, theta) + log p(x0|theta)
+        ll = euler_maruyama_state_sample_object.log_prob(C_PATH[:, 1:, :]).sum(-1) # log p(x|x0, theta)
+        if LIDX == 0:
+            ll += INIT_PRIOR.log_prob(C_PATH[:, 0, :]) # log p(x0|theta)
+    elif LIK_DIST == 'TruncatedNormal':
+        drift, diffusion_sqrt = SBM_SDE_CLASS.drift_diffusion(C_PATH, PARAMS_DICT, LIDX, RIDX, diffusion_matrix=False)
+        euler_maruyama_state_sample_object = TruncatedNormal(loc = C_PATH[:, :-1, :] + drift * DT, scale = diffusion_sqrt * math.sqrt(DT), a = 0, b = float('inf'))
+
+        # Compute log p(x|theta) = log p(x|x0, theta) + log p(x0|theta)
+        ll = euler_maruyama_state_sample_object.log_prob(C_PATH[:, 1:, :]).sum((-2, -1)) # log p(x|x0, theta)
+        if LIDX == 0:
+            ll += INIT_PRIOR.log_prob(C_PATH[:, 0, :]).sum(-1) # log p(x0|theta)
+
+    return ll, drift, diffusion_sqrt # ll.shape == (state_dim, )
 
 def train_minibatch(DEVICE, ELBO_LR, N_ITER, BATCH_SIZE, NUM_LAYERS,
         OBS_CSV_STR, OBS_ERROR_SCALE, T, DT, N,
