@@ -154,7 +154,6 @@ def train_minibatch(DEVICE, ELBO_LR, N_ITER, BATCH_SIZE, NUM_LAYERS,
     best_loss_ELBO = 1e15
     norm_losses = []
     ELBO_losses = []
-    list_parent_loc_scale = []
 
     #Initiate optimizers.
     if PTRAIN_ALG:
@@ -180,9 +179,8 @@ def train_minibatch(DEVICE, ELBO_LR, N_ITER, BATCH_SIZE, NUM_LAYERS,
             net.train()
 
             # Sample (unknown) theta
-            theta_dict, theta, log_q_theta, parent_loc_scale_dict = q_theta(BATCH_SIZE)
+            theta_dict, theta, log_q_theta, _ = q_theta(BATCH_SIZE)
             log_p_theta = priors.log_prob(theta).sum(-1)
-            list_parent_loc_scale.append(parent_loc_scale_dict)
 
             # Fix known theta
             if FIX_THETA_DICT:
@@ -258,9 +256,6 @@ def train_minibatch(DEVICE, ELBO_LR, N_ITER, BATCH_SIZE, NUM_LAYERS,
 
                 # Print info
                 if (it + 1) % PRINT_EVERY == 0:
-                    #print('log_prob.mean() =', log_prob.mean())
-                    #print('log_lik.mean() =', log_lik.mean())
-                    #print('obs_model(C_PATH, theta_dict) =', obs_model(C_PATH, theta_dict))                    
                     print(f'\ndrift at {it + 1} iterations: {drift}')
                     print(f'\ndiffusion_sqrt at {it + 1} iterations = {diffusion_sqrt}')
                     print(f'\nMoving average ELBO loss at {it + 1} iterations is: {sum(ELBO_losses[-10:]) / len(ELBO_losses[-10:])}. Best ELBO loss value is: {best_loss_ELBO}.')
@@ -288,4 +283,4 @@ def train_minibatch(DEVICE, ELBO_LR, N_ITER, BATCH_SIZE, NUM_LAYERS,
 
             tq.update()
     
-    return net, q_theta, priors, obs_model, norm_losses, ELBO_losses, list_parent_loc_scale, SBM_SDE
+    return net, q_theta, priors, obs_model, norm_losses, ELBO_losses, SBM_SDE
