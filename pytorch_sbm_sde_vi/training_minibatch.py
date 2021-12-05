@@ -278,8 +278,8 @@ def train_minibatch(DEVICE, ELBO_LR, N_ITER, BATCH_SIZE, NUM_LAYERS,
                 torch.nn.utils.clip_grad_norm_(ELBO_params, 5.0)
                 ELBO_optimizer.step()
 
-            if it % DECAY_STEP_SIZE == 0:
-                ELBO_optimizer.param_groups[0]['lr'] *= LR_DECAY
+                if it % DECAY_STEP_SIZE == 0:
+                    ELBO_optimizer.param_groups[0]['lr'] *= LR_DECAY
 
             if DEBUG_SAVE_DIR:
                 to_save = {'model': net, 'model_state_dict': net.state_dict(), 'ELBO_optimizer_state_dict': ELBO_optimizer.state_dict(), 
