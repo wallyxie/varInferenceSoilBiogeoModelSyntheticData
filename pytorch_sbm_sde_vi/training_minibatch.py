@@ -278,7 +278,7 @@ def train_minibatch(DEVICE, ELBO_LR, N_ITER, BATCH_SIZE, NUM_LAYERS,
 
             if DEBUG_SAVE_DIR:
                 to_save = {'model': net, 'model_state_dict': net.state_dict(), 'ELBO_optimizer_state_dict': ELBO_optimizer.state_dict(), 
-                        'pretrain_optimizer_state_dict': pretrain_optimizer.state_dict(), 'q_theta': q_theta, 'list_parent_loc_scale': list_parent_loc_scale}
+                        'pretrain_optimizer_state_dict': pretrain_optimizer.state_dict(), 'q_theta': q_theta}
                 debug_saver.save(to_save, it + 1)
 
             tq.update()
