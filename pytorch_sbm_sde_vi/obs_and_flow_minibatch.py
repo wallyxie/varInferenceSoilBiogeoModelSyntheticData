@@ -133,22 +133,25 @@ class AffineLayer(nn.Module):
         self.linear_cond = linear_cond
         
         network = []
+        
+        if theta_dim is not None:
+            if linear_cond:
+                self.nin = nn.Sequential(nn.Linear(theta_dim+h_cha, h_cha),
+                                         nn.PReLU(),
+                                         nn.Linear(h_cha, h_cha),
+                                         nn.PReLU(),
+                                         nn.Linear(h_cha, h_cha),
+                                         nn.PReLU(),
+                                         nn.Linear(h_cha, 2))
+            else:
+                cond_inputs += theta_dim
+        
         for i in range(num_resblocks):
-            if theta_dim is not None:
-                if linear_cond:
-                    self.nin = nn.Sequential(nn.Linear(theta_dim+h_cha, h_cha),
-                                    nn.PReLU(),
-                                    nn.Linear(h_cha, h_cha),
-                                    nn.PReLU(),
-                                    nn.Linear(h_cha, h_cha),
-                                    nn.PReLU(),
-                                    nn.Linear(h_cha, 2))
-                else:    
-                    cond_inputs += theta_dim
             if i == 0:
                 network += [ResNetBlock(1+cond_inputs, h_cha, kernel=kernel, first=True)]
             else:
                 network += [ResNetBlock(h_cha, h_cha, kernel=kernel)]
+                
         if linear_cond:
             network += [MaskedConv1d('B', h_cha, 2 if theta_dim is None else h_cha, kernel, 1, kernel//2)]
         else:
@@ -158,7 +161,7 @@ class AffineLayer(nn.Module):
         self.kernel = kernel
         self.alpha = nn.Parameter(torch.Tensor([0.1])) 
         self.gamma = nn.Parameter(torch.Tensor([0.]))
-        
+
     def forward(self, x, cond_inputs, *args, **kwargs): # x.shape == (batch_size, 1, n * state_dim)
         theta = kwargs.get("theta", None)
         if theta is not None:
