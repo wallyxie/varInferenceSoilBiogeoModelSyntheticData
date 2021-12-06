@@ -161,7 +161,7 @@ class AffineLayer(nn.Module):
         self.kernel = kernel
         self.alpha = nn.Parameter(torch.Tensor([0.1])) 
         self.gamma = nn.Parameter(torch.Tensor([0.]))
-
+        
     def forward(self, x, cond_inputs, *args, **kwargs): # x.shape == (batch_size, 1, n * state_dim)
         theta = kwargs.get("theta", None)
         if theta is not None:
@@ -235,15 +235,16 @@ class BatchNormLayer(nn.Module):
 
         return y[:, None, :], ildj[None, None, :]
     
-class SDEFlow(nn.Module):
+class SDEFlowMinibatch(nn.Module):
 
-    def __init__(self, args, cond_inputs):
+    def __init__(self, args, cond_inputs, linear_cond = False):
         super().__init__()
         self.device = args.device
         self.state_dim = args.state_dim
         self.t = args.T
         self.dt = args.dt
         self.n = args.n
+        self.linear_cond = linear_cond
         
         self.scale = nn.Parameter(torch.Tensor([1.0]), requires_grad=True)
         self.cond_inputs = cond_inputs
@@ -252,7 +253,7 @@ class SDEFlow(nn.Module):
 
         layers = []
         for i in range(self.num_layers):
-            layers += [AffineLayer(self.n_cond_inputs, args.kernel, args.num_resblocks, args.theta_dim)]
+            layers += [AffineLayer(self.n_cond_inputs, args.kernel, args.num_resblocks, args.theta_dim, linear_cond = self.linear_cond)]
             layers += [PermutationLayer(self.state_dim)]
             layers += [BatchNormLayer(1)] # WARNING: This might be less effective (seems to currently work)
             
