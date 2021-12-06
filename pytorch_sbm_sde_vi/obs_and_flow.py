@@ -323,26 +323,6 @@ class ObsModel(nn.Module):
     def plt_dat(self):
         return self.mu, self.times
 
-class ObsModelMinibatch(ObsModel):
-    def __init__(self, DEVICE, TIMES, DT, MU, SCALE):
-        super().__init__(DEVICE, TIMES, DT, MU, SCALE)
-
-        # NOTE: Assumes regular obs_every interval starting from the 0th index,
-        # otherwise not sure how to  convert from lidx/ridx to obs_lidx/obs_lidx
-        self.obs_every = self.obs_model.idx[1] - self.obs_model.idx[0]
-        
-    def forward(self, x, theta, lidx=0, ridx=None):
-        obs_lidx = int(torch.ceil(lidx / self.obs_every))
-        if ridx is None:
-            ridx = self.idx.shape[0]
-        else:
-            obs_ridx = int(torch.ceil(ridx / self.obs_every))
-        
-        loc = self.mu.permute(1, 0)[obs_lidx:obs_ridx, :] # (obs_minibatch_size, state_dim)
-        idx = self.idx[obs_lidx:obs_ridx]
-        obs_ll = D.normal.Normal(loc, self.scale).log_prob(x[:, idx, :]) # (batch_size, obs_minibatch_size, state_dim)
-        return torch.sum(obs_ll, [-1, -2]).mean() # scalar
-
 ########################
 ##MISC MODEL DEBUGGING##
 ########################
