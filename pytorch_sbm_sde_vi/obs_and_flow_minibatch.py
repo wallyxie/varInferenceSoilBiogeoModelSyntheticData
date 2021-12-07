@@ -1,4 +1,4 @@
-#Torch-related imports
+#Torch imports
 import torch
 from torch.autograd import Function
 from torch import nn
@@ -244,12 +244,13 @@ class SDEFlowMinibatch(nn.Module):
         self.t = args.T
         self.dt = args.dt
         self.n = args.n
-        self.linear_cond = linear_cond
         
         self.scale = nn.Parameter(torch.Tensor([1.0]), requires_grad=True)
         self.cond_inputs = cond_inputs
         self.n_cond_inputs = cond_inputs.shape[0]        
         self.num_layers = args.num_layers
+
+        self.linear_cond = linear_cond        
 
         layers = []
         for i in range(self.num_layers):
