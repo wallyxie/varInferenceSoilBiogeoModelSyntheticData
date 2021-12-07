@@ -5,7 +5,7 @@ from typing import Dict, Tuple, Union
 from collections import namedtuple
 import platform
 
-#Torch-related imports
+#Torch imports
 import torch
 from torch.autograd import Function
 from torch import nn
@@ -15,8 +15,8 @@ import torch.optim as optim
 
 #Module imports
 from mean_field import *
-from obs_and_flow import *
-from SBM_SDE_classes import *
+from obs_and_flow_minibatch import *
+from SBM_SDE_classes_optim import *
 
 '''
 This module containins the `calc_log_lik` and `training` functions for pre-training and ELBO training of the soil biogeochemical model SDE systems.
@@ -119,7 +119,7 @@ def train_minibatch(DEVICE, ELBO_LR, N_ITER, BATCH_SIZE, NUM_LAYERS,
     #Establish neural network.
     # args: device T dt n state_dim num_layers kernel num_resblocks positive theta_dim
     args = Arguments(DEVICE, T, DT, N, SBM_SDE.state_dim, NUM_LAYERS, KERNEL, NUM_RESBLOCKS, True, len(PRIOR_DIST_DETAILS_DICT))
-    net = SDEFlow(args, obs_model, FIX_THETA_DICT)
+    net = SDEFlowMinibatch(args, obs_model, FIX_THETA_DICT)
     
     #Initiate model debugging saver.
     if DEBUG_SAVE_DIR:
