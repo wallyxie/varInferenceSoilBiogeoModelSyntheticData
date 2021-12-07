@@ -1,3 +1,7 @@
+#Python-related imports
+import os
+from collections import namedtuple
+
 #Torch imports
 import torch
 from torch.autograd import Function
@@ -9,10 +13,6 @@ import torch.optim as optim
 #PyData imports
 import numpy as np
 import pandas as pd
-
-#Python-related imports
-import os
-
 
 '''
 This module contains the constituent classes for the generative flow used to represent the neural differential equations corresponding to the soil biogeochemical model SDE systems, along with the observation model class and miscellanious data processing functions.
@@ -237,24 +237,31 @@ class BatchNormLayer(nn.Module):
     
 class SDEFlowMinibatch(nn.Module):
 
-    def __init__(self, args, cond_inputs, linear_cond = False):
+    def __init__(self, OBS_MODEL_MINIBATCH, STATE_DIM, T, N, COND_INPUTS,
+                 NUM_LAYERS = 5, KERNEL = 3, NUM_RESBLOCKS = 2, 
+                 POSITIVE = True, LINEAR_COND = False):
         super().__init__()
-        self.device = args.device
-        self.state_dim = args.state_dim
-        self.t = args.T
-        self.dt = args.dt
-        self.n = args.n
+        
+        self.device = OBS_MODEL_MINIBATCH.device
+        self.state_dim = STATE_DIM
+        self.t = T
+        self.dt = OBS_MODEL_MINIBATCH.DT
+        self.n = N
+        
+        self.cond_inputs = COND_INPUTS
+        self.n_cond_inputs = COND_INPUTS.shape[0]        
+        self.num_layers = NUM_LAYERS
+        self.kernel = KERNEL
+        self.num_resblocks = NUM_RESBLOCKS
+        
+        self.positive = POSITIVE
+        self.linear_cond = LINEAR_COND
         
         self.scale = nn.Parameter(torch.Tensor([1.0]), requires_grad=True)
-        self.cond_inputs = cond_inputs
-        self.n_cond_inputs = cond_inputs.shape[0]        
-        self.num_layers = args.num_layers
-
-        self.linear_cond = linear_cond        
 
         layers = []
         for i in range(self.num_layers):
-            layers += [AffineLayer(self.n_cond_inputs, args.kernel, args.num_resblocks, args.theta_dim, linear_cond = self.linear_cond)]
+            layers += [AffineLayer(self.n_cond_inputs, self.kernel, self.num_resblocks, self.theta_dim, self.linear_cond)]
             layers += [PermutationLayer(self.state_dim)]
             layers += [BatchNormLayer(1)] # WARNING: This might be less effective (seems to currently work)
             
