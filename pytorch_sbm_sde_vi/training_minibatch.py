@@ -92,7 +92,7 @@ def train_minibatch(DEVICE, ELBO_LR, N_ITER, BATCH_SIZE, NUM_LAYERS,
         THETA_DIST = None, THETA_POST_DIST = None, THETA_POST_INIT = None, LIK_DIST = 'Normal',
         BYPASS_NAN: bool = False, LR_DECAY: float = 0.8, DECAY_STEP_SIZE: int = 50000, PRINT_EVERY: int = 100,
         DEBUG_SAVE_DIR: str = None, PTRAIN_ITER: int = 0, PTRAIN_LR: float = None, PTRAIN_ALG: str = None,
-        MINIBATCH_SIZE: int = 0, KERNEL = 3, NUM_RESBLOCKS = 2):
+        MINIBATCH_SIZE: int = 0, KERNEL: int = 3, NUM_RESBLOCKS: int = 2):
     if PTRAIN_ITER >= N_ITER:
         raise ValueError('PTRAIN_ITER must be < N_ITER.')
 
