@@ -239,7 +239,7 @@ class BatchNormLayer(nn.Module):
     
 class SDEFlowMinibatch(nn.Module):
 
-    def __init__(self, DEVICE, OBS_MODEL_MINIBATCH, STATE_DIM, T, N, THETA_DIM, COND_INPUTS,
+    def __init__(self, DEVICE, OBS_MODEL_MINIBATCH, STATE_DIM, T, N, THETA_DIM, COND_INPUTS = None, FIX_THETA_DICT = None,
                  NUM_LAYERS = 5, KERNEL_SIZE = 3, NUM_RESBLOCKS = 2, 
                  POSITIVE = True, THETA_COND = 'convolution'):
         super().__init__()
@@ -251,7 +251,22 @@ class SDEFlowMinibatch(nn.Module):
         self.n = N
         self.theta_dim = THETA_DIM
         
-        self.cond_inputs = COND_INPUTS
+        #Transform time-related tensors into shape for conditional inputs.
+        t_space = torch.linspace(-1, 1, self.n)[None].repeat(self.state_dim, 1).transpose(1, 0).reshape(1, -1) #t_space is re-scaled timestamp.
+        #future observation count
+        #past observation count
+        #Combine time cond_inputs.
+        cond_inputs = torch.cat([t_future, t_past, t_space], 0)
+
+        if COND_INPUTS is not None:
+            cond_inputs = torch.cat([cond_inputs, COND_INPUTS], 0)
+
+        if FIX_THETA_DICT is not None:
+            fix_theta_tensor = torch.tensor(list(FIX_THETA_DICT.values()))
+            fix_theta_tensor = fix_theta_tensor[:, None].repeat(N * SBM_SDE.state_dim, -1)
+            cond_inputs = torch.cat([cond_inputs, fix_theta_tensor], 0)
+
+        self.cond_inputs = cond_inputs
         self.n_cond_inputs = COND_INPUTS.shape[0]        
         self.num_layers = NUM_LAYERS
         self.kernel_size = KERNEL_SIZE

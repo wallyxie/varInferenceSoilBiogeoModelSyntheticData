@@ -114,10 +114,12 @@ def train_minibatch(DEVICE, ELBO_LR, N_ITER, BATCH_SIZE,
     obs_times, obs_means, obs_error = csv_to_obs_df(OBS_CSV_STR, obs_dim, T, OBS_ERROR_SCALE) #csv_to_obs_df function in obs_and_flow module
     obs_model_minibatch = ObsModelMinibatch(TIMES = obs_times, DT = DT, MU = obs_means, SCALE = obs_error).to(DEVICE)
 
+    #cond_inputs processing and reshaping would go here if we use additional cond_inputs aside from time and theta, such as the i and temperature tensors.
+    cond_inputs = None
+
     #Establish neural network.
-    #NOTE TO DELETE LATER: CONTINUE HERE, DISCUSS COND_INPUTS).
-    net = SDEFlowMinibatch(DEVICE, obs_model_minibatch, SBM_SDE.state_dim, T, N, len(PRIOR_DIST_DETAILS_DICT), cond_inputs,
-            NUM_LAYERS, KERNEL, NUM_RESBLOCKS, THETA_COND = THETA_COND)
+    net = SDEFlowMinibatch(DEVICE, obs_model_minibatch, SBM_SDE.state_dim, T, N, len(PRIOR_DIST_DETAILS_DICT), COND_INPUTS = cond_inputs, FIX_THETA_DICT = FIX_THETA_DICT,
+            NUM_LAYERS = NUM_LAYERS, KERNEL_SIZE = KERNEL, NUM_RESBLOCKS = NUM_RESBLOCKS, THETA_COND = THETA_COND)
     
     #Initiate model debugging saver.
     if DEBUG_SAVE_DIR:
