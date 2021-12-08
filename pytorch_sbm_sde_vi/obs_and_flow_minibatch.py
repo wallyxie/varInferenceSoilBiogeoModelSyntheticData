@@ -317,13 +317,12 @@ class SDEFlowMinibatch(nn.Module):
 
 class ObsModel(nn.Module):
 
-    def __init__(self, DEVICE, TIMES, DT, MU, SCALE):
+    def __init__(self, TIMES, DT, MU, SCALE):
         super().__init__()
-        self.device = DEVICE
         self.times = TIMES # (num_obs, )
         self.dt = DT
         self.idx = self.get_idx(TIMES, DT)        
-        self.mu = torch.Tensor(MU).to(DEVICE) # (state_dim, num_obs)
+        self.mu = torch.Tensor(MU) # (state_dim, num_obs)
         self.scale = SCALE # (1, state_dim)
         self.obs_dim = self.mu.shape[0]
         
@@ -338,12 +337,12 @@ class ObsModel(nn.Module):
         return self.mu, self.times
 
 class ObsModelMinibatch(ObsModel):
-    def __init__(self, DEVICE, TIMES, DT, MU, SCALE):
-        super().__init__(DEVICE, TIMES, DT, MU, SCALE)
+    def __init__(self, TIMES, DT, MU, SCALE):
+        super().__init__(TIMES, DT, MU, SCALE)
 
         # NOTE: Assumes regular obs_every interval starting from the 0th index,
         # otherwise not sure how to convert from lidx/ridx to obs_lidx/obs_lidx
-        self.obs_every = self.obs_model.idx[1] - self.obs_model.idx[0]
+        self.obs_every = self.idx[1] - self.idx[0]
         
     def forward(self, x, theta, lidx=0, ridx=None):
         obs_lidx = int(torch.ceil(lidx / self.obs_every))

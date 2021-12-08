@@ -114,7 +114,7 @@ def train_minibatch(DEVICE, ELBO_LR, N_ITER, BATCH_SIZE,
     else:
         obs_dim = SBM_SDE.state_dim
     obs_times, obs_means, obs_error = csv_to_obs_df(OBS_CSV_STR, obs_dim, T, OBS_ERROR_SCALE) #csv_to_obs_df function in obs_and_flow module
-    obs_model_minibatch = ObsModelMinibatch(DEVICE, TIMES = obs_times, DT = DT, MU = obs_means, SCALE = obs_error).to(DEVICE)
+    obs_model_minibatch = ObsModelMinibatch(TIMES = obs_times, DT = DT, MU = obs_means, SCALE = obs_error).to(DEVICE)
 
     #Establish neural network.
     #NOTE TO DELETE LATER: CONTINUE HERE, DISCUSS COND_INPUTS).
