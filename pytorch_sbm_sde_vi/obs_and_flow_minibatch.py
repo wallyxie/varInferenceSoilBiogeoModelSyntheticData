@@ -127,14 +127,14 @@ class PermutationLayer(nn.Module):
 
 class AffineLayer(nn.Module):
     
-    def __init__(self, cond_inputs, kernel, num_resblocks, theta_dim, h_cha = 96, linear_cond = False):
+    def __init__(self, cond_inputs, kernel, num_resblocks, theta_dim, theta_cond = 'convolution', h_cha = 96):
         super().__init__()
-        self.linear_cond = linear_cond
+        self.theta_cond = theta_cond
         
         network = []
         
-        if theta_dim is not None:
-            if linear_cond:
+        if theta_dim is not None and theta_cond:
+            if theta_cond == 'linear':
                 self.nin = nn.Sequential(nn.Linear(theta_dim+h_cha, h_cha),
                                          nn.PReLU(),
                                          nn.Linear(h_cha, h_cha),
@@ -142,8 +142,11 @@ class AffineLayer(nn.Module):
                                          nn.Linear(h_cha, h_cha),
                                          nn.PReLU(),
                                          nn.Linear(h_cha, 2))
-            else:
+            elif theta_cond == 'convolution':
                 cond_inputs += theta_dim
+        else:
+            if theta_dim is None and theta_cond != False:
+                raise InputError('theta_dim is None, but theta_cond is not False. Either theta_dim needs int input, or theta_cond needs to be False.')
         
         for i in range(num_resblocks):
             if i == 0:
@@ -151,7 +154,7 @@ class AffineLayer(nn.Module):
             else:
                 network += [ResNetBlock(h_cha, h_cha, kernel=kernel)]
                 
-        if linear_cond:
+        if theta_cond == 'linear':
             network += [MaskedConv1d('B', h_cha, 2 if theta_dim is None else h_cha, kernel, 1, kernel//2)]
         else:
             network += [MaskedConv1d('B', h_cha, 2, kernel, 1, kernel//2)]
@@ -163,13 +166,13 @@ class AffineLayer(nn.Module):
         
     def forward(self, x, cond_inputs, *args, **kwargs): # x.shape == (batch_size, 1, n * state_dim)
         theta = kwargs.get("theta", None)
-        if theta is not None:
-            if self.linear_cond:
+        if theta is not None and self.theta_cond:
+            if self.theta_cond == 'linear':
                 intermediate_output = self.network(torch.cat([x, cond_inputs], 1))
                 theta = theta[:, :, None].repeat(1, 1, intermediate_output.shape[-1])
                 intermediate_output = torch.cat([theta, intermediate_output], 1).permute(0, 2, 1)
                 output = self.nin(intermediate_output).permute(0, 2, 1)  
-            else:    
+            elif self.theta_cond == 'convolution':    
                 theta = theta[:, :, None].repeat(1, 1, x.shape[-1])
                 output = self.network(torch.cat([x, cond_inputs, theta], 1))
         else:
