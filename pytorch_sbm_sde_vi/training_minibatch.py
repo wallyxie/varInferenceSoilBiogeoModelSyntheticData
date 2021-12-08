@@ -84,7 +84,7 @@ def calc_log_lik_minibatch(C_PATH: torch.Tensor, # (batch_size, minibatch_size +
 
     return ll, drift, diffusion_sqrt # ll.shape == (state_dim, )
 
-def train_minibatch(DEVICE, ELBO_LR, N_ITER, BATCH_SIZE, NUM_LAYERS,
+def train_minibatch(DEVICE, ELBO_LR, N_ITER, BATCH_SIZE,
         OBS_CSV_STR, OBS_ERROR_SCALE, T, DT, N,
         T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF,
         SBM_SDE_CLASS: str, DIFFUSION_TYPE: str,
@@ -92,7 +92,7 @@ def train_minibatch(DEVICE, ELBO_LR, N_ITER, BATCH_SIZE, NUM_LAYERS,
         THETA_DIST = None, THETA_POST_DIST = None, THETA_POST_INIT = None, LIK_DIST = 'Normal',
         BYPASS_NAN: bool = False, LR_DECAY: float = 0.8, DECAY_STEP_SIZE: int = 50000, PRINT_EVERY: int = 100,
         DEBUG_SAVE_DIR: str = None, PTRAIN_ITER: int = 0, PTRAIN_LR: float = None, PTRAIN_ALG: str = None,
-        MINIBATCH_SIZE: int = 0, KERNEL: int = 3, NUM_RESBLOCKS: int = 2):
+        MINIBATCH_SIZE: int = 0, NUM_LAYERS: int = 5, KERNEL: int = 3, NUM_RESBLOCKS: int = 2):
     if PTRAIN_ITER >= N_ITER:
         raise ValueError('PTRAIN_ITER must be < N_ITER.')
 
@@ -114,12 +114,12 @@ def train_minibatch(DEVICE, ELBO_LR, N_ITER, BATCH_SIZE, NUM_LAYERS,
     else:
         obs_dim = SBM_SDE.state_dim
     obs_times, obs_means, obs_error = csv_to_obs_df(OBS_CSV_STR, obs_dim, T, OBS_ERROR_SCALE) #csv_to_obs_df function in obs_and_flow module
-    obs_model = ObsModel(DEVICE, TIMES = obs_times, DT = DT, MU = obs_means, SCALE = obs_error).to(DEVICE)
+    obs_model_minibatch = ObsModelMinibatch(DEVICE, TIMES = obs_times, DT = DT, MU = obs_means, SCALE = obs_error).to(DEVICE)
 
     #Establish neural network.
-    # args: device T dt n state_dim num_layers kernel num_resblocks positive theta_dim
-    args = Arguments(DEVICE, T, DT, N, SBM_SDE.state_dim, NUM_LAYERS, KERNEL, NUM_RESBLOCKS, True, len(PRIOR_DIST_DETAILS_DICT))
-    net = SDEFlowMinibatch(args, obs_model, FIX_THETA_DICT)
+    #NOTE TO DELETE LATER: CONTINUE HERE, DISCUSS COND_INPUTS).
+    net = SDEFlowMinibatch(obs_model_minibatch, SBM_SDE.state_dim, T = T, N = N, len(PRIOR_DIST_DETAILS_DICT), cond_inputs,
+            NUM_LAYERS, KERNEL, NUM_RESBLOCKS)
     
     #Initiate model debugging saver.
     if DEBUG_SAVE_DIR:
