@@ -79,9 +79,9 @@ class MaskedConv1d(nn.Conv1d):
 
 class ResNetBlock(nn.Module):
     
-    def __init__(self, inp_cha, out_cha, kernel=3, stride = 1, first = False, batch_norm = False):
+    def __init__(self, inp_cha, out_cha, kernel = 3, stride = 1, first = False, batch_norm = False):
         super().__init__()
-        self.conv1 = MaskedConv1d('A' if first else 'B', inp_cha,  out_cha, kernel, stride, kernel//2, bias = False)
+        self.conv1 = MaskedConv1d('A' if first else 'B', inp_cha, out_cha, kernel, stride, kernel//2, bias = False)
         self.conv2 = MaskedConv1d('B', out_cha,  out_cha, kernel, 1, kernel//2, bias = False)
 
         self.act1 = nn.PReLU(out_cha, init = 0.2)
@@ -261,13 +261,13 @@ class SDEFlowMinibatch(nn.Module):
 
         layers = []
         for i in range(self.num_layers):
-            layers += [AffineLayer(self.n_cond_inputs, self.kernel, self.num_resblocks, self.theta_dim, self.linear_cond)]
+            layers += [AffineLayer(self.n_cond_inputs, self.kernel, self.num_resblocks, self.theta_dim, 96, self.linear_cond)]
             layers += [PermutationLayer(self.state_dim)]
             layers += [BatchNormLayer(1)] # WARNING: This might be less effective (seems to currently work)
             
         layers.pop(-1)
         layers.pop(-1)
-        if args.positive:
+        if self.positive:
             layers += [SoftplusLayer()]
         self.layers = nn.ModuleList(layers)
         
