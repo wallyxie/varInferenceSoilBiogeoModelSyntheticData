@@ -157,7 +157,7 @@ class AffineLayer(nn.Module):
             network += [MaskedConv1d('B', h_cha, 2, kernel, 1, kernel//2)]
         
         self.network = nn.Sequential(*network)
-        self.kernel = kernel
+        self.kernel_size = kernel
         self.alpha = nn.Parameter(torch.Tensor([0.1])) 
         self.gamma = nn.Parameter(torch.Tensor([0.]))
         
@@ -181,7 +181,7 @@ class AffineLayer(nn.Module):
     
     @property
     def window(self):
-        win = self.kernel//2
+        win = self.kernel_size//2
         for l in self.network[:-1]:
             win += l.window
         return win
@@ -237,7 +237,7 @@ class BatchNormLayer(nn.Module):
 class SDEFlowMinibatch(nn.Module):
 
     def __init__(self, DEVICE, OBS_MODEL_MINIBATCH, STATE_DIM, T, N, THETA_DIM, COND_INPUTS,
-                 NUM_LAYERS = 5, KERNEL = 3, NUM_RESBLOCKS = 2, 
+                 NUM_LAYERS = 5, KERNEL_SIZE = 3, NUM_RESBLOCKS = 2, 
                  POSITIVE = True, LINEAR_COND = False):
         super().__init__()
         
@@ -251,7 +251,7 @@ class SDEFlowMinibatch(nn.Module):
         self.cond_inputs = COND_INPUTS
         self.n_cond_inputs = COND_INPUTS.shape[0]        
         self.num_layers = NUM_LAYERS
-        self.kernel = KERNEL
+        self.kernel_size = KERNEL_SIZE
         self.num_resblocks = NUM_RESBLOCKS
         
         self.positive = POSITIVE
@@ -261,7 +261,7 @@ class SDEFlowMinibatch(nn.Module):
 
         layers = []
         for i in range(self.num_layers):
-            layers += [AffineLayer(self.n_cond_inputs, self.kernel, self.num_resblocks, self.theta_dim, 96, self.linear_cond)]
+            layers += [AffineLayer(self.n_cond_inputs, self.kernel_size, self.num_resblocks, self.theta_dim, 96, self.linear_cond)]
             layers += [PermutationLayer(self.state_dim)]
             layers += [BatchNormLayer(1)] # WARNING: This might be less effective (seems to currently work)
             
