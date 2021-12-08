@@ -25,8 +25,8 @@ class TruncatedStandardNormal(Distribution):
     """
 
     arg_constraints = {
-        'loc': constraints.real, 'scale': constraints.positive,
-        'a': constraints.real, 'b': constraints.real,
+        'a': constraints.real,
+        'b': constraints.real,
     }
     has_rsample = True
 
@@ -50,7 +50,9 @@ class TruncatedStandardNormal(Distribution):
         self._big_phi_b = self._big_phi(self.b)
         self._Z = (self._big_phi_b - self._big_phi_a).clamp_min(eps)
         self._log_Z = self._Z.log()
-        self._lpbb_m_lpaa_d_Z = (self._little_phi_b * self.b - self._little_phi_a * self.a) / self._Z
+        little_phi_coeff_a = torch.nan_to_num(self.a, nan=math.nan)
+        little_phi_coeff_b = torch.nan_to_num(self.b, nan=math.nan)
+        self._lpbb_m_lpaa_d_Z = (self._little_phi_b * little_phi_coeff_b - self._little_phi_a * little_phi_coeff_a) / self._Z
         self._mean = -(self._little_phi_b - self._little_phi_a) / self._Z
         self._variance = 1 - self._lpbb_m_lpaa_d_Z - ((self._little_phi_b - self._little_phi_a) / self._Z) ** 2
         self._entropy = CONST_LOG_SQRT_2PI_E + self._log_Z - 0.5 * self._lpbb_m_lpaa_d_Z
@@ -105,23 +107,6 @@ class TruncatedStandardNormal(Distribution):
         p = torch.empty(shape, device=self.a.device).uniform_(self._dtype_min_gt_0, self._dtype_max_lt_1)
         return self.icdf(p)
 
-    def compute_gradient_injection(self, x):
-        with torch.no_grad():
-            log_pdf = self.log_prob(x)
-        cdf = self.cdf(x)
-
-        gradient_injection_value = -cdf * torch.exp(-log_pdf).detach()
-        gradient_injection_value = gradient_injection_value - gradient_injection_value.detach()
-        return gradient_injection_value
-
-    def irsample(self, sample_shape=torch.Size()):
-        # Sample x using the inverse cdf method and detach
-        x = self.sample(sample_shape).detach()
-
-        # Inject the gradient
-        x = x + self.compute_gradient_injection(x)
-
-        return x
 
 class TruncatedNormal(TruncatedStandardNormal):
     """
@@ -133,14 +118,8 @@ class TruncatedNormal(TruncatedStandardNormal):
 
     def __init__(self, loc, scale, a, b, validate_args=None):
         self.loc, self.scale, a, b = broadcast_all(loc, scale, a, b)
-        #print('loc', loc)
-        #print('scale', scale)
-        #print('a', a)
-        #print('b', b)
         a = (a - self.loc) / self.scale
         b = (b - self.loc) / self.scale
-        #print('a`', a)
-        #print('b`', b)        
         super(TruncatedNormal, self).__init__(a, b, validate_args=validate_args)
         self._log_scale = self.scale.log()
         self._mean = self._mean * self.scale + self.loc
