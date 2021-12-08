@@ -116,7 +116,7 @@ def train_minibatch(DEVICE, ELBO_LR, N_ITER, BATCH_SIZE,
 
     #Establish neural network.
     #NOTE TO DELETE LATER: CONTINUE HERE, DISCUSS COND_INPUTS).
-    net = SDEFlowMinibatch(obs_model_minibatch, SBM_SDE.state_dim, T, N, len(PRIOR_DIST_DETAILS_DICT), cond_inputs,
+    net = SDEFlowMinibatch(DEVICE, obs_model_minibatch, SBM_SDE.state_dim, T, N, len(PRIOR_DIST_DETAILS_DICT), cond_inputs,
             NUM_LAYERS, KERNEL, NUM_RESBLOCKS)
     
     #Initiate model debugging saver.

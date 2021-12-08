@@ -236,12 +236,12 @@ class BatchNormLayer(nn.Module):
     
 class SDEFlowMinibatch(nn.Module):
 
-    def __init__(self, OBS_MODEL_MINIBATCH, STATE_DIM, T, N, THETA_DIM, COND_INPUTS,
+    def __init__(self, DEVICE, OBS_MODEL_MINIBATCH, STATE_DIM, T, N, THETA_DIM, COND_INPUTS,
                  NUM_LAYERS = 5, KERNEL = 3, NUM_RESBLOCKS = 2, 
                  POSITIVE = True, LINEAR_COND = False):
         super().__init__()
         
-        self.device = OBS_MODEL_MINIBATCH.device
+        self.device = DEVICE
         self.state_dim = STATE_DIM
         self.t = T
         self.dt = OBS_MODEL_MINIBATCH.dt
