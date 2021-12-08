@@ -90,7 +90,7 @@ def train_minibatch(DEVICE, ELBO_LR, N_ITER, BATCH_SIZE,
         THETA_DIST = None, THETA_POST_DIST = None, THETA_POST_INIT = None, LIK_DIST = 'Normal',
         BYPASS_NAN: bool = False, LR_DECAY: float = 0.8, DECAY_STEP_SIZE: int = 50000, PRINT_EVERY: int = 100,
         DEBUG_SAVE_DIR: str = None, PTRAIN_ITER: int = 0, PTRAIN_LR: float = None, PTRAIN_ALG: str = None,
-        MINIBATCH_SIZE: int = 0, NUM_LAYERS: int = 5, KERNEL: int = 3, NUM_RESBLOCKS: int = 2):
+        MINIBATCH_SIZE: int = 0, NUM_LAYERS: int = 5, KERNEL: int = 3, NUM_RESBLOCKS: int = 2, THETA_COND = 'convolution'):
     if PTRAIN_ITER >= N_ITER:
         raise ValueError('PTRAIN_ITER must be < N_ITER.')
 
@@ -117,7 +117,7 @@ def train_minibatch(DEVICE, ELBO_LR, N_ITER, BATCH_SIZE,
     #Establish neural network.
     #NOTE TO DELETE LATER: CONTINUE HERE, DISCUSS COND_INPUTS).
     net = SDEFlowMinibatch(DEVICE, obs_model_minibatch, SBM_SDE.state_dim, T, N, len(PRIOR_DIST_DETAILS_DICT), cond_inputs,
-            NUM_LAYERS, KERNEL, NUM_RESBLOCKS)
+            NUM_LAYERS, KERNEL, NUM_RESBLOCKS, THETA_COND = THETA_COND)
     
     #Initiate model debugging saver.
     if DEBUG_SAVE_DIR:
