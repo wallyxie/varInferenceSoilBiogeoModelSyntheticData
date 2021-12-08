@@ -316,7 +316,6 @@ class SDEFlowMinibatch(nn.Module):
 ###################################################
 
 class ObsModel(nn.Module):
-
     def __init__(self, TIMES, DT, MU, SCALE):
         super().__init__()
         self.times = TIMES # (num_obs, )
