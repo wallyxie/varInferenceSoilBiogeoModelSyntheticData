@@ -172,10 +172,10 @@ def train_minibatch(DEVICE, ELBO_LR, N_ITER, BATCH_SIZE,
     #Training loop
     # if BYPASS_NAN:
     #         torch.autograd.set_detect_anomaly(True)
+    net.train()
     with tqdm(total = N_ITER, desc = f'Learning SDE and hidden parameters.', position = -1) as tq:
         for it in range(N_ITER):
-            net.train()
-
+            
             # Sample (unknown) theta
             theta_dict, theta, log_q_theta, parent_loc_scale_dict = q_theta(BATCH_SIZE)
             log_p_theta = priors.log_prob(theta).sum(-1)
@@ -193,7 +193,7 @@ def train_minibatch(DEVICE, ELBO_LR, N_ITER, BATCH_SIZE,
                 ridx = min(N, batch_indices[it] + MINIBATCH_SIZE) # v
             else:
                 lidx, ridx = 0, N
-            C_PATH, log_prob = net(BATCH_SIZE, lidx, ridx, theta=theta) #Obtain paths with solutions to times including t0.
+            C_PATH, log_prob = net(BATCH_SIZE, lidx, ridx, theta = theta) #Obtain paths with solutions to times including t0.
             
             #NaN handling            
             nan_count = 0
