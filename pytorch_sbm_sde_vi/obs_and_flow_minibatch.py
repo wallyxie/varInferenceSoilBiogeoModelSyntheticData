@@ -241,7 +241,7 @@ class SDEFlowMinibatch(nn.Module):
 
     def __init__(self, DEVICE, OBS_MODEL_MINIBATCH, STATE_DIM, T, N, THETA_DIM, COND_INPUTS,
                  NUM_LAYERS = 5, KERNEL_SIZE = 3, NUM_RESBLOCKS = 2, 
-                 POSITIVE = True, LINEAR_COND = False):
+                 POSITIVE = True, THETA_COND = 'convolution'):
         super().__init__()
         
         self.device = DEVICE
@@ -258,13 +258,13 @@ class SDEFlowMinibatch(nn.Module):
         self.num_resblocks = NUM_RESBLOCKS
         
         self.positive = POSITIVE
-        self.linear_cond = LINEAR_COND
+        self.theta_cond = THETA_COND
         
         self.scale = nn.Parameter(torch.Tensor([1.0]), requires_grad=True)
 
         layers = []
         for i in range(self.num_layers):
-            layers += [AffineLayer(self.n_cond_inputs, self.kernel_size, self.num_resblocks, self.theta_dim, 96, self.linear_cond)]
+            layers += [AffineLayer(self.n_cond_inputs, self.kernel_size, self.num_resblocks, self.theta_dim, self.theta_cond)]
             layers += [PermutationLayer(self.state_dim)]
             layers += [BatchNormLayer(1)] # WARNING: This might be less effective (seems to currently work)
             
