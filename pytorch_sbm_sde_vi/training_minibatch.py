@@ -2,7 +2,6 @@
 import math
 from tqdm import tqdm
 from typing import Dict, Tuple, Union
-from collections import namedtuple
 import platform
 
 #Torch imports
@@ -25,7 +24,6 @@ This module containins the `calc_log_lik` and `training` functions for pre-train
 DictOfTensors = Dict[str, torch.Tensor]
 Number = Union[int, float]
 TupleOfTensors = Tuple[torch.Tensor, torch.Tensor]
-Arguments = namedtuple('args', 'device T dt n state_dim num_layers kernel num_resblocks positive theta_dim')
 
 ###############################
 ##TRAINING AND ELBO FUNCTIONS##

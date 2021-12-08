@@ -1,6 +1,5 @@
 #Python-related imports
 import os
-from collections import namedtuple
 
 #Torch imports
 import torch
