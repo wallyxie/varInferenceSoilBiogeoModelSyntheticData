@@ -88,7 +88,7 @@ csv_data_path = os.path.join('generated_data/', 'SCON-SS_fix_u_M_a_Ea_CO2_trunc_
 debug_save_dir = 'debug_fix_u_M_a_Ea_CO2_5000_diff_theta/'
 
 #Call training loop function for SCON-SS.
-net, q_theta, p_theta, obs_model, ELBO_hist, list_parent_loc_scale, SBM_SDE_instance = train2(
+net, q_theta, p_theta, obs_model, ELBO_hist, SBM_SDE_instance = train2(
         active_device, train_lr, niter, batch_size, num_layers,
         csv_data_path, obs_error_scale, t, dt_flow, n, 
         t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
@@ -107,7 +107,6 @@ q_theta_save_string = os.path.join(outputs_folder, 'q_theta' + save_string)
 p_theta_save_string = os.path.join(outputs_folder, 'p_theta' + save_string)
 obs_model_save_string = os.path.join(outputs_folder, 'obs_model' + save_string)
 ELBO_save_string = os.path.join(outputs_folder, 'ELBO' + save_string)
-list_parent_loc_scale_save_string = os.path.join(outputs_folder, 'parent_loc_scale_trajectory' + save_string)
 SBM_SDE_instance_save_string = os.path.join(outputs_folder, 'SBM_SDE_instance' + save_string)
 torch.save(net, net_save_string)
 torch.save(net.state_dict(), net_state_dict_save_string) #For loading net on CPU.
@@ -115,7 +114,6 @@ torch.save(q_theta, q_theta_save_string)
 torch.save(p_theta, p_theta_save_string)
 torch.save(obs_model, obs_model_save_string) 
 torch.save(ELBO_hist, ELBO_save_string)
-torch.save(list_parent_loc_scale, list_parent_loc_scale_save_string)
 torch.save(SBM_SDE_instance, SBM_SDE_instance_save_string)
 
 #Release some CUDA memory and load .pt files.

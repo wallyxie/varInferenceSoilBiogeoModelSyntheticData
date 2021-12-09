@@ -91,7 +91,7 @@ i_d_tensor = i_d(t_span_tensor).to(active_device) #Exogenous DOC input function
 csv_data_path = os.path.join('generated_data/', 'SCON-SS_CO2_logit_short_fix_u_M_a_Ea_2021_11_21_14_46_sample_y_t_5000_dt_0-01_sd_scale_0-25.csv')
 
 #Call training loop function for SCON-SS.
-net, q_theta, p_theta, obs_model, norm_hist, ELBO_hist, list_parent_loc_scale, SBM_SDE_instance = train2(
+net, q_theta, p_theta, obs_model, norm_hist, ELBO_hist, SBM_SDE_instance = train2(
         active_device, train_lr, niter, batch_size, num_layers,
         csv_data_path, obs_error_scale, t, dt_flow, n, 
         t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
@@ -112,7 +112,6 @@ p_theta_save_string = os.path.join(outputs_folder, 'p_theta' + save_string)
 obs_model_save_string = os.path.join(outputs_folder, 'obs_model' + save_string)
 norm_save_string = os.path.join(outputs_folder, 'norm' + save_string)
 ELBO_save_string = os.path.join(outputs_folder, 'ELBO' + save_string)
-list_parent_loc_scale_save_string = os.path.join(outputs_folder, 'parent_loc_scale_trajectory' + save_string)
 SBM_SDE_instance_save_string = os.path.join(outputs_folder, 'SBM_SDE_instance' + save_string)
 torch.save(net, net_save_string)
 torch.save(net.state_dict(), net_state_dict_save_string) #For loading net on CPU.
@@ -121,7 +120,6 @@ torch.save(p_theta, p_theta_save_string)
 torch.save(obs_model, obs_model_save_string)
 torch.save(norm_hist, norm_save_string)
 torch.save(ELBO_hist, ELBO_save_string)
-torch.save(list_parent_loc_scale, list_parent_loc_scale_save_string)
 torch.save(SBM_SDE_instance, SBM_SDE_instance_save_string)
 print('Output files saving finished. Moving to plotting.')
 
