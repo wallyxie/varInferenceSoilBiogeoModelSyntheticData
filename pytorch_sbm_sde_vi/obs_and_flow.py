@@ -306,11 +306,11 @@ class ObsModel(nn.Module):
     def __init__(self, DEVICE, TIMES, DT, MU, SCALE):
         super().__init__()
         self.device = DEVICE
-        self.times = TIMES # (num_obs, )
+        self.times = TIMES # (n_obs, )
         self.dt = DT
         self.idx = self.get_idx(TIMES, DT)        
-        self.mu = torch.Tensor(MU).to(DEVICE) # (state_dim, num_obs)
-        self.scale = SCALE # (1, state_dim)
+        self.mu = torch.Tensor(MU).to(DEVICE) # (obs_dim, n_obs)
+        self.scale = SCALE # (1, obs_dim)
         self.obs_dim = self.mu.shape[0]
         
     def forward(self, x, theta):
