@@ -88,8 +88,13 @@ class RescaledLogitNormal(Distribution):
     def log_prob(self, x):
         lower, upper = self.sigmoid.lower, self.sigmoid.upper
         logit_x = self.logit(x)
-        jac = (upper - lower)/((x-lower)*(upper-x))
-        return self.base.log_prob(logit_x) + torch.log(jac)
+
+        # TODO: Change log(jac) to log(numerator) - log(denominator)
+        #jac = (upper - lower)/((x-lower)*(upper-x))
+        #return self.base.log_prob(logit_x) + torch.log(jac)
+
+        log_jac = torch.log(upper - lower) - torch.log((x-lower)*(upper-x))
+        return self.base.log_prob(logit_x) + log_jac 
 
 class MultivariateLogitNormal(Distribution):
     arg_constraints = {'loc': constraints.real_vector,
