@@ -17,7 +17,7 @@ from mean_field import *
 from obs_and_flow_minibatch import *
 from SBM_SDE_classes_optim import *
 from TruncatedNormal import *
-from RescaledLogitNormal import *
+from LogitNormal import *
 
 '''
 This module containins the `calc_log_lik` and `training` functions for pre-training and ELBO training of the soil biogeochemical model SDE systems.
