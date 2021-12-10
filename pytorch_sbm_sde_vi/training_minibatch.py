@@ -16,6 +16,8 @@ import torch.optim as optim
 from mean_field import *
 from obs_and_flow_minibatch import *
 from SBM_SDE_classes_optim import *
+from TruncatedNormal import *
+from RescaledLogitNormal import *
 
 '''
 This module containins the `calc_log_lik` and `training` functions for pre-training and ELBO training of the soil biogeochemical model SDE systems.
@@ -24,6 +26,7 @@ This module containins the `calc_log_lik` and `training` functions for pre-train
 DictOfTensors = Dict[str, torch.Tensor]
 Number = Union[int, float]
 TupleOfTensors = Tuple[torch.Tensor, torch.Tensor]
+BoolAndString = Union[bool, str]
 
 ###############################
 ##TRAINING AND ELBO FUNCTIONS##
@@ -36,7 +39,6 @@ def calc_log_lik_minibatch_CO2(C_PATH: torch.Tensor,
         INIT_PRIOR,
         LIDX, RIDX
         ):
-    #if LEARN_CO2:
     if LIK_DIST == 'Normal':
         drift, diffusion_sqrt, x_add_CO2 = SBM_SDE_CLASS.drift_diffusion_add_CO2(C_PATH, PARAMS_DICT, LIDX, RIDX) #Appropriate indexing of tensors corresponding to data generating process now handled in `drift_diffusion` class method. Recall that drift diffusion will use C_PATH[:, :-1, :], I_S_TENSOR[:, 1:, :], I_D_TENSOR[:, 1:, :], TEMP_TENSOR[:, 1:, :]. 
         euler_maruyama_state_sample_object = D.multivariate_normal.MultivariateNormal(loc = C_PATH[:, :-1, :] + drift * DT, scale_tril = diffusion_sqrt * math.sqrt(DT)) #C_PATH[:, :-1, :] + drift * DT will diverge from C_PATH if C_PATH values not compatible with x0 and theta. Algorithm aims to minimize gap between computed drift and actual gradient between x_n and x_{n+1}. 
@@ -59,9 +61,9 @@ def calc_log_lik_minibatch_CO2(C_PATH: torch.Tensor,
 def calc_log_lik_minibatch(C_PATH: torch.Tensor, # (batch_size, minibatch_size + 1, state_dim)
         PARAMS_DICT: DictOfTensors,
         DT: float, 
-        SBM_SDE_CLASS, 
-        INIT_PRIOR,
-        LIDX, RIDX
+        SBM_SDE_CLASS: type, 
+        INIT_PRIOR: torch.distributions.multivariate_normal.MultivariateNormal,
+        LIDX: int, RIDX: int
         ):
     if LIK_DIST == 'Normal':
         drift, diffusion_sqrt = SBM_SDE_CLASS.drift_diffusion(C_PATH, PARAMS_DICT, LIDX, RIDX) #Appropriate indexing of tensors corresponding to data generating process now handled in `drift_diffusion` class method. Recall that drift diffusion will use C_PATH[:, :-1, :], I_S_TENSOR[:, 1:, :], I_D_TENSOR[:, 1:, :], TEMP_TENSOR[:, 1:, :]. 
@@ -82,15 +84,17 @@ def calc_log_lik_minibatch(C_PATH: torch.Tensor, # (batch_size, minibatch_size +
 
     return ll, drift, diffusion_sqrt # ll.shape == (state_dim, )
 
-def train_minibatch(DEVICE, ELBO_LR, N_ITER, BATCH_SIZE,
-        OBS_CSV_STR, OBS_ERROR_SCALE, T, DT, N,
-        T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF,
-        SBM_SDE_CLASS: str, DIFFUSION_TYPE: str,
-        INIT_PRIOR, PRIOR_DIST_DETAILS_DICT, FIX_THETA_DICT = None, LEARN_CO2: bool = False,
+def train_minibatch(DEVICE, ELBO_LR: float, N_ITER: int, BATCH_SIZE: int,
+        OBS_CSV_STR: str, OBS_ERROR_SCALE: float, T: float, DT: float, N: int,
+        T_SPAN_TENSOR: torch.Tensor, I_S_TENSOR: torch.Tensor, I_D_TENSOR: torch.Tensor, TEMP_TENSOR: torch.Tensor, TEMP_REF: float,
+        SBM_SDE_CLASS: str, DIFFUSION_TYPE: str, INIT_PRIOR: torch.distributions.multivariate_normal.MultivariateNormal,
+        PRIOR_DIST_DETAILS_DICT: DictOfTensors, FIX_THETA_DICT = None, LEARN_CO2: bool = False,
         THETA_DIST = None, THETA_POST_DIST = None, THETA_POST_INIT = None, LIK_DIST = 'Normal',
         BYPASS_NAN: bool = False, LR_DECAY: float = 0.8, DECAY_STEP_SIZE: int = 50000, PRINT_EVERY: int = 100,
         DEBUG_SAVE_DIR: str = None, PTRAIN_ITER: int = 0, PTRAIN_LR: float = None, PTRAIN_ALG: str = None,
-        MINIBATCH_SIZE: int = 0, NUM_LAYERS: int = 5, KERNEL: int = 3, NUM_RESBLOCKS: int = 2, THETA_COND = 'convolution'):
+        MINIBATCH_SIZE: int = 0, NUM_LAYERS: int = 5, KERNEL_SIZE: int = 3, NUM_RESBLOCKS: int = 2,
+        THETA_COND: BoolAndString  = 'convolution', OTHER_COND_INPUTS: bool = False):
+
     if PTRAIN_ITER >= N_ITER:
         raise ValueError('PTRAIN_ITER must be < N_ITER.')
 
@@ -114,13 +118,16 @@ def train_minibatch(DEVICE, ELBO_LR, N_ITER, BATCH_SIZE,
     obs_times, obs_means, obs_error = csv_to_obs_df(OBS_CSV_STR, obs_dim, T, OBS_ERROR_SCALE) #csv_to_obs_df function in obs_and_flow module
     obs_model_minibatch = ObsModelMinibatch(TIMES = obs_times, DT = DT, MU = obs_means, SCALE = obs_error).to(DEVICE)
 
-    #other_inputs processing and reshaping would go here if we use additional features
-    #aside from time, obs, and theta, such as the i and temperature tensors.
-    other_inputs = None
+    #Other_inputs presently consists of i and temperature tensors.
+    #Timestamps and theta conditional inputs added as conditional inputs in SDEFlowMinibatch.
+    if OTHER_COND_INPUTS:
+        temp_tensor_rescale = TEMP_TENSOR / torch.max(TEMP_TENSOR) #Rescale temp_tensor such that temp_tensor_rescale values <= 1, per Tom's suggestion to rescale large conditional inputs. 
+        other_inputs_pre = torch.cat([temp_tensor_rescale, I_S_TENSOR, I_D_TENSOR], 0) #Concatenate temp_tensor_rescale with exogenous input tensors.
+        other_inputs = other_inputs_pre.repeat([1, SBM_SDE.state_dim, 1]).squeeze(-1) #Arrive at shape torch.Size([other_inputs_dim, SBM_SDE_class.state_dim * N]) for use in SDEFlowMinibatch.
 
     #Establish neural network.
     net = SDEFlowMinibatch(DEVICE, obs_model_minibatch, SBM_SDE.state_dim, T, N, len(PRIOR_DIST_DETAILS_DICT), OTHER_INPUTS = other_inputs, FIX_THETA_DICT = FIX_THETA_DICT,
-            NUM_LAYERS = NUM_LAYERS, KERNEL_SIZE = KERNEL, NUM_RESBLOCKS = NUM_RESBLOCKS, THETA_COND = THETA_COND)
+            NUM_LAYERS = NUM_LAYERS, KERNEL_SIZE = KERNEL_SIZE, NUM_RESBLOCKS = NUM_RESBLOCKS, THETA_COND = THETA_COND)
     
     #Initiate model debugging saver.
     if DEBUG_SAVE_DIR:
