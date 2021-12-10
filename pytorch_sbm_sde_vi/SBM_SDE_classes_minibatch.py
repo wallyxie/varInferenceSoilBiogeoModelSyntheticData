@@ -113,7 +113,7 @@ class SBM_SDE:
         c_path_drift_diffusion = C_PATH[:, :-1, :] # (batch_size, minibatch_size-1, state_dim)
         i_S_tensor_drift_diffusion = self.i_S[:, start_idx+1:end_idx, :]
         i_D_tensor_drift_diffusion = self.i_D[:, start_idx+1:end_idx, :]
-        temp_tensor_drift_diffusion = self.temps[:, start_idx+1:end_idx, :]
+        temp_tensor_drift_diffusion = self.temps[:, start_idx+1:end_idx, :] # (1, minibatch_size-1, 1)
 
         #Reshape parameter values to match dimension sizes.
         params_dict_res = dict((k, v.reshape(-1, 1, 1)) for k, v in params_dict.items()) # (batch_size) -> (batch_size, 1, 1)
@@ -211,7 +211,7 @@ class SBM_SDE:
         return x_add_CO2
         
 
-class SCON_optim(SBM_SDE):
+class SCON_minibatch(SBM_SDE):
     '''
     Class contains SCON SDE drift (alpha) and diffusion (beta) equations.
     Constant (C) and state-scaling (SS) diffusion paramterizations are included. DIFFUSION_TYPE must thereby be specified as 'C' or 'SS'. 
@@ -256,13 +256,13 @@ class SCON_optim(SBM_SDE):
                            i_D_tensor_drift_diffusion, temp_tensor):
         #Partition SOC, DOC, MBC values. Split based on final C_PATH dim, which specifies state variables and is also indexed as dim #2 in tensor. 
         SOC_full, DOC_full, MBC_full = torch.chunk(x, self.state_dim, -1)
-        SOC = SOC_full[:, :-1, :]
+        SOC = SOC_full[:, :-1, :] # (batch_size, minibatch_size - 1, 1)
         DOC = DOC_full[:, :-1, :]
         MBC = MBC_full[:, :-1, :]
 
         #Decay parameters are forced by temperature changes.
         k_S_full = arrhenius_temp_dep(SCON_params_dict_res['k_S_ref'], temp_tensor, SCON_params_dict_res['Ea_S'], self.temp_ref) #Apply vectorized temperature-dependent transformation to k_S_ref.
-        k_S = k_S_full[:, 1:, :]
+        k_S = k_S_full[:, 1:, :] # (batch_size, minibatch_size - 1, 1)
         k_D_full = arrhenius_temp_dep(SCON_params_dict_res['k_D_ref'], temp_tensor, SCON_params_dict_res['Ea_D'], self.temp_ref) #Apply vectorized temperature-dependent transformation to k_D_ref.
         k_D = k_D_full[:, 1:, :]
         k_M_full = arrhenius_temp_dep(SCON_params_dict_res['k_M_ref'], temp_tensor, SCON_params_dict_res['Ea_M'], self.temp_ref) #Apply vectorized temperature-dependent transformation to k_M_ref.
@@ -313,7 +313,7 @@ class SCON_optim(SBM_SDE):
         
         return CO2
 
-class SAWB_optim(SBM_SDE):
+class SAWB_minibatch(SBM_SDE):
     '''
     Class contains SAWB SDE drift (alpha) and diffusion (beta) equations.
     Constant (C) and state-scaling (SS) diffusion paramterizations are included. DIFFUSION_TYPE must thereby be specified as 'C' or 'SS'. 
@@ -417,7 +417,7 @@ class SAWB_optim(SBM_SDE):
         
         return CO2
 
-class SAWB_ECA_optim(SBM_SDE):
+class SAWB_ECA_minibatch(SBM_SDE):
     '''
     Class contains SAWB-ECA SDE drift (alpha) and diffusion (beta) equations.
     Constant (C) and state-scaling (SS) diffusion paramterizations are included. DIFFUSION_TYPE must thereby be specified as 'C' or 'SS'. 

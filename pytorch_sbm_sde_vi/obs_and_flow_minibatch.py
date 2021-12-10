@@ -279,7 +279,7 @@ class SDEFlowMinibatch(nn.Module):
             cond_inputs_list.append(fix_theta_tensor)
 
         self.cond_inputs = torch.cat(cond_inputs_list, 0) # (num_features, n * state_dim)
-        self.n_cond_inputs = COND_INPUTS.shape[0] # number of static features (don't change every iter)
+        self.n_cond_inputs = self.cond_inputs.shape[0] # number of static features (don't change every iter)
         self.num_layers = NUM_LAYERS
         self.kernel_size = KERNEL_SIZE
         self.num_resblocks = NUM_RESBLOCKS
@@ -307,7 +307,7 @@ class SDEFlowMinibatch(nn.Module):
         # ridx - left index
         buffer = self.state_dim*(ridx - lidx)
         lidx = max((lidx*self.state_dim) - self.window, 0)
-        ridx *= self.state_dim
+        ridx = ridx * self.state_dim
         
         theta = kwargs.get("theta", None)
 
@@ -329,7 +329,8 @@ class SDEFlowMinibatch(nn.Module):
         eps = eps[:, :, -buffer:]
         log_prob = log_prob[:, :, -buffer:]
             
-        return eps.reshape(bsz, -1, self.state_dim).transpose(2, 1), log_prob
+        #return eps.reshape(bsz, -1, self.state_dim).transpose(2, 1), log_prob
+        return eps.reshape(bsz, -1, self.state_dim), log_prob
     
     @property
     def window(self):
@@ -359,7 +360,7 @@ class ObsModel(nn.Module):
         return torch.sum(obs_ll, [-1, -2]).mean()
 
     def get_idx(self, TIMES, DT):
-        return list((TIMES / DT).astype(int))
+        return (TIMES / DT).long() #list((TIMES / DT).astype(int))
     
     def plt_dat(self):
         return self.mu, self.times
@@ -375,12 +376,13 @@ class ObsModelMinibatch(ObsModel):
     def forward(self, x, theta, lidx=0, ridx=None):
         obs_lidx = int(torch.ceil(lidx / self.obs_every))
         if ridx is None:
-            ridx = self.idx.shape[0]
+            obs_ridx = self.mu.shape[1]
         else:
             obs_ridx = int(torch.ceil(ridx / self.obs_every))
         
         loc = self.mu.permute(1, 0)[obs_lidx:obs_ridx, :] # (n_obs_minibatch, obs_dim)
-        idx = self.idx[obs_lidx:obs_ridx]
+        idx = self.idx[obs_lidx:obs_ridx] - lidx
+        #print(torch.tensor(idx) - lidx)
         obs_ll = D.normal.Normal(loc, self.scale).log_prob(x[:, idx, :]) # (batch_size, n_obs_minibatch, obs_dim)
         return torch.sum(obs_ll, [-1, -2]).mean() # scalar
 
