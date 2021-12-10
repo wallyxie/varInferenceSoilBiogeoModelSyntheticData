@@ -174,13 +174,14 @@ def train_minibatch(DEVICE, ELBO_LR: float, N_ITER: int, BATCH_SIZE: int,
     ELBO_optimizer = optim.Adamax(ELBO_params, lr = ELBO_LR)
 
     # Sample minibatch indices
-    if 0 < MINIBATCH_SIZE < N:
+    if 0 < MINIBATCH_SIZE < N and N % MINIBATCH_SIZE == 0:
         minibatch_indices = torch.arange(0, N - MINIBATCH_SIZE, MINIBATCH_SIZE) + 1
         rand = torch.randint(len(minibatch_indices), (N_ITER, ))
         assert torch.min(torch.bincount(rand)) > 0 # verify that each minibatch is used at least once
         batch_indices = minibatch_indices[rand]
     else:
         # If MINIBATCH_SIZE is outside of acceptable range, then use full batch by default
+        print('Proceeding with uni-batching, because either MINIBATCH_SIZE >= N, or N % MINIBATCH_SIZE != 0.')
         batch_indices = None
     
     #Training loop
