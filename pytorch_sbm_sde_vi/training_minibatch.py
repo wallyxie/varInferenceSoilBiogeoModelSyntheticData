@@ -32,12 +32,13 @@ BoolAndString = Union[bool, str]
 ##TRAINING AND ELBO FUNCTIONS##
 ###############################
 
-def calc_log_lik_minibatch_CO2(C_PATH: torch.Tensor,
+def calc_log_lik_minibatch_CO2(C_PATH: torch.Tensor, # (batch_size, minibatch_size + 1, state_dim)
         PARAMS_DICT: DictOfTensors,
         DT: float, 
-        SBM_SDE_CLASS, 
-        INIT_PRIOR,
-        LIDX, RIDX
+        SBM_SDE_CLASS: type, 
+        INIT_PRIOR: torch.distributions.multivariate_normal.MultivariateNormal,
+        LIDX: int, RIDX: int,
+        LIK_DIST = 'Normal'
         ):
     if LIK_DIST == 'Normal':
         drift, diffusion_sqrt, x_add_CO2 = SBM_SDE_CLASS.drift_diffusion_add_CO2(C_PATH, PARAMS_DICT, LIDX, RIDX) #Appropriate indexing of tensors corresponding to data generating process now handled in `drift_diffusion` class method. Recall that drift diffusion will use C_PATH[:, :-1, :], I_S_TENSOR[:, 1:, :], I_D_TENSOR[:, 1:, :], TEMP_TENSOR[:, 1:, :]. 
@@ -63,7 +64,8 @@ def calc_log_lik_minibatch(C_PATH: torch.Tensor, # (batch_size, minibatch_size +
         DT: float, 
         SBM_SDE_CLASS: type, 
         INIT_PRIOR: torch.distributions.multivariate_normal.MultivariateNormal,
-        LIDX: int, RIDX: int
+        LIDX: int, RIDX: int,
+        LIK_DIST = 'Normal'
         ):
     if LIK_DIST == 'Normal':
         drift, diffusion_sqrt = SBM_SDE_CLASS.drift_diffusion(C_PATH, PARAMS_DICT, LIDX, RIDX) #Appropriate indexing of tensors corresponding to data generating process now handled in `drift_diffusion` class method. Recall that drift diffusion will use C_PATH[:, :-1, :], I_S_TENSOR[:, 1:, :], I_D_TENSOR[:, 1:, :], TEMP_TENSOR[:, 1:, :]. 
@@ -91,7 +93,7 @@ def train_minibatch(DEVICE, ELBO_LR: float, N_ITER: int, BATCH_SIZE: int,
         PRIOR_DIST_DETAILS_DICT: DictOfTensors, FIX_THETA_DICT = None, LEARN_CO2: bool = False,
         THETA_DIST = None, THETA_POST_DIST = None, THETA_POST_INIT = None, LIK_DIST = 'Normal',
         BYPASS_NAN: bool = False, LR_DECAY: float = 0.8, DECAY_STEP_SIZE: int = 50000, PRINT_EVERY: int = 100,
-        DEBUG_SAVE_DIR: str = None, PTRAIN_ITER: int = 0, PTRAIN_LR: float = None, PTRAIN_ALG: str = None,
+        DEBUG_SAVE_DIR: str = None, PTRAIN_ITER: int = 0, PTRAIN_LR: float = None, PTRAIN_ALG: BoolAndString = False,
         MINIBATCH_SIZE: int = 0, NUM_LAYERS: int = 5, KERNEL_SIZE: int = 3, NUM_RESBLOCKS: int = 2,
         THETA_COND: BoolAndString  = 'convolution', OTHER_COND_INPUTS: bool = False):
 
@@ -164,17 +166,19 @@ def train_minibatch(DEVICE, ELBO_LR: float, N_ITER: int, BATCH_SIZE: int,
     ELBO_losses = []
 
     #Initiate optimizers.
-    if PTRAIN_ALG:
+    if PTRAIN_ALG and PTRAIN_ITER != 0:
         pretrain_optimizer = optim.Adam(net.parameters(), lr = PTRAIN_LR)
+    elif not PTRAIN_ALG and PTRAIN_ITER != 0:
+        raise InputError('Pre-training iterations specified without PTRAIN_ALG input. Must request PTRAIN_ALG = "L1" or "L2"'.)
     ELBO_params = list(net.parameters()) + list(q_theta.parameters())
     ELBO_optimizer = optim.Adamax(ELBO_params, lr = ELBO_LR)
 
     # Sample minibatch indices
     if 0 < MINIBATCH_SIZE < N:
-        minibatch_indices = torch.arange(0, N - minibatch_size, minibatch_size) + 1
-        rand = torch.randint(len(minibatch_indices), (NITER, ))
+        minibatch_indices = torch.arange(0, N - MINIBATCH_SIZE, MINIBATCH_SIZE) + 1
+        rand = torch.randint(len(minibatch_indices), (N_ITER, ))
         assert torch.min(torch.bincount(rand)) > 0 # verify that each minibatch is used at least once
-        batch_indices = MINIBATCH_INDICES[rand]
+        batch_indices = minibatch_indices[rand]
     else:
         # If MINIBATCH_SIZE is outside of acceptable range, then use full batch by default
         batch_indices = None
@@ -217,13 +221,13 @@ def train_minibatch(DEVICE, ELBO_LR: float, N_ITER: int, BATCH_SIZE: int,
                 else:
                     raise ValueError(f'\nnan in x at niter: {it}. Check gradient clipping and learning rate to start.')
 
-            if it <= PTRAIN_ITER:
+            if it < PTRAIN_ITER:
                 pretrain_optimizer.zero_grad()
 
                 if LEARN_CO2:
-                    mean_state_obs = torch.mean(obs_model.mu[:-1, :], -1)[None, None, :]
+                    mean_state_obs = torch.mean(obs_model_minibatch.mu[:-1, :], -1)[None, None, :]
                 else:
-                    mean_state_obs = torch.mean(obs_model.mu, -1)[None, None, :]
+                    mean_state_obs = torch.mean(obs_model_minibatch.mu, -1)[None, None, :]
 
                 if PTRAIN_ALG == 'L1':
                     l1_norm_element = C_PATH - mean_state_obs #Compute difference between x and observed state means.
@@ -252,10 +256,10 @@ def train_minibatch(DEVICE, ELBO_LR: float, N_ITER: int, BATCH_SIZE: int,
                 # Compute likelihood and ELBO
                 # Negative ELBO: -log p(theta) + log q(theta) - log p(y_0|x_0, theta) [already accounted for in obs_model output when learning x_0] + log q(x|theta) - log p(x|theta) - log p(y|x, theta)
                 if LEARN_CO2:
-                    log_lik, drift, diffusion_sqrt, x_add_CO2 = calc_log_lik_CO2(C_PATH, theta_dict, DT, SBM_SDE, INIT_PRIOR, lidx, ridx)
+                    log_lik, drift, diffusion_sqrt, x_add_CO2 = calc_log_lik_minibatch_CO2(C_PATH, theta_dict, DT, SBM_SDE, INIT_PRIOR, lidx, ridx)
                     ELBO = -log_p_theta.mean() + log_q_theta.mean() + log_prob.mean() - log_lik.mean() - obs_model(x_add_CO2, theta_dict, lidx, ridx)
                 else:
-                    log_lik, drift, diffusion_sqrt = calc_log_lik(C_PATH, theta_dict, DT, SBM_SDE, INIT_PRIOR, lidx, ridx)
+                    log_lik, drift, diffusion_sqrt = calc_log_lik_minibatch(C_PATH, theta_dict, DT, SBM_SDE, INIT_PRIOR, lidx, ridx)
                     ELBO = -log_p_theta.mean() + log_q_theta.mean() + log_prob.mean() - log_lik.mean() - obs_model(C_PATH, theta_dict, lidx, ridx)
 
                 # Record ELBO history and best ELBO so far
