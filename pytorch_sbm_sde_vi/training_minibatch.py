@@ -169,7 +169,7 @@ def train_minibatch(DEVICE, ELBO_LR: float, N_ITER: int, BATCH_SIZE: int,
     if PTRAIN_ALG and PTRAIN_ITER != 0:
         pretrain_optimizer = optim.Adam(net.parameters(), lr = PTRAIN_LR)
     elif not PTRAIN_ALG and PTRAIN_ITER != 0:
-        raise InputError('Pre-training iterations specified without PTRAIN_ALG input. Must request PTRAIN_ALG = "L1" or "L2"'.)
+        raise InputError('Pre-training iterations specified without PTRAIN_ALG input. Must request PTRAIN_ALG = "L1" or "L2".')
     ELBO_params = list(net.parameters()) + list(q_theta.parameters())
     ELBO_optimizer = optim.Adamax(ELBO_params, lr = ELBO_LR)
 
