@@ -210,8 +210,7 @@ class SBM_SDE:
         
         return x_add_CO2
         
-
-class SCON_minibatch(SBM_SDE):
+class SCON(SBM_SDE):
     '''
     Class contains SCON SDE drift (alpha) and diffusion (beta) equations.
     Constant (C) and state-scaling (SS) diffusion paramterizations are included. DIFFUSION_TYPE must thereby be specified as 'C' or 'SS'. 
@@ -313,7 +312,7 @@ class SCON_minibatch(SBM_SDE):
         
         return CO2
 
-class SAWB_minibatch(SBM_SDE):
+class SAWB(SBM_SDE):
     '''
     Class contains SAWB SDE drift (alpha) and diffusion (beta) equations.
     Constant (C) and state-scaling (SS) diffusion paramterizations are included. DIFFUSION_TYPE must thereby be specified as 'C' or 'SS'. 
@@ -417,7 +416,7 @@ class SAWB_minibatch(SBM_SDE):
         
         return CO2
 
-class SAWB_ECA_minibatch(SBM_SDE):
+class SAWB_ECA(SBM_SDE):
     '''
     Class contains SAWB-ECA SDE drift (alpha) and diffusion (beta) equations.
     Constant (C) and state-scaling (SS) diffusion paramterizations are included. DIFFUSION_TYPE must thereby be specified as 'C' or 'SS'. 

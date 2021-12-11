@@ -163,7 +163,7 @@ def train1(DEVICE, ELBO_LR, N_ITER, BATCH_SIZE, NUM_LAYERS,
                 else:
                     raise ValueError(f'nan in x at niter: {it}. Check gradient clipping and learning rate to start.')
 
-            if it <= PTRAIN_ITER:
+            if it < PTRAIN_ITER:
                 pretrain_optimizer.zero_grad()
 
                 if LEARN_CO2:

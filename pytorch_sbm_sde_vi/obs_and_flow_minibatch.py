@@ -168,10 +168,10 @@ class AffineLayer(nn.Module):
         theta = kwargs.get("theta", None)
         if theta is not None and self.theta_cond:
             if self.theta_cond == 'linear':
-                intermediate_output = self.network(torch.cat([x, cond_inputs], 1))
-                theta = theta[:, :, None].repeat(1, 1, intermediate_output.shape[-1])
-                intermediate_output = torch.cat([theta, intermediate_output], 1).permute(0, 2, 1)
-                output = self.nin(intermediate_output).permute(0, 2, 1)  
+                output_pre = self.network(torch.cat([x, cond_inputs], 1))
+                theta = theta[:, :, None].repeat(1, 1, output_pre.shape[-1])
+                output_pre = torch.cat([theta, output_pre], 1).permute(0, 2, 1)
+                output = self.nin(output_pre).permute(0, 2, 1)  
             elif self.theta_cond == 'convolution':    
                 theta = theta[:, :, None].repeat(1, 1, x.shape[-1])
                 output = self.network(torch.cat([x, cond_inputs, theta], 1))
@@ -252,8 +252,7 @@ class SDEFlowMinibatch(nn.Module):
         self.n = N
         self.theta_dim = THETA_DIM
         
-        #Transform time-related tensors into shape for conditional inputs. 
-        #re-scaled timestamp.
+        #Transform time-related tensors into shape for conditional inputs and rescale timestamp smaller per Tom's suggestion.
         timestamp = torch.linspace(-1, 1, self.n)[None].repeat(self.state_dim, 1).transpose(1, 0).reshape(1, -1) # (1, n * state_dim)
         
         #future observation count
