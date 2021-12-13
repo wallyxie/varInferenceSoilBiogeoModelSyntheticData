@@ -359,7 +359,7 @@ class ObsModel(nn.Module):
         return torch.sum(obs_ll, [-1, -2]).mean()
 
     def get_idx(self, TIMES, DT):
-        return (TIMES / DT).long() #list((TIMES / DT).astype(int))
+        return torch.tensor((TIMES / DT)).long() #list((TIMES / DT).astype(int))
     
     def plt_dat(self):
         return self.mu, self.times
