@@ -146,7 +146,7 @@ class AffineLayer(nn.Module):
                 cond_inputs += theta_dim
         else:
             if theta_dim is None and theta_cond != False:
-                raise InputError('theta_dim is None, but theta_cond is not False. Either theta_dim needs int input, or theta_cond needs to be False.')
+                raise Error('theta_dim is None, but theta_cond is not False. Either theta_dim needs int input, or theta_cond needs to be False.')
         
         for i in range(num_resblocks):
             if i == 0:

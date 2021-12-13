@@ -89,16 +89,16 @@ def calc_log_lik_minibatch(C_PATH: torch.Tensor, # (batch_size, minibatch_size +
 def train_minibatch(DEVICE, ELBO_LR: float, N_ITER: int, BATCH_SIZE: int,
         OBS_CSV_STR: str, OBS_ERROR_SCALE: float, T: float, DT: float, N: int,
         T_SPAN_TENSOR: torch.Tensor, I_S_TENSOR: torch.Tensor, I_D_TENSOR: torch.Tensor, TEMP_TENSOR: torch.Tensor, TEMP_REF: float,
-        SBM_SDE_CLASS: str, DIFFUSION_TYPE: str, INIT_PRIOR: torch.distributions.multivariate_normal.MultivariateNormal,
+        SBM_SDE_CLASS: str, DIFFUSION_TYPE: str, INIT_PRIOR: torch.distributions.distribution.Distribution,
         PRIOR_DIST_DETAILS_DICT: DictOfTensors, FIX_THETA_DICT = None, LEARN_CO2: bool = False,
         THETA_DIST = None, THETA_POST_DIST = None, THETA_POST_INIT = None, LIK_DIST = 'Normal',
-        BYPASS_NAN: bool = False, LR_DECAY: float = 0.8, DECAY_STEP_SIZE: int = 50000, PRINT_EVERY: int = 100,
-        DEBUG_SAVE_DIR: str = None, PTRAIN_ITER: int = 0, PTRAIN_LR: float = None, PTRAIN_ALG: BoolAndString = False,
+        BYPASS_NAN: bool = False, LR_DECAY: float = 0.8, DECAY_STEP_SIZE: int = 50000, PTRAIN_LR_DECAY: float = 0.8, PTRAIN_DECAY_STEP_SIZE: int = 1000,
+        PRINT_EVERY: int = 100, DEBUG_SAVE_DIR: str = None, PTRAIN_ITER: int = 0, PTRAIN_LR: float = None, PTRAIN_ALG: BoolAndString = 'L1',
         MINIBATCH_SIZE: int = 0, NUM_LAYERS: int = 5, KERNEL_SIZE: int = 3, NUM_RESBLOCKS: int = 2,
         THETA_COND: BoolAndString  = 'convolution', OTHER_COND_INPUTS: bool = False):
 
-    if PTRAIN_ITER >= N_ITER:
-        raise ValueError('PTRAIN_ITER must be < N_ITER.')
+    #Sum to get total training iterations.
+    T_ITER = N_ITER + PTRAIN_ITER    
 
     #Instantiate SBM_SDE object based on specified model and diffusion type.
     SBM_SDE_class_dict = {
@@ -169,21 +169,21 @@ def train_minibatch(DEVICE, ELBO_LR: float, N_ITER: int, BATCH_SIZE: int,
 
     #Initiate optimizers.
     if PTRAIN_ALG and PTRAIN_ITER != 0:
-        pretrain_optimizer = optim.Adam(net.parameters(), lr = PTRAIN_LR)
+        ptrain_optimizer = optim.Adam(net.parameters(), lr = PTRAIN_LR)
     elif not PTRAIN_ALG and PTRAIN_ITER != 0:
-        raise InputError('Pre-training iterations specified without PTRAIN_ALG input. Must request PTRAIN_ALG = "L1" or "L2".')
+        raise Error('Pre-training iterations specified without PTRAIN_ALG input. Must request PTRAIN_ALG = "L1" or "L2".')
     ELBO_params = list(net.parameters()) + list(q_theta.parameters())
     ELBO_optimizer = optim.Adamax(ELBO_params, lr = ELBO_LR)
 
     # Sample minibatch indices
     if 0 < MINIBATCH_SIZE < N and (N - 1) % MINIBATCH_SIZE == 0:
         minibatch_indices = torch.arange(0, N - MINIBATCH_SIZE, MINIBATCH_SIZE) + 1
-        rand = torch.randint(len(minibatch_indices), (N_ITER, ))
+        rand = torch.randint(len(minibatch_indices), (T_ITER, ))
         batch_indices = minibatch_indices[rand]
 
         # Print warning unless each minibatch is used at least once
         if torch.min(torch.bincount(rand)) == 0:
-            print('Warning: Not all minibatches are used at least once')
+            print('Warning: Not all minibatches are used at least once.')
     else:
         # If MINIBATCH_SIZE is outside of acceptable range, then use full batch by default
         print('Proceeding with uni-batching, because either MINIBATCH_SIZE >= N, or N % MINIBATCH_SIZE != 0.')
@@ -192,9 +192,10 @@ def train_minibatch(DEVICE, ELBO_LR: float, N_ITER: int, BATCH_SIZE: int,
     #Training loop
     # if BYPASS_NAN:
     #         torch.autograd.set_detect_anomaly(True)
+    print(f'\nStarting autoencoder training. {PTRAIN_ITER} pre-training iterations and {N_ITER} ELBO training iterations for {T_ITER} total iterations specified.')    
     net.train()
-    with tqdm(total = N_ITER, desc = f'Learning SDE and hidden parameters.', position = -1) as tq:
-        for it in range(N_ITER):
+    with tqdm(total = T_ITER, desc = f'Learning SDE and hidden parameters.', position = -1) as tq:
+        for it in range(T_ITER):
             
             # Sample (unknown) theta
             theta_dict, theta, log_q_theta, parent_loc_scale_dict = q_theta(BATCH_SIZE)
@@ -227,8 +228,8 @@ def train_minibatch(DEVICE, ELBO_LR: float, N_ITER: int, BATCH_SIZE: int,
                 else:
                     raise ValueError(f'\nnan in x at niter: {it}. Check gradient clipping and learning rate to start.')
 
-            if it < PTRAIN_ITER:
-                pretrain_optimizer.zero_grad()
+            if PTRAIN_ALG and PTRAIN_ITER != 0 and it <= PTRAIN_ITER:
+                ptrain_optimizer.zero_grad()
 
                 if LEARN_CO2:
                     mean_state_obs = torch.mean(obs_model_minibatch.mu[:-1, :], -1)[None, None, :]
@@ -254,7 +255,10 @@ def train_minibatch(DEVICE, ELBO_LR: float, N_ITER: int, BATCH_SIZE: int,
 
                 norm.backward()
                 torch.nn.utils.clip_grad_norm_(net.parameters(), 3.0)                                
-                pretrain_optimizer.step()
+                ptrain_optimizer.step()
+
+                if it % PTRAIN_DECAY_STEP_SIZE == 0:
+                    ptrain_optimizer.param_groups[0]['lr'] *= PTRAIN_LR_DECAY
 
             else:
                 ELBO_optimizer.zero_grad()
@@ -296,9 +300,11 @@ def train_minibatch(DEVICE, ELBO_LR: float, N_ITER: int, BATCH_SIZE: int,
 
             if DEBUG_SAVE_DIR:
                 to_save = {'model': net, 'model_state_dict': net.state_dict(), 'ELBO_optimizer_state_dict': ELBO_optimizer.state_dict(), 
-                        'pretrain_optimizer_state_dict': pretrain_optimizer.state_dict(), 'q_theta': q_theta}
+                        'ptrain_optimizer_state_dict': ptrain_optimizer.state_dict(), 'q_theta': q_theta}
                 debug_saver.save(to_save, it + 1)
 
             tq.update()
+
+    print('\nAll finished! Now, we need to check outputs to see if things worked...')
     
     return net, q_theta, priors, obs_model_minibatch, norm_losses, ELBO_losses, SBM_SDE
