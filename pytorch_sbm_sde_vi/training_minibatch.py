@@ -86,19 +86,19 @@ def calc_log_lik_minibatch(C_PATH: torch.Tensor, # (batch_size, minibatch_size +
 
     return ll, drift, diffusion_sqrt # ll.shape == (state_dim, )
 
-def train_minibatch(DEVICE, ELBO_LR: float, N_ITER: int, BATCH_SIZE: int,
+def train_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
         OBS_CSV_STR: str, OBS_ERROR_SCALE: float, T: float, DT: float, N: int,
         T_SPAN_TENSOR: torch.Tensor, I_S_TENSOR: torch.Tensor, I_D_TENSOR: torch.Tensor, TEMP_TENSOR: torch.Tensor, TEMP_REF: float,
         SBM_SDE_CLASS: str, DIFFUSION_TYPE: str, INIT_PRIOR: torch.distributions.distribution.Distribution,
         PRIOR_DIST_DETAILS_DICT: DictOfTensors, FIX_THETA_DICT = None, LEARN_CO2: bool = False,
         THETA_DIST = None, THETA_POST_DIST = None, THETA_POST_INIT = None, LIK_DIST = 'Normal',
-        BYPASS_NAN: bool = False, LR_DECAY: float = 0.8, DECAY_STEP_SIZE: int = 50000, PTRAIN_LR_DECAY: float = 0.8, PTRAIN_DECAY_STEP_SIZE: int = 1000,
+        BYPASS_NAN: bool = False, ELBO_LR_DECAY: float = 0.8, ELBO_DECAY_STEP_SIZE: int = 50000, PTRAIN_LR_DECAY: float = 0.8, PTRAIN_DECAY_STEP_SIZE: int = 1000,
         PRINT_EVERY: int = 100, DEBUG_SAVE_DIR: str = None, PTRAIN_ITER: int = 0, PTRAIN_LR: float = None, PTRAIN_ALG: BoolAndString = 'L1',
-        MINIBATCH_SIZE: int = 0, NUM_LAYERS: int = 5, KERNEL_SIZE: int = 3, NUM_RESBLOCKS: int = 2,
+        MINIBATCH_T: int = 0, NUM_LAYERS: int = 5, KERNEL_SIZE: int = 3, NUM_RESBLOCKS: int = 2,
         THETA_COND: BoolAndString  = 'convolution', OTHER_COND_INPUTS: bool = False):
 
     #Sum to get total training iterations.
-    T_ITER = N_ITER + PTRAIN_ITER    
+    T_ITER = ELBO_ITER + PTRAIN_ITER    
 
     #Instantiate SBM_SDE object based on specified model and diffusion type.
     SBM_SDE_class_dict = {
@@ -176,8 +176,9 @@ def train_minibatch(DEVICE, ELBO_LR: float, N_ITER: int, BATCH_SIZE: int,
     ELBO_optimizer = optim.Adamax(ELBO_params, lr = ELBO_LR)
 
     # Sample minibatch indices
-    if 0 < MINIBATCH_SIZE < N and (N - 1) % MINIBATCH_SIZE == 0:
-        minibatch_indices = torch.arange(0, N - MINIBATCH_SIZE, MINIBATCH_SIZE) + 1
+    minibatch_size = MINIBATCH_T / DT + 1
+    if 0 < minibatch_size < N and T % MINIBATCH_T == 0:
+        minibatch_indices = torch.arange(0, N - minibatch_size, minibatch_size) + 1
         rand = torch.randint(len(minibatch_indices), (T_ITER, ))
         batch_indices = minibatch_indices[rand]
 
@@ -185,14 +186,14 @@ def train_minibatch(DEVICE, ELBO_LR: float, N_ITER: int, BATCH_SIZE: int,
         if torch.min(torch.bincount(rand)) == 0:
             print('Warning: Not all minibatches are used at least once.')
     else:
-        # If MINIBATCH_SIZE is outside of acceptable range, then use full batch by default
-        print('Proceeding with uni-batching, because either MINIBATCH_SIZE >= N, or N % MINIBATCH_SIZE != 0.')
+        # If minibatch_size is outside of acceptable range, then use full batch by default
+        print('Proceeding with uni-batching, because either minibatch_size >= N, or T % MINIBATCH_T != 0.')
         batch_indices = None
     
     #Training loop
     # if BYPASS_NAN:
     #         torch.autograd.set_detect_anomaly(True)
-    print(f'\nStarting autoencoder training. {PTRAIN_ITER} pre-training iterations and {N_ITER} ELBO training iterations for {T_ITER} total iterations specified.')    
+    print(f'\nStarting autoencoder training. {PTRAIN_ITER} pre-training iterations and {ELBO_ITER} ELBO training iterations for {T_ITER} total iterations specified.')    
     net.train()
     with tqdm(total = T_ITER, desc = f'Learning SDE and hidden parameters.', position = -1) as tq:
         for it in range(T_ITER):
@@ -211,7 +212,7 @@ def train_minibatch(DEVICE, ELBO_LR: float, N_ITER: int, BATCH_SIZE: int,
             # Sample x_{u-1:v}|y, theta (unless u = 0, then sample x_{u:v})
             if batch_indices is not None:
                 lidx = max(0, batch_indices[it] - 1)              # u-1 if u > 0, else 0
-                ridx = min(N, batch_indices[it] + MINIBATCH_SIZE) # v
+                ridx = min(N, batch_indices[it] + minibatch_size) # v
             else:
                 lidx, ridx = 0, N
             C_PATH, log_prob = net(BATCH_SIZE, lidx, ridx, theta = theta) #Obtain paths with solutions to times including t0.
@@ -295,8 +296,8 @@ def train_minibatch(DEVICE, ELBO_LR: float, N_ITER: int, BATCH_SIZE: int,
                 torch.nn.utils.clip_grad_norm_(ELBO_params, 5.0)
                 ELBO_optimizer.step()
 
-                if it % DECAY_STEP_SIZE == 0:
-                    ELBO_optimizer.param_groups[0]['lr'] *= LR_DECAY
+                if it % ELBO_DECAY_STEP_SIZE == 0:
+                    ELBO_optimizer.param_groups[0]['lr'] *= ELBO_LR_DECAY
 
             if DEBUG_SAVE_DIR:
                 to_save = {'model': net, 'model_state_dict': net.state_dict(), 'ELBO_optimizer_state_dict': ELBO_optimizer.state_dict(), 

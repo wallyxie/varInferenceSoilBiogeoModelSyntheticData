@@ -16,10 +16,10 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 #Module imports
-from SBM_SDE_classes_optim import *
+from SBM_SDE_classes_minibatch import *
 from obs_and_flow_minibatch import *
 from training_minibatch import *
-#from plotting import * #Need to create minibatch versions of plotting scripts.
+from plotting import * #Need to update versions of plotting scripts for minibatching.
 from mean_field import *
 
 #PyTorch settings
@@ -36,26 +36,36 @@ torch.set_printoptions(precision = 8)
 torch.manual_seed(0)
 
 #IAF SSM time parameters
-dt_flow = 1.0 #Increased from 0.1 to reduce memory.
-t = 5000 #In hours.
-n = int(t / dt_flow) + 1
+dt_flow = 1.0
+t = 1000 #In hours.
+n = int(t / dt_flow) + 1 #Total number of time-steps needs to include x0.
 t_span = np.linspace(0, t, n)
-t_span_tensor = torch.reshape(torch.Tensor(t_span), [1, n, 1]).to(active_device) #T_span needs to be converted to tensor object. Additionally, facilitates conversion of I_S and I_D to tensor objects.
+t_span_tensor = torch.reshape(torch.Tensor(t_span), [1, n, 1]).to(active_device) #t_span needs to be converted to tensor object. Additionally, facilitates conversion of I_S and I_D to tensor objects.
 
 #SBM temperature forcing parameters
 temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-niter = 410000
-ptrain_iter = 0
-train_lr = 1.5e-5 #ELBO learning rate
+n_iter = 5
+ptrain_iter = 5
+elbo_lr = 1.5e-5 #ELBO learning rate
+lr_decay = 0.9
+decay_step_size = 25000
+ptrain_alg = 'L1'
 ptrain_lr = 1e-5
-batch_size = 31
+ptrain_lr_decay = 0.9
+ptrain_decay_step_size = 1000
+batch_size = 31 #Current maximum for T = 5000 with UCI HPC3 GPUs.
 eval_batch_size = 31
-obs_error_scale = 0.1 #Observation (y) standard deviation.
-prior_scale_factor = 0.25 #Proportion of prior standard deviation to prior means.
-num_layers = 5 #5 - number needed to fit UCI HPC3 RAM requirements with 16 GB RAM at t = 5000.
+obs_error_scale = 0.1
+prior_scale_factor = 0.25
+num_layers = 5
+kernel_size = 3
+num_resblocks = 2
+minibatch_size = 1000
+theta_cond = 'convolution'
+other_cond_inputs = True
 
 #Specify desired SBM SDE model type and details.
 state_dim_SCON = 3
@@ -95,7 +105,7 @@ print('Training finished. Moving to saving of output files.')
 
 #Save net and ELBO files.
 now = datetime.now()
-now_string = 'SCON-SS_CO2_logit_short' + now.strftime('_%Y_%m_%d_%H_%M_%S')
+now_string = 'SCON-SS_CO2_minibatch_logit_short' + now.strftime('_%Y_%m_%d_%H_%M_%S')
 save_string = f'_iter_{niter}_piter_{ptrain_iter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_lr_{train_lr}_sd_scale_{prior_scale_factor}_{now_string}.pt'
 outputs_folder = 'training_pt_outputs/'
 net_save_string = os.path.join(outputs_folder, 'net' + save_string)
@@ -118,24 +128,25 @@ print('Output files saving finished. Moving to plotting.')
 
 #Release some CUDA memory and load .pt files.
 torch.cuda.empty_cache()
-net = torch.load(net_save_string)
-net.to(active_device)
+#net = torch.load(net_save_string)
+#net.to(active_device)
 p_theta = torch.load(p_theta_save_string)
+p_theta.to(active_device)
 q_theta = torch.load(q_theta_save_string)
 q_theta.to(active_device)
-obs_model = torch.load(obs_model_save_string)
-obs_model.to(active_device)
-ELBO_hist = torch.load(ELBO_save_string)
-SBM_SDE_instance = torch.load(SBM_SDE_instance_save_string)
+#obs_model = torch.load(obs_model_save_string)
+#obs_model.to(active_device)
+#ELBO_hist = torch.load(ELBO_save_string)
+#SBM_SDE_instance = torch.load(SBM_SDE_instance_save_string)
 true_theta = torch.load(os.path.join('generated_data/', 'SCON-SS_CO2_logit_short_2021_11_17_20_16_sample_y_t_5000_dt_0-01_sd_scale_0-25_rsample.pt'), map_location = active_device)
 
 #Plot training posterior results and ELBO history.
 net.eval()
 x, _ = net(eval_batch_size)
 plots_folder = 'training_plots/'
-plot_elbo(ELBO_hist, niter, ptrain_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, xmin = int(niter * 0.2))
-print('ELBO plotting finished.')
-plot_states_post(x, q_theta, obs_model, SBM_SDE_instance, niter, ptrain_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, learn_CO2, ymin_list = [0, 0, 0, 0], ymax_list = [60., 5., 8., 0.025])
-print('States fit plotting finished.')
+#plot_elbo(ELBO_hist, niter, ptrain_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, xmin = int(niter * 0.2))
+#print('ELBO plotting finished.')
+#plot_states_post(x, q_theta, obs_model, SBM_SDE_instance, niter, ptrain_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, learn_CO2, ymin_list = [0, 0, 0, 0], ymax_list = [60., 5., 8., 0.025])
+#print('States fit plotting finished.')
 plot_theta(p_theta, q_theta, true_theta, niter, ptrain_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string)
 print('Prior-posterior pair plotting finished.')
