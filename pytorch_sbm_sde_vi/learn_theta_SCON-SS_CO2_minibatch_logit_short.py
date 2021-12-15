@@ -47,23 +47,23 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-n_iter = 5
-ptrain_iter = 5
-elbo_lr = 1.5e-5 #ELBO learning rate
-lr_decay = 0.9
-decay_step_size = 25000
+elbo_iter = 25
+elbo_lr = 2e-5 #ELBO learning rate
+elbo_lr_decay = 0.9
+elbo_decay_step_size = 25000
+ptrain_iter = 10
+ptrain_lr = 1e-4
 ptrain_alg = 'L1'
-ptrain_lr = 1e-5
 ptrain_lr_decay = 0.9
 ptrain_decay_step_size = 1000
-batch_size = 31 #Current maximum for T = 5000 with UCI HPC3 GPUs.
+batch_size = 31
 eval_batch_size = 31
 obs_error_scale = 0.1
 prior_scale_factor = 0.25
 num_layers = 5
 kernel_size = 3
 num_resblocks = 2
-minibatch_size = 1000
+minibatch_t = 1000
 theta_cond = 'convolution'
 other_cond_inputs = True
 
@@ -73,13 +73,13 @@ SBM_SDE_class = 'SCON'
 diffusion_type = 'SS'
 learn_CO2 = True
 theta_dist = 'RescaledLogitNormal' #String needs to be exact name of the distribution class. Options are 'TruncatedNormal' and 'RescaledLogitNormal'.
-fix_dict = None
+fix_theta_dict = None
 
 #Load parameterization of priors.
-SCON_SS_priors_details = {k: v.to(active_device) for k, v in torch.load(os.path.join('generated_data/', 'SCON-SS_CO2_logit_short_2021_11_17_20_16_sample_y_t_5000_dt_0-01_sd_scale_0-25_hyperparams.pt')).items()}
+SCON_SS_priors_details = {k: v.to(active_device) for k, v in torch.load(os.path.join('../generated_data/', 'SCON-SS_CO2_logit_short_2021_11_17_20_16_sample_y_t_5000_dt_0-01_sd_scale_0-25_hyperparams.pt')).items()}
 
 #Initial condition prior means
-x0_SCON_tensor = torch.load(os.path.join('generated_data/', 'SCON-SS_CO2_logit_short_2021_11_17_20_16_sample_y_t_5000_dt_0-01_sd_scale_0-25_x0_SCON_tensor.pt')).to(active_device)
+x0_SCON_tensor = torch.load(os.path.join('../generated_data/', 'SCON-SS_CO2_logit_short_2021_11_17_20_16_sample_y_t_5000_dt_0-01_sd_scale_0-25_x0_SCON_tensor.pt')).to(active_device)
 x0_prior_SCON = D.multivariate_normal.MultivariateNormal(x0_SCON_tensor, scale_tril = torch.eye(state_dim_SCON).to(active_device) * obs_error_scale * x0_SCON_tensor)
 
 #Generate exogenous input vectors.
@@ -91,16 +91,18 @@ i_s_tensor = i_s(t_span_tensor).to(active_device) #Exogenous SOC input function
 i_d_tensor = i_d(t_span_tensor).to(active_device) #Exogenous DOC input function
 
 #Generate observation model.
-csv_data_path = os.path.join('generated_data/', 'SCON-SS_CO2_logit_short_2021_11_17_20_16_sample_y_t_5000_dt_0-01_sd_scale_0-25.csv')
+csv_data_path = os.path.join('../generated_data/', 'SCON-SS_CO2_logit_short_2021_11_17_20_16_sample_y_t_5000_dt_0-01_sd_scale_0-25.csv')
 
 #Call training loop function for SCON-SS.
-net, q_theta, p_theta, obs_model, norm_hist, ELBO_hist, SBM_SDE_instance = train2(
-        active_device, train_lr, niter, batch_size, num_layers,
-        csv_data_path, obs_error_scale, t, dt_flow, n, 
+net, q_theta, priors, obs_model, norm_losses, ELBO_losses, SBM_SDE = train_minibatch(active_device, elbo_lr, elbo_iter, batch_size,
+        csv_data_path, obs_error_scale, t, dt_flow, n,
         t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
-        SBM_SDE_class, diffusion_type, x0_prior_SCON, SCON_SS_priors_details, fix_dict, learn_CO2,
-        THETA_DIST = theta_dist, BYPASS_NAN = False, LR_DECAY = 0.95, DECAY_STEP_SIZE = 25000, PRINT_EVERY = 1,
-        DEBUG_SAVE_DIR = None, PTRAIN_ITER = ptrain_iter, PTRAIN_LR = ptrain_lr, PTRAIN_ALG = 'L2')
+        SBM_SDE_class, diffusion_type, x0_prior_SCON,
+        SCON_SS_priors_details, fix_theta_dict, learn_CO2, theta_dist,
+        ELBO_LR_DECAY = elbo_lr_decay, ELBO_DECAY_STEP_SIZE = elbo_decay_step_size, PTRAIN_LR_DECAY = ptrain_lr_decay, PTRAIN_DECAY_STEP_SIZE = ptrain_decay_step_size,
+        PRINT_EVERY = 1, DEBUG_SAVE_DIR = None, PTRAIN_ITER = ptrain_iter, PTRAIN_LR = ptrain_lr, PTRAIN_ALG = ptrain_alg,
+        MINIBATCH_T = minibatch_t, NUM_LAYERS = num_layers, KERNEL_SIZE = kernel_size, NUM_RESBLOCKS = num_resblocks,
+        THETA_COND = theta_cond, OTHER_COND_INPUTS = other_cond_inputs)
 print('Training finished. Moving to saving of output files.')
 
 #Save net and ELBO files.
