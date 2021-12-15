@@ -98,7 +98,7 @@ def train_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
         THETA_COND: BoolAndString  = 'convolution', OTHER_COND_INPUTS: bool = False):
 
     #Sum to get total training iterations.
-    T_ITER = ELBO_ITER + PTRAIN_ITER    
+    T_ITER = ELBO_ITER + PTRAIN_ITER
 
     #Instantiate SBM_SDE object based on specified model and diffusion type.
     SBM_SDE_class_dict = {
@@ -176,11 +176,12 @@ def train_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
     ELBO_optimizer = optim.Adamax(ELBO_params, lr = ELBO_LR)
 
     # Sample minibatch indices
-    minibatch_size = MINIBATCH_T / DT + 1
+    minibatch_size = int(MINIBATCH_T / DT)
     if 0 < minibatch_size < N and T % MINIBATCH_T == 0:
         minibatch_indices = torch.arange(0, N - minibatch_size, minibatch_size) + 1
         rand = torch.randint(len(minibatch_indices), (T_ITER, ))
         batch_indices = minibatch_indices[rand]
+        print(f'Time series being chunked into {len(minibatch_indices)} minibatches at time step indices {minibatch_indices}. Check that this is the intended minibatch size.')
 
         # Print warning unless each minibatch is used at least once
         if torch.min(torch.bincount(rand)) == 0:
@@ -229,7 +230,7 @@ def train_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                 else:
                     raise ValueError(f'\nnan in x at niter: {it}. Check gradient clipping and learning rate to start.')
 
-            if PTRAIN_ALG and PTRAIN_ITER != 0 and it <= PTRAIN_ITER:
+            if PTRAIN_ALG and it < PTRAIN_ITER:
                 ptrain_optimizer.zero_grad()
 
                 if LEARN_CO2:
