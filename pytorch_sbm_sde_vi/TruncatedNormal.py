@@ -3,13 +3,12 @@ Originally from https://github.com/toshas/torch_truncnorm/blob/main/TruncatedNor
 Code written by Anton Obukhov (ETH Zurich). 
 Module contains TruncatedNormal and TruncatedStandardNormal PyTorch distributions inheriting from the PyTorch StandardNormal class.
 '''
-
-import math
-from numbers import Number
-
 import torch
 from torch.distributions import Distribution, constraints
 from torch.distributions.utils import broadcast_all
+
+import math
+from numbers import Number
 
 CONST_SQRT_2 = math.sqrt(2)
 CONST_INV_SQRT_2PI = 1 / math.sqrt(2 * math.pi)
@@ -25,6 +24,7 @@ class TruncatedStandardNormal(Distribution):
     """
 
     arg_constraints = {
+        'loc': constraints.real, 'scale': constraints.positive,
         'a': constraints.real,
         'b': constraints.real,
     }
