@@ -483,7 +483,7 @@ class SAWB_ECA(SBM_SDE):
         drift_list = [drift_SOC, drift_DOC, drift_MBC, drift_EEC]
 
         #Compute CO2.
-        CO2 = (1 - u_Q_full) * (V_UE_full * MBC_full * DOC_full) / (SAWB_ECA_params_dict_res['K_UE'] + DOC_full)
+        CO2 = (1 - u_Q_full) * (V_UE_full * MBC_full * DOC_full) / (SAWB_ECA_params_dict_res['K_UE'] + MBC_full + DOC_full)
 
         return torch.cat(drift_list, -1), CO2 # (batch_size, N-1, state_dim), (batch_size, N, 1)
 
@@ -517,6 +517,6 @@ class SAWB_ECA(SBM_SDE):
         V_UE = arrhenius_temp_dep(SAWB_ECA_params_dict_res['V_UE_ref'], temp_tensor, SAWB_ECA_params_dict_res['Ea_V_UE'], self.temp_ref) #Apply vectorized temperature-dependent transformation to V_UE.
         
         #Compute CO2.
-        CO2 = (1 - u_Q) * (V_UE * MBC * DOC) / (SAWB_ECA_params_dict_res['K_UE'] + DOC)
+        CO2 = (1 - u_Q) * (V_UE * MBC * DOC) / (SAWB_ECA_params_dict_res['K_UE'] + MBC + DOC)
         
         return CO2

@@ -628,7 +628,7 @@ class SAWB_ECA(SBM_SDE):
             diffusion_sqrt[:, :, 3 : 4, 3] = torch.sqrt(LowerBound.apply(EEC * SAWB_ECA_params_dict_res['s_EEC'], 1e-8)) #EEC diffusion standard deviation
 
         #Compute CO2.
-        CO2 = (1 - u_Q_full) * (V_UE_full * MBC_full * DOC_full) / (SAWB_ECA_params_dict_res['K_UE'] + DOC_full)
+        CO2 = (1 - u_Q_full) * (V_UE_full * MBC_full * DOC_full) / (SAWB_ECA_params_dict_res['K_UE'] + MBC_full + DOC_full)
         
         #Add CO2 as additional dimension to original x matrix.
         x_add_CO2 = torch.cat([C_PATH, CO2], -1)
@@ -656,7 +656,7 @@ class SAWB_ECA(SBM_SDE):
         V_UE = arrhenius_temp_dep(SAWB_ECA_params_dict_res['V_UE_ref'], self.temps, SAWB_ECA_params_dict_res['Ea_V_UE'], self.temp_ref) #Apply vectorized temperature-dependent transformation to V_UE.
         
         #Compute CO2.
-        CO2 = (1 - u_Q) * (V_UE * MBC * DOC) / (SAWB_ECA_params_dict_res['K_UE'] + DOC)
+        CO2 = (1 - u_Q) * (V_UE * MBC * DOC) / (SAWB_ECA_params_dict_res['K_UE'] + MBC + DOC)
         
         #Add CO2 as additional dimension to original x matrix.
         x_add_CO2 = torch.cat([C_PATH, CO2], -1)
