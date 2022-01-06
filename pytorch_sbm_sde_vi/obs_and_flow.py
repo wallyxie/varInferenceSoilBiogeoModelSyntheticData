@@ -231,7 +231,7 @@ class BatchNormLayer(nn.Module):
 class SDEFlow(nn.Module):
 
     def __init__(self, DEVICE, OBS_MODEL, STATE_DIM, T, DT, N,
-                 I_S_TENSOR = None, I_D_TENSOR = None, cond_inputs = 1, num_layers = 5):
+                 I_S_TENSOR = None, I_D_TENSOR = None, cond_inputs = 1, num_layers = 5, positive=True):
         super().__init__()
         self.device = DEVICE
         self.obs_model = OBS_MODEL
@@ -249,7 +249,9 @@ class SDEFlow(nn.Module):
         self.affine = nn.ModuleList([AffineLayer(cond_inputs + self.obs_model.obs_dim, 1) for _ in range(num_layers)])
         self.permutation = [PermutationLayer(STATE_DIM) for _ in range(num_layers)]
         self.batch_norm = nn.ModuleList([BatchNormLayer(STATE_DIM * N) for _ in range(num_layers - 1)])
-        self.SP = SoftplusLayer()
+        self.positive = positive
+        if positive:
+            self.SP = SoftplusLayer()
         
     def forward(self, BATCH_SIZE, *args, **kwargs):
         eps = self.base_dist.sample([BATCH_SIZE, 1, self.state_dim * self.n]).to(self.device)
@@ -286,9 +288,10 @@ class SDEFlow(nn.Module):
                 #print('BatchNorm layer {}'.format(i), eps, bn_ildj)
             ildjs.append(cl_ildj)
                 
-        eps, sp_ildj = self.SP(eps) # (batch_size, 1, n * state_dim)
-        ildjs.append(sp_ildj)
-        #print('Softplus layer', eps, sp_ildj)
+        if self.positive:
+            eps, sp_ildj = self.SP(eps) # (batch_size, 1, n * state_dim)
+            ildjs.append(sp_ildj)
+            #print('Softplus layer', eps, sp_ildj)
         
         eps = eps.reshape(BATCH_SIZE, -1, self.state_dim) + 1e-6 # (batch_size, n, state_dim)
         for ildj in ildjs:

@@ -274,7 +274,7 @@ class SDEFlowMinibatch(nn.Module):
 
         if FIX_THETA_DICT is not None:
             fix_theta_tensor = torch.tensor(list(FIX_THETA_DICT.values())) # (num_fixed_params, )
-            fix_theta_tensor = fix_theta_tensor[:, None].repeat(1, N * SBM_SDE.state_dim) # (num_fixed_params, n * state_dim)
+            fix_theta_tensor = fix_theta_tensor[:, None].repeat(1, N * self.state_dim) # (num_fixed_params, n * state_dim)
             cond_inputs_list.append(fix_theta_tensor)
 
         self.cond_inputs = torch.cat(cond_inputs_list, 0) # (num_features, n * state_dim)
@@ -359,7 +359,7 @@ class ObsModel(nn.Module):
         return torch.sum(obs_ll, [-1, -2]).mean()
 
     def get_idx(self, TIMES, DT):
-        return torch.tensor((TIMES / DT)).long() #list((TIMES / DT).astype(int))
+        return torch.as_tensor((TIMES / DT)).long() #list((TIMES / DT).astype(int))
     
     def plt_dat(self):
         return self.mu, self.times
