@@ -23,7 +23,6 @@ from plotting import * #Need to update versions of plotting scripts for minibatc
 from mean_field import *
 
 #PyTorch settings
-active_device = torch.device('cpu')
 if torch.cuda.is_available():
     print('CUDA device detected.')
     active_device = torch.device('cuda')

@@ -30,7 +30,6 @@ from LogitNormal import *
 from tqdm import tqdm
 
 #PyTorch settings
-active_device = torch.device('cpu')
 if torch.cuda.is_available():
     print('CUDA device detected.')
     active_device = torch.device('cuda')
