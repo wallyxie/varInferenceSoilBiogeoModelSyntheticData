@@ -496,4 +496,4 @@ def train_NN_minibatch(DEVICE, NN_ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: in
 
     print('\nAll finished! Now, we need to check outputs to see if things worked...')
     
-    return net, q_theta, priors, obs_model_minibatch, norm_losses, ELBO_losses, SBM_SDE
+    return net, obs_model_minibatch, norm_losses, ELBO_losses, SBM_SDE
