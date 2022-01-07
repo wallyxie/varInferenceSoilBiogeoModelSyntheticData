@@ -120,7 +120,7 @@ def train_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
         obs_dim = SBM_SDE.state_dim + 1
     else:
         obs_dim = SBM_SDE.state_dim
-    obs_times, obs_means, obs_error = [torch.as_tensor(x).to(DEVICE) for x in csv_to_obs_df(OBS_CSV_STR, obs_dim, T, OBS_ERROR_SCALE)] #csv_to_obs_df function in obs_and_flow module
+    obs_times, obs_means, obs_error = csv_to_obs_df(OBS_CSV_STR, obs_dim, T, OBS_ERROR_SCALE) #csv_to_obs_df function in obs_and_flow module
     obs_model_minibatch = ObsModelMinibatch(TIMES = obs_times, DT = DT, MU = obs_means, SCALE = obs_error).to(DEVICE)
 
     #Other_inputs presently consists of i and temperature tensors.
@@ -342,7 +342,7 @@ def train_NN_minibatch(DEVICE, NN_ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: in
         obs_dim = SBM_SDE.state_dim + 1
     else:
         obs_dim = SBM_SDE.state_dim
-    obs_times, obs_means, obs_error = [torch.as_tensor(x).to(DEVICE) for x in csv_to_obs_df(OBS_CSV_STR, obs_dim, T, OBS_ERROR_SCALE)] #csv_to_obs_df function in obs_and_flow module
+    obs_times, obs_means, obs_error = csv_to_obs_df(OBS_CSV_STR, obs_dim, T, OBS_ERROR_SCALE) #csv_to_obs_df function in obs_and_flow module
     obs_model_minibatch = ObsModelMinibatch(TIMES = obs_times, DT = DT, MU = obs_means, SCALE = obs_error).to(DEVICE)
 
     #Other_inputs presently consists of i and temperature tensors.
