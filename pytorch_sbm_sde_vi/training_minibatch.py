@@ -116,7 +116,6 @@ def train_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
     SBM_SDE = SBM_SDE_class(T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF, DIFFUSION_TYPE)
 
     #Read in data to obtain y and establish observation model.
-    obs_dim = None
     if LEARN_CO2:
         obs_dim = SBM_SDE.state_dim + 1
     else:
@@ -321,7 +320,8 @@ def train_NN_minibatch(DEVICE, NN_ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: in
         PARAMS_DICT: DictOfNpArrays, LEARN_CO2: bool = False, LIK_DIST = 'Normal',
         BYPASS_NAN: bool = False, NN_ELBO_LR_DECAY: float = 0.8, NN_ELBO_LR_DECAY_STEP_SIZE: int = 50000, PTRAIN_LR_DECAY: float = 0.8, PTRAIN_LR_DECAY_STEP_SIZE: int = 1000,
         PRINT_EVERY: int = 100, DEBUG_SAVE_DIR: str = None, PTRAIN_ITER: int = 0, PTRAIN_LR: float = None, PTRAIN_ALG: BoolAndString = False,
-        MINIBATCH_T: int = 0, NUM_LAYERS: int = 5, KERNEL_SIZE: int = 3, NUM_RESBLOCKS: int = 2):
+        MINIBATCH_T: int = 0, NUM_LAYERS: int = 5, KERNEL_SIZE: int = 3, NUM_RESBLOCKS: int = 2,
+        OTHER_COND_INPUTS: bool = False):
 
     #Sum to get total training iterations.
     T_ITER = ELBO_ITER + PTRAIN_ITER
@@ -338,13 +338,21 @@ def train_NN_minibatch(DEVICE, NN_ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: in
     SBM_SDE = SBM_SDE_class(T_SPAN_TENSOR, I_S_TENSOR, I_D_TENSOR, TEMP_TENSOR, TEMP_REF, DIFFUSION_TYPE)
 
     #Read in data to obtain y and establish observation model.
-    obs_dim = None
     if LEARN_CO2:
         obs_dim = SBM_SDE.state_dim + 1
     else:
         obs_dim = SBM_SDE.state_dim
     obs_times, obs_means, obs_error = [torch.as_tensor(x).to(DEVICE) for x in csv_to_obs_df(OBS_CSV_STR, obs_dim, T, OBS_ERROR_SCALE)] #csv_to_obs_df function in obs_and_flow module
     obs_model_minibatch = ObsModelMinibatch(TIMES = obs_times, DT = DT, MU = obs_means, SCALE = obs_error).to(DEVICE)
+
+    #Other_inputs presently consists of i and temperature tensors.
+    #Timestamps and theta conditional inputs added as conditional inputs in SDEFlowMinibatch.
+    if OTHER_COND_INPUTS:
+        temp_tensor_rescale = TEMP_TENSOR / torch.max(TEMP_TENSOR) #Rescale temp_tensor such that temp_tensor_rescale values <= 1, per Tom's suggestion to rescale large conditional inputs. 
+        other_inputs_pre = torch.cat([temp_tensor_rescale, I_S_TENSOR, I_D_TENSOR], 0) #Concatenate temp_tensor_rescale with exogenous input tensors.
+        other_inputs = other_inputs_pre.repeat([1, SBM_SDE.state_dim, 1]).squeeze(-1) #Arrive at shape torch.Size([other_inputs_dim, SBM_SDE_class.state_dim * N]) for use in SDEFlowMinibatch.
+    else:
+        other_inputs = None
 
     #Establish neural network.
     net = SDEFlowMinibatch(DEVICE, obs_model_minibatch, SBM_SDE.state_dim, T, N, len(PARAMS_DICT), OTHER_INPUTS = other_inputs, FIX_THETA_DICT = None,
