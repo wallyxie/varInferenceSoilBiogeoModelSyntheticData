@@ -31,7 +31,7 @@ def csv_to_obs_df(df_csv_string, dim, T, obs_error_scale):
     obs_df_full = pd.read_csv(df_csv_string)
     obs_df = obs_df_full[obs_df_full['hour'] <= T]    
     obs_times = torch.tensor(np.array(obs_df['hour']))    
-    obs_means = torch.tensor(np.array(obs_df.drop(columns = 'hour')))    
+    obs_means = torch.tensor(np.array(obs_df.drop(columns = 'hour')))
     obs_means_T = obs_means.T
     obs_error_sd =  obs_error_scale * torch.mean(obs_means_T, 1)
     obs_error_sd_re = obs_error_sd.reshape([1, dim]) #Need to reshape observation error tensor for input into ObsModel class.
@@ -350,7 +350,7 @@ class ObsModel(nn.Module):
         self.times = TIMES # (n_obs, )
         self.dt = DT
         self.idx = self.get_idx(TIMES, DT)        
-        self.mu = torch.Tensor(MU) # (obs_dim, n_obs)
+        self.mu = MU # (obs_dim, n_obs)
         self.scale = SCALE # (1, obs_dim)
         self.obs_dim = self.mu.shape[0]
         
