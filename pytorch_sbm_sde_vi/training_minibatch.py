@@ -96,7 +96,7 @@ def train_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
         SBM_SDE_CLASS: str, DIFFUSION_TYPE: str, INIT_PRIOR: torch.distributions.distribution.Distribution,
         PRIOR_DIST_DETAILS_DICT: DictOfTensors, FIX_THETA_DICT = None, LEARN_CO2: bool = False,
         THETA_DIST = None, THETA_POST_DIST = None, THETA_POST_INIT = None, LIK_DIST = 'Normal',
-        BYPASS_NAN: bool = False, ELBO_LR_DECAY: float = 0.8, ELBO_DECAY_STEP_SIZE: int = 50000, PTRAIN_LR_DECAY: float = 0.8, PTRAIN_DECAY_STEP_SIZE: int = 1000,
+        BYPASS_NAN: bool = False, ELBO_LR_DECAY: float = 0.8, ELBO_LR_DECAY_STEP_SIZE: int = 50000, PTRAIN_LR_DECAY: float = 0.8, PTRAIN_LR_DECAY_STEP_SIZE: int = 1000,
         PRINT_EVERY: int = 100, DEBUG_SAVE_DIR: str = None, PTRAIN_ITER: int = 0, PTRAIN_LR: float = None, PTRAIN_ALG: BoolAndString = False,
         MINIBATCH_T: int = 0, NUM_LAYERS: int = 5, KERNEL_SIZE: int = 3, NUM_RESBLOCKS: int = 2,
         THETA_COND: BoolAndString  = 'convolution', OTHER_COND_INPUTS: bool = False):
@@ -262,7 +262,7 @@ def train_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                 torch.nn.utils.clip_grad_norm_(net.parameters(), 3.0)                                
                 ptrain_optimizer.step()
 
-                if it % PTRAIN_DECAY_STEP_SIZE == 0:
+                if it % PTRAIN_LR_DECAY_STEP_SIZE == 0:
                     ptrain_optimizer.param_groups[0]['lr'] *= PTRAIN_LR_DECAY
 
             else:
@@ -300,7 +300,7 @@ def train_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                 torch.nn.utils.clip_grad_norm_(ELBO_params, 5.0)
                 ELBO_optimizer.step()
 
-                if it % ELBO_DECAY_STEP_SIZE == 0:
+                if it % ELBO_LR_DECAY_STEP_SIZE == 0:
                     ELBO_optimizer.param_groups[0]['lr'] *= ELBO_LR_DECAY
 
             if DEBUG_SAVE_DIR:
@@ -319,7 +319,7 @@ def train_NN_minibatch(DEVICE, NN_ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: in
         T_SPAN_TENSOR: torch.Tensor, I_S_TENSOR: torch.Tensor, I_D_TENSOR: torch.Tensor, TEMP_TENSOR: torch.Tensor, TEMP_REF: float,
         SBM_SDE_CLASS: str, DIFFUSION_TYPE: str, INIT_PRIOR: torch.distributions.distribution.Distribution,
         PARAMS_DICT: DictOfNpArrays, LEARN_CO2: bool = False, LIK_DIST = 'Normal',
-        BYPASS_NAN: bool = False, NN_ELBO_LR_DECAY: float = 0.8, NN_ELBO_LR_DECAY_STEP_SIZE: int = 50000, PTRAIN_LR_DECAY: float = 0.8, PTRAIN_DECAY_STEP_SIZE: int = 1000,
+        BYPASS_NAN: bool = False, NN_ELBO_LR_DECAY: float = 0.8, NN_ELBO_LR_DECAY_STEP_SIZE: int = 50000, PTRAIN_LR_DECAY: float = 0.8, PTRAIN_LR_DECAY_STEP_SIZE: int = 1000,
         PRINT_EVERY: int = 100, DEBUG_SAVE_DIR: str = None, PTRAIN_ITER: int = 0, PTRAIN_LR: float = None, PTRAIN_ALG: BoolAndString = False,
         MINIBATCH_T: int = 0, NUM_LAYERS: int = 5, KERNEL_SIZE: int = 3, NUM_RESBLOCKS: int = 2):
 
@@ -448,7 +448,7 @@ def train_NN_minibatch(DEVICE, NN_ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: in
                 torch.nn.utils.clip_grad_norm_(net.parameters(), 3.0)                                
                 ptrain_opt.step()
 
-                if it % PTRAIN_DECAY_STEP_SIZE == 0:
+                if it % PTRAIN_LR_DECAY_STEP_SIZE == 0:
                     ptrain_opt.param_groups[0]['lr'] *= PTRAIN_LR_DECAY
 
             else:
