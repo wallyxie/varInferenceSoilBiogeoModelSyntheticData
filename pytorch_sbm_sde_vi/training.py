@@ -77,8 +77,8 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
         SBM_SDE_CLASS: str, DIFFUSION_TYPE: str, INIT_PRIOR : torch.distributions.distribution.Distribution, 
         PRIOR_DIST_DETAILS_DICT: DictOfTensors, FIX_THETA_DICT = None, LEARN_CO2: bool = False,
         THETA_DIST = None, THETA_POST_DIST = None, THETA_POST_INIT = None,
-        BYPASS_NAN: bool = False, LR_DECAY: float = 0.8, LR_DECAY_STEP_SIZE: int = 50000, PRINT_EVERY: int = 100,
-        DEBUG_SAVE_DIR: str = None, PTRAIN_ITER: int = 0, PTRAIN_LR: float = None, PTRAIN_ALG: str = None.
+        BYPASS_NAN: bool = False, ELBO_LR_DECAY: float = 0.8, ELBO_LR_DECAY_STEP_SIZE: int = 50000, PTRAIN_LR_DECAY: float = 0.8, PTRAIN_LR_DECAY_STEP_SIZE: int = 1000,
+        PRINT_EVERY: int = 100, DEBUG_SAVE_DIR: str = None, PTRAIN_ITER: int = 0, PTRAIN_LR: float = None, PTRAIN_ALG: BoolAndString = False,
         NUM_LAYERS: int = 5):
 
     #Sum to get total training iterations.
@@ -198,7 +198,10 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
 
                 norm.backward()
                 torch.nn.utils.clip_grad_norm_(net.parameters(), 3.0)                                
-                pretrain_opt.step()
+                ptrain_opt.step()
+
+                if it % PTRAIN_LR_DECAY_STEP_SIZE == 0:
+                    ptrain_opt.param_groups[0]['lr'] *= PTRAIN_LR_DECAY
 
             else:
                 ELBO_opt.zero_grad()                
