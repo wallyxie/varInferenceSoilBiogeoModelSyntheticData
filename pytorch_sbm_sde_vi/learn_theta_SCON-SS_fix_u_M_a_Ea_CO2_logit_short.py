@@ -53,11 +53,11 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-elbo_iter = 10
+elbo_iter = 500000
 elbo_lr = 2e-5 #ELBO learning rate
 elbo_lr_decay = 0.9
-elbo_decay_step_size = 25000
-ptrain_iter = 5
+elbo_decay_step_size = 50000
+ptrain_iter = 0
 ptrain_lr = 1e-4
 ptrain_alg = 'L1'
 ptrain_lr_decay = 0.9
