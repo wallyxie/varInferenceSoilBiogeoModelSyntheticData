@@ -29,7 +29,6 @@ This module containins the `calc_log_lik` and `training` functions for pre-train
 DictOfTensors = Dict[str, torch.Tensor]
 DictOfNpArrays = Dict[str, np.ndarray]
 Number = Union[int, float]
-TupleOfTensors = Tuple[torch.Tensor, torch.Tensor]
 BoolAndString = Union[bool, str]
 
 ###############################
