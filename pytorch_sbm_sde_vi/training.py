@@ -178,7 +178,7 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                     raise ValueError(f'nan in x at niter: {it}. Check gradient clipping and learning rate to start.')
             
             if PTRAIN_ALG and it < PTRAIN_ITER:
-                pretrain_opt.zero_grad()
+                ptrain_opt.zero_grad()
 
                 if PTRAIN_ALG == 'L1':
                     l1_norm_element = C_PATH - mean_state_obs #Compute difference between x and observed state means.
@@ -251,7 +251,7 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
 
             if DEBUG_SAVE_DIR:
                 to_save = {'model': net, 'model_state_dict': net.state_dict(), 'ELBO_opt_state_dict': ELBO_opt.state_dict(), 
-                        'pretrain_opt_state_dict': pretrain_opt.state_dict(), 'q_theta': q_theta}
+                        'ptrain_opt_state_dict': ptrain_opt.state_dict(), 'q_theta': q_theta}
                 debug_saver.save(to_save, it + 1)
 
             tq.update()
