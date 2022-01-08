@@ -53,7 +53,7 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-elbo_iter = 500000
+elbo_iter = 10
 elbo_lr = 2e-5 #ELBO learning rate
 elbo_lr_decay = 0.9
 elbo_decay_step_size = 25000
@@ -100,7 +100,7 @@ net, q_theta, p_theta, obs_model, norm_hist, ELBO_hist, SBM_SDE_instance = train
         csv_data_path, obs_error_scale, t, dt_flow, n, 
         t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
         SBM_SDE_class, diffusion_type, x0_prior_SCON,
-        SCON_SS_priors_details, fix_dict, learn_CO2, theta_dist, 
+        SCON_SS_priors_details, fix_theta_dict, learn_CO2, theta_dist, 
         ELBO_LR_DECAY = elbo_lr_decay, ELBO_DECAY_STEP_SIZE = elbo_decay_step_size, PTRAIN_LR_DECAY = ptrain_lr_decay, PTRAIN_DECAY_STEP_SIZE = ptrain_decay_step_size,
         PRINT_EVERY = 1, DEBUG_SAVE_DIR = None, PTRAIN_ITER = ptrain_iter, PTRAIN_LR = ptrain_lr, PTRAIN_ALG = ptrain_alg,
         NUM_LAYERS = num_layers)
