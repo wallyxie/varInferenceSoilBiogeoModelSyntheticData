@@ -172,7 +172,7 @@ def train_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
 
     #Initiate optimizers.
     if PTRAIN_ALG and PTRAIN_ITER != 0:
-        ptrain_optimizer = optim.Adam(net.parameters(), lr = PTRAIN_LR)
+        ptrain_opt = optim.Adam(net.parameters(), lr = PTRAIN_LR)
         if LEARN_CO2:
             mean_state_obs = torch.mean(obs_model_minibatch.mu[:-1, :], -1)[None, None, :]
         else:
@@ -180,7 +180,7 @@ def train_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
     elif not PTRAIN_ALG and PTRAIN_ITER != 0:
         raise Error('Pre-training iterations specified without PTRAIN_ALG input. Must request PTRAIN_ALG = "L1" or "L2".')
     ELBO_params = list(net.parameters()) + list(q_theta.parameters())
-    ELBO_optimizer = optim.Adamax(ELBO_params, lr = ELBO_LR)
+    ELBO_opt = optim.Adamax(ELBO_params, lr = ELBO_LR)
 
     # Sample minibatch indices
     minibatch_size = int(MINIBATCH_T / DT)
@@ -238,7 +238,7 @@ def train_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                     raise ValueError(f'\nnan in x at niter: {it}. Check gradient clipping and learning rate to start.')
 
             if PTRAIN_ALG and it < PTRAIN_ITER:
-                ptrain_optimizer.zero_grad()
+                ptrain_opt.zero_grad()
 
                 if PTRAIN_ALG == 'L1':
                     l1_norm_element = C_PATH - mean_state_obs #Compute difference between x and observed state means.
@@ -259,13 +259,13 @@ def train_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
 
                 norm.backward()
                 torch.nn.utils.clip_grad_norm_(net.parameters(), 3.0)                                
-                ptrain_optimizer.step()
+                ptrain_opt.step()
 
                 if it % PTRAIN_LR_DECAY_STEP_SIZE == 0:
-                    ptrain_optimizer.param_groups[0]['lr'] *= PTRAIN_LR_DECAY
+                    ptrain_opt.param_groups[0]['lr'] *= PTRAIN_LR_DECAY
 
             else:
-                ELBO_optimizer.zero_grad()
+                ELBO_opt.zero_grad()
 
                 # Compute likelihood and ELBO
                 # Negative ELBO: -log p(theta) + log q(theta) - log p(y_0|x_0, theta) [already accounted for in obs_model output when learning x_0] + log q(x|theta) - log p(x|theta) - log p(y|x, theta)
@@ -297,14 +297,14 @@ def train_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                 # Take gradient step
                 ELBO.backward()
                 torch.nn.utils.clip_grad_norm_(ELBO_params, 5.0)
-                ELBO_optimizer.step()
+                ELBO_opt.step()
 
                 if it % ELBO_LR_DECAY_STEP_SIZE == 0:
-                    ELBO_optimizer.param_groups[0]['lr'] *= ELBO_LR_DECAY
+                    ELBO_opt.param_groups[0]['lr'] *= ELBO_LR_DECAY
 
             if DEBUG_SAVE_DIR:
-                to_save = {'model': net, 'model_state_dict': net.state_dict(), 'ELBO_optimizer_state_dict': ELBO_optimizer.state_dict(), 
-                        'ptrain_optimizer_state_dict': ptrain_optimizer.state_dict(), 'q_theta': q_theta}
+                to_save = {'model': net, 'model_state_dict': net.state_dict(), 'ELBO_opt_state_dict': ELBO_opt.state_dict(), 
+                        'ptrain_opt_state_dict': ptrain_opt.state_dict(), 'q_theta': q_theta}
                 debug_saver.save(to_save, it + 1)
 
             tq.update()
