@@ -99,7 +99,7 @@ net, q_theta, p_theta, obs_model, norm, ELBO, SBM_SDE_instance = train_minibatch
         t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
         SBM_SDE_class, diffusion_type, x0_prior_SCON,
         SCON_SS_priors_details, fix_theta_dict, learn_CO2, theta_dist,
-        ELBO_LR_DECAY = elbo_lr_decay, ELBO_DECAY_STEP_SIZE = elbo_decay_step_size, PTRAIN_LR_DECAY = ptrain_lr_decay, PTRAIN_DECAY_STEP_SIZE = ptrain_decay_step_size,
+        ELBO_LR_DECAY = elbo_lr_decay, ELBO_LR_DECAY_STEP_SIZE = elbo_decay_step_size, PTRAIN_LR_DECAY = ptrain_lr_decay, PTRAIN_LR_DECAY_STEP_SIZE = ptrain_decay_step_size,
         PRINT_EVERY = 1, DEBUG_SAVE_DIR = None, PTRAIN_ITER = ptrain_iter, PTRAIN_LR = ptrain_lr, PTRAIN_ALG = ptrain_alg,
         MINIBATCH_T = minibatch_t, NUM_LAYERS = num_layers, KERNEL_SIZE = kernel_size, NUM_RESBLOCKS = num_resblocks,
         THETA_COND = theta_cond, OTHER_COND_INPUTS = other_cond_inputs)
