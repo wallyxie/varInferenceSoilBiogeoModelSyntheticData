@@ -13,7 +13,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 #Module imports
-from mean_field_smooth import *
+from mean_field import *
 from obs_and_flow import *
 from SBM_SDE_classes import *
 
