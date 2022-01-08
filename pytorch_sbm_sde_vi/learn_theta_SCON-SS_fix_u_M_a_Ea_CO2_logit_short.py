@@ -109,7 +109,7 @@ print('Training finished. Moving to saving of output files.')
 #Save net and ELBO files.
 now = datetime.now()
 now_string = 'SCON-SS_fix_u_M_a_Ea_CO2_logit_short' + now.strftime('_%Y_%m_%d_%H_%M_%S')
-save_string = f'_iter_{elbo_iter}_piter_{ptrain_iter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_lr_{train_lr}_sd_scale_{prior_scale_factor}_{now_string}.pt'
+save_string = f'_iter_{elbo_iter}_piter_{ptrain_iter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_lr_{elbo_lr}_sd_scale_{prior_scale_factor}_{now_string}.pt'
 outputs_folder = 'training_pt_outputs/'
 net_save_string = os.path.join(outputs_folder, 'net' + save_string)
 net_state_dict_save_string = os.path.join(outputs_folder,'net_state_dict' + save_string)
@@ -146,9 +146,9 @@ true_theta = torch.load(os.path.join('generated_data/', 'SCON-SS_CO2_logit_short
 net.eval()
 x, _ = net(eval_batch_size)
 plots_folder = 'training_plots/'
-plot_elbo(ELBO_hist, niter, ptrain_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, xmin = int(niter * 0.2))
+plot_elbo(ELBO_hist, elbo_iter, ptrain_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, prior_scale_factor, plots_folder, now_string, xmin = int(elbo_iter * 0.2))
 print('ELBO plotting finished.')
-plot_states_post(x, q_theta, obs_model, SBM_SDE_instance, niter, ptrain_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string, fix_theta_dict, learn_CO2, ymin_list = [0, 0, 0, 0], ymax_list = [70., 8., 11., 0.025])
+plot_states_post(x, q_theta, obs_model, SBM_SDE_instance, elbo_iter, ptrain_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, prior_scale_factor, plots_folder, now_string, fix_theta_dict, learn_CO2, ymin_list = [0, 0, 0, 0], ymax_list = [70., 8., 11., 0.025])
 print('States fit plotting finished.')
-plot_theta(p_theta, q_theta, true_theta, niter, ptrain_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, train_lr, prior_scale_factor, plots_folder, now_string)
+plot_theta(p_theta, q_theta, true_theta, elbo_iter, ptrain_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, prior_scale_factor, plots_folder, now_string)
 print('Prior-posterior pair plotting finished.')
