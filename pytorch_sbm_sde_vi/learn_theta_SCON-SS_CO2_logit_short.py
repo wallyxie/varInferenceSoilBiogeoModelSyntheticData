@@ -66,7 +66,7 @@ batch_size = 31
 eval_batch_size = 31
 obs_error_scale = 0.1
 prior_scale_factor = 0.25
-num_layers = 5.
+num_layers = 5
 
 #Specify desired SBM SDE model type and details.
 state_dim_SCON = 3
