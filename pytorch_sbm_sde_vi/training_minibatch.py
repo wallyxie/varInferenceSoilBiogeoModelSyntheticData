@@ -198,9 +198,6 @@ def train_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
         print('Proceeding with uni-batching, because either minibatch_size >= N, or T % MINIBATCH_T != 0.')
         batch_indices = None
     
-    #Training loop
-    # if BYPASS_NAN:
-    #         torch.autograd.set_detect_anomaly(True)
     print(f'\nStarting autoencoder training. {PTRAIN_ITER} pre-training iterations and {ELBO_ITER} ELBO training iterations for {T_ITER} total iterations specified.')    
     net.train()
     with tqdm(total = T_ITER, desc = f'Learning SDE and hidden parameters.', position = -1) as tq:
