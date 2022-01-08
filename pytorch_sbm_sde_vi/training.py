@@ -264,8 +264,8 @@ def train_NN_old(DEVICE, NN_ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
         OBS_CSV_STR: str, OBS_ERROR_SCALE: float, T: float, DT: float, N: int,
         T_SPAN_TENSOR: torch.Tensor, I_S_TENSOR: torch.Tensor, I_D_TENSOR: torch.Tensor, TEMP_TENSOR: torch.Tensor, TEMP_REF: float,
         SBM_SDE_CLASS: str, DIFFUSION_TYPE: str, INIT_PRIOR: torch.distributions.distribution.Distribution,
-        PARAMS_DICT: DictOfNpArrays, LEARN_CO2: bool = False, LIK_DIST: str = 'Normal',
-        BYPASS_NAN: bool = False, NN_ELBO_LR_DECAY: float = 0.8, NN_ELBO_LR_DECAY_STEP_SIZE: int = 50000, PTRAIN_LR_DECAY: float = 0.8, PTRAIN_LR_DECAY_STEP_SIZE: int = 1000,
+        PARAMS_DICT: DictOfNpArrays, LEARN_CO2: bool = False, BYPASS_NAN: bool = False,
+        NN_ELBO_LR_DECAY: float = 0.8, NN_ELBO_LR_DECAY_STEP_SIZE: int = 50000, PTRAIN_LR_DECAY: float = 0.8, PTRAIN_LR_DECAY_STEP_SIZE: int = 1000,
         PRINT_EVERY: int = 100, DEBUG_SAVE_DIR: str = None, PTRAIN_ITER: int = 0, PTRAIN_LR: float = None, PTRAIN_ALG: BoolAndString = False,
         NUM_LAYERS: int = 5):
 
@@ -379,11 +379,11 @@ def train_NN_old(DEVICE, NN_ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                 # Compute likelihood and ELBO
                 # Negative ELBO: -log p(theta) + log q(theta) - log p(y_0|x_0, theta) [already accounted for in obs_model output when learning x_0] + log q(x|theta) - log p(x|theta) - log p(y|x, theta)
                 if LEARN_CO2:
-                    log_lik, drift, diffusion_sqrt, x_add_CO2 = calc_log_lik_minibatch_CO2(C_PATH, theta_dict, DT, SBM_SDE, INIT_PRIOR, lidx, ridx, LIK_DIST)
-                    ELBO = N/minibatch_size * (log_prob.mean() - log_lik.mean()) #- obs_model(x_add_CO2, theta_dict, lidx, ridx))
+                    log_lik, drift, diffusion_sqrt, x_add_CO2 = calc_log_lik2(C_PATH, theta_dict, DT, SBM_SDE, INIT_PRIOR, LEARN_CO2)
+                    ELBO = log_prob.mean() - log_lik.mean() #- obs_model(x_add_CO2, theta_dict)
                 else:
-                    log_lik, drift, diffusion_sqrt = calc_log_lik_minibatch(C_PATH, theta_dict, DT, SBM_SDE, INIT_PRIOR, lidx, ridx, LIK_DIST)
-                    ELBO = N/minibatch_size * (log_prob.mean() - log_lik.mean()) #- obs_model(C_PATH, theta_dict, lidx, ridx))
+                    log_lik, drift, diffusion_sqrt = calc_log_lik2(C_PATH, theta_dict, DT, SBM_SDE, INIT_PRIOR, LEARN_CO2)
+                    ELBO = log_prob.mean() - log_lik.mean() #- obs_model(C_PATH, theta_dict)
 
                 # Record ELBO history and best ELBO so far
                 best_loss_ELBO = ELBO if ELBO < best_loss_ELBO else best_loss_ELBO
