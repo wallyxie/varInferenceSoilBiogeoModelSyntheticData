@@ -245,8 +245,8 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                 torch.nn.utils.clip_grad_norm_(ELBO_params, 5.0)
                 ELBO_opt.step()
 
-                if it % LR_DECAY_STEP_SIZE == 0:
-                    ELBO_opt.param_groups[0]['lr'] *= LR_DECAY
+                if it % ELBO_LR_DECAY_STEP_SIZE == 0:
+                    ELBO_opt.param_groups[0]['lr'] *= ELBO_LR_DECAY
 
             if DEBUG_SAVE_DIR:
                 to_save = {'model': net, 'model_state_dict': net.state_dict(), 'ELBO_opt_state_dict': ELBO_opt.state_dict(), 
