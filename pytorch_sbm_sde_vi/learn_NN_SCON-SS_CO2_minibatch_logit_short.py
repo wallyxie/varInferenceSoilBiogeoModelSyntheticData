@@ -48,9 +48,9 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-elbo_iter = 11
-nn_elbo_lr = 1e-3 #ELBO learning rate
-nn_elbo_lr_decay = 0.85
+elbo_iter = 25000
+nn_elbo_lr = 1e-2 #ELBO learning rate
+nn_elbo_lr_decay = 0.8
 nn_elbo_lr_decay_step_size = 10000
 ptrain_iter = 0
 ptrain_lr = 1e-3
@@ -73,6 +73,7 @@ state_dim_SCON = 3
 SBM_SDE_class = 'SCON'
 diffusion_type = 'SS'
 learn_CO2 = True
+lik_dist = 'Normal'
 
 #Load sampled true theta.
 params_dict = torch.load(os.path.join('generated_data/', 'SCON-SS_CO2_logit_short_2021_11_17_20_16_sample_y_t_5000_dt_0-01_sd_scale_0-25_rsample.pt'), map_location = active_device)
