@@ -24,9 +24,6 @@ from training import *
 from plotting import *
 from mean_field import *
 
-#Other imports
-from tqdm import tqdm
-
 #PyTorch settings
 if torch.cuda.is_available():
     print('CUDA device detected.')
@@ -55,7 +52,7 @@ elbo_iter = 215000
 nn_elbo_lr = 1e-3
 nn_elbo_lr_decay = 0.85
 nn_elbo_lr_decay_step_size = 10000
-ptrain_iter = 50
+ptrain_iter = 0
 ptrain_lr = 1e-3
 ptrain_alg = 'L1'
 ptrain_lr_decay = 0.9
