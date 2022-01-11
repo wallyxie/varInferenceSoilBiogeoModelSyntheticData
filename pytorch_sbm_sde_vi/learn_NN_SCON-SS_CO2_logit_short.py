@@ -23,7 +23,6 @@ from obs_and_flow import *
 from training import *
 from plotting import *
 from mean_field import *
-#from TruncatedNormal import *
 from LogitNormal import *
 
 #Other imports
@@ -53,15 +52,15 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-elbo_iter = 100000
-elbo_lr = 2e-5 #ELBO learning rate
-elbo_lr_decay = 0.9
-elbo_decay_step_size = 50000
-ptrain_iter = 0
-ptrain_lr = 1e-4
+elbo_iter = 215000
+nn_elbo_lr = 1e-3
+nn_elbo_lr_decay = 0.85
+nn_elbo_lr_decay_step_size = 10000
+ptrain_iter = 50
+ptrain_lr = 1e-3
 ptrain_alg = 'L1'
 ptrain_lr_decay = 0.9
-ptrain_decay_step_size = 1000
+ptrain_lr_decay_step_size = 1000
 batch_size = 31
 eval_batch_size = 31
 obs_error_scale = 0.1
@@ -93,7 +92,7 @@ i_d_tensor = i_d(t_span_tensor).to(active_device) #Exogenous DOC input function
 csv_data_path = os.path.join('generated_data/', 'SCON-SS_CO2_logit_short_2021_11_17_20_16_sample_y_t_5000_dt_0-01_sd_scale_0-25.csv')
 
 #Call training loop function for SCON-SS.
-net, obs_model, norm, ELBO, SBM_SDE_instance = train_NN_old(active_device, nn_elbo_lr, elbo_iter, batch_size,
+net, obs_model, norm_hist, ELBO_hist, SBM_SDE_instance = train_NN_old(active_device, nn_elbo_lr, elbo_iter, batch_size,
         csv_data_path, obs_error_scale, t, dt_flow, n,
         t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
         SBM_SDE_class, diffusion_type, x0_prior_SCON,
@@ -106,7 +105,7 @@ print('Training finished. Moving to saving of output files.')
 #Save net and ELBO files.
 now = datetime.now()
 now_string = 'SCON-SS_CO2_logit_short_NN_only' + now.strftime('_%Y_%m_%d_%H_%M_%S')
-save_string = f'_iter_{elbo_iter}_piter_{ptrain_iter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_lr_{elbo_lr}_sd_scale_{prior_scale_factor}_{now_string}.pt'
+save_string = f'_iter_{elbo_iter}_piter_{ptrain_iter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_lr_{nn_elbo_lr}_sd_scale_{prior_scale_factor}_{now_string}.pt'
 outputs_folder = 'training_pt_outputs/'
 net_save_string = os.path.join(outputs_folder, 'net' + save_string)
 net_state_dict_save_string = os.path.join(outputs_folder,'net_state_dict' + save_string)
@@ -135,7 +134,8 @@ SBM_SDE_instance = torch.load(SBM_SDE_instance_save_string)
 net.eval()
 x, _ = net(eval_batch_size)
 plots_folder = 'training_plots/'
-plot_elbo(ELBO_hist, elbo_iter, ptrain_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, prior_scale_factor, plots_folder, now_string, xmin = int(elbo_iter * 0.2))
+plot_elbo(ELBO_hist, elbo_iter, ptrain_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, nn_elbo_lr, prior_scale_factor, plots_folder, now_string, xmin = int(elbo_iter * 0.2))
 print('ELBO plotting finished.')
-plot_states_NN(x, params_dict, obs_model, SBM_SDE_instance, elbo_iter, ptrain_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, prior_scale_factor, plots_folder, now_string, learn_CO2, ymin_list = [0, 0, 0, 0], ymax_list = [70., 5., 8., 0.025])
+params_dict_tensor = {k: torch.tensor(v).unsqueeze(0) for k, v in params_dict.items()}
+plot_states_NN(x, params_dict_tensor, obs_model, SBM_SDE_instance, elbo_iter, ptrain_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, nn_elbo_lr, prior_scale_factor, plots_folder, now_string, learn_CO2, ymin_list = [0, 0, 0, 0], ymax_list = [70., 5., 8., 0.025])
 print('States fit plotting finished.')
