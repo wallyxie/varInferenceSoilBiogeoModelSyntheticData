@@ -22,8 +22,6 @@ from obs_and_flow import *
 from training import *
 from plotting import *
 from mean_field import *
-from TruncatedNormal import *
-from LogitNormal import *
 
 #Other imports
 from tqdm import tqdm
