@@ -78,7 +78,7 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
         SBM_SDE_CLASS: str, DIFFUSION_TYPE: str, INIT_PRIOR : torch.distributions.distribution.Distribution, 
         PRIOR_DIST_DETAILS_DICT: DictOfTensors, FIX_THETA_DICT = None, LEARN_CO2: bool = False,
         THETA_DIST = None, THETA_POST_DIST = None, THETA_POST_INIT = None,
-        BYPASS_NAN: bool = False, ELBO_LR_DECAY: float = 0.8, ELBO_LR_DECAY_STEP_SIZE: int = 50000, PTRAIN_LR_DECAY: float = 0.8, PTRAIN_LR_DECAY_STEP_SIZE: int = 1000,
+        BYPASS_NAN: bool = False, ELBO_LR_DECAY: float = 0.8, ELBO_LR_DECAY_STEP_SIZE: int = 50000,
         PRINT_EVERY: int = 100, DEBUG_SAVE_DIR: str = None, PTRAIN_ITER: int = 0, PTRAIN_LR: float = None, PTRAIN_ALG: BoolAndString = False,
         NUM_LAYERS: int = 5):
 
@@ -201,9 +201,6 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                 torch.nn.utils.clip_grad_norm_(net.parameters(), 3.0)                                
                 ptrain_opt.step()
 
-                if it % PTRAIN_LR_DECAY_STEP_SIZE == 0:
-                    ptrain_opt.param_groups[0]['lr'] *= PTRAIN_LR_DECAY
-
             else:
                 ELBO_opt.zero_grad()                
                 
@@ -265,7 +262,7 @@ def train_NN_old(DEVICE, NN_ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
         T_SPAN_TENSOR: torch.Tensor, I_S_TENSOR: torch.Tensor, I_D_TENSOR: torch.Tensor, TEMP_TENSOR: torch.Tensor, TEMP_REF: float,
         SBM_SDE_CLASS: str, DIFFUSION_TYPE: str, INIT_PRIOR: torch.distributions.distribution.Distribution,
         PARAMS_DICT: DictOfNpArrays, LEARN_CO2: bool = False, BYPASS_NAN: bool = False,
-        NN_ELBO_LR_DECAY: float = 0.8, NN_ELBO_LR_DECAY_STEP_SIZE: int = 50000, PTRAIN_LR_DECAY: float = 0.8, PTRAIN_LR_DECAY_STEP_SIZE: int = 1000,
+        NN_ELBO_LR_DECAY: float = 0.8, NN_ELBO_LR_DECAY_STEP_SIZE: int = 50000,
         PRINT_EVERY: int = 100, DEBUG_SAVE_DIR: str = None, PTRAIN_ITER: int = 0, PTRAIN_LR: float = None, PTRAIN_ALG: BoolAndString = False,
         NUM_LAYERS: int = 5):
 
@@ -369,9 +366,6 @@ def train_NN_old(DEVICE, NN_ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                 norm.backward()
                 torch.nn.utils.clip_grad_norm_(net.parameters(), 3.0)                                
                 ptrain_opt.step()
-
-                if it % PTRAIN_LR_DECAY_STEP_SIZE == 0:
-                    ptrain_opt.param_groups[0]['lr'] *= PTRAIN_LR_DECAY
 
             else:
                 nn_ELBO_opt.zero_grad()
