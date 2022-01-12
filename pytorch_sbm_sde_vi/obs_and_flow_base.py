@@ -241,8 +241,12 @@ class SDEFlow(nn.Module):
         self.n = N
         if cond_inputs == 3:
             self.i_tensor = torch.stack((I_S_TENSOR.reshape(-1), I_D_TENSOR.reshape(-1)))[None, :, :].repeat_interleave(3, -1)
-
-        self.base_dist = D.normal.Normal(loc = 0., scale = 1.)
+        #Parameterize loc and scale of base flow distribution.
+        base_loc_SOC, base_loc_DOC, base_loc_MBC = torch.split(nn.Parameter(torch.zeros(1, self.state_dim)), 1, -1)
+        base_scale_SOC, base_scale_DOC, base_scale_MBC = torch.split(nn.Parameter(torch.ones(1, self.state_dim)), 1, -1)
+        base_loc = torch.cat(base_loc_SOC.expand([1, self.n]), base_loc_DOC.expand([1, self.n]), base_loc_MBC.expand([1, self.n]), 1)
+        base_scale = torch.cat(base_scale_SOC.expand([1, self.n]), base_scale_DOC.expand([1, self.n]), base_scale_MBC.expand([1, self.n]), 1)
+        self.base_dist = D.normal.Normal(loc = base_loc, scale = base_scale)
         self.cond_inputs = cond_inputs        
         self.num_layers = num_layers
 
