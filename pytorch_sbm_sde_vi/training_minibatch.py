@@ -23,16 +23,17 @@ from TruncatedNormal import *
 from LogitNormal import *
 
 '''
-This module containins the `calc_log_lik` and `training` functions for pre-training and ELBO training of the soil biogeochemical model SDE systems.
+This module containins the `calc_log_lik` and `train` functions for pre-training and ELBO training of the soil biogeochemical model SDE systems.
 '''
 
+#Declare typing combinations.
 DictOfTensors = Dict[str, torch.Tensor]
 DictOfNpArrays = Dict[str, np.ndarray]
 Number = Union[int, float]
 BoolAndString = Union[bool, str]
 
 ###############################
-##TRAINING AND ELBO FUNCTIONS##
+##ELBO OPTIMIZATION FUNCTIONS##
 ###############################
 
 def calc_log_lik_minibatch_CO2(C_PATH: torch.Tensor, # (batch_size, minibatch_size + 1, state_dim)

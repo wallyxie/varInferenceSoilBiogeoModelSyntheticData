@@ -18,16 +18,17 @@ from obs_and_flow import *
 from SBM_SDE_classes import *
 
 '''
-This module containins the `calc_log_lik` and `training` functions for pre-training and ELBO training of the soil biogeochemical model SDE systems.
+This module containins the `calc_log_lik` and `train` functions for pre-training and ELBO training of the soil biogeochemical model SDE systems.
 '''
 
+#Declare typing combinations.
 DictOfTensors = Dict[str, torch.Tensor]
 DictOfNpArrays = Dict[str, np.ndarray]
 Number = Union[int, float]
 BoolAndString = Union[bool, str]
 
 ###############################
-##TRAINING AND ELBO FUNCTIONS##
+##ELBO OPTIMIZATION FUNCTIONS##
 ###############################
 
 def calc_log_lik1(C_PATH: torch.Tensor,
