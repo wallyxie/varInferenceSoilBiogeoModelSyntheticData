@@ -96,7 +96,7 @@ def train_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
         SBM_SDE_CLASS: str, DIFFUSION_TYPE: str, INIT_PRIOR: torch.distributions.distribution.Distribution,
         PRIOR_DIST_DETAILS_DICT: DictOfTensors, FIX_THETA_DICT = None, LEARN_CO2: bool = False,
         THETA_DIST = None, THETA_POST_DIST = None, THETA_POST_INIT = None, LIK_DIST: str = 'Normal',
-        BYPASS_NAN: bool = False, ELBO_LR_DECAY: float = 0.8, ELBO_LR_DECAY_STEP_SIZE: int = 50000, PTRAIN_LR_DECAY: float = 0.8, PTRAIN_LR_DECAY_STEP_SIZE: int = 1000,
+        ELBO_LR_DECAY: float = 0.8, ELBO_LR_DECAY_STEP_SIZE: int = 50000, PTRAIN_LR_DECAY: float = 0.8, PTRAIN_LR_DECAY_STEP_SIZE: int = 1000,
         PRINT_EVERY: int = 100, DEBUG_SAVE_DIR: str = None, PTRAIN_ITER: int = 0, PTRAIN_LR: float = None, PTRAIN_ALG: BoolAndString = False,
         MINIBATCH_T: int = 0, NUM_LAYERS: int = 5, KERNEL_SIZE: int = 3, NUM_RESBLOCKS: int = 2,
         THETA_COND: BoolAndString  = 'convolution', OTHER_COND_INPUTS: bool = False):
@@ -226,13 +226,7 @@ def train_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
             nan_count = 0
             #Check for NaNs in x.
             if torch.isnan(C_PATH).any():
-                if BYPASS_NAN:
-                    nan_count += 1
-                    print(f'\nnan_count = {nan_count}')
-                    print(f'\nWarning. NaN in x at niter: {it}. Using `torch.nan_to_num` to bypass. Check gradient clipping and learning rate to start.')
-                    C_PATH = torch.nan_to_num(C_PATH)
-                else:
-                    raise ValueError(f'\nnan in x at niter: {it}. Check gradient clipping and learning rate to start.')
+                raise ValueError(f'\nnan in x at niter: {it}. Check gradient clipping and learning rate to start.')
 
             if PTRAIN_ALG and it < PTRAIN_ITER:
                 ptrain_opt.zero_grad()
@@ -315,7 +309,7 @@ def train_NN_minibatch(DEVICE, NN_ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: in
         T_SPAN_TENSOR: torch.Tensor, I_S_TENSOR: torch.Tensor, I_D_TENSOR: torch.Tensor, TEMP_TENSOR: torch.Tensor, TEMP_REF: float,
         SBM_SDE_CLASS: str, DIFFUSION_TYPE: str, INIT_PRIOR: torch.distributions.distribution.Distribution,
         PARAMS_DICT: DictOfNpArrays, LEARN_CO2: bool = False, LIK_DIST: str = 'Normal',
-        BYPASS_NAN: bool = False, NN_ELBO_LR_DECAY: float = 0.8, NN_ELBO_LR_DECAY_STEP_SIZE: int = 50000, PTRAIN_LR_DECAY: float = 0.8, PTRAIN_LR_DECAY_STEP_SIZE: int = 1000,
+        NN_ELBO_LR_DECAY: float = 0.8, NN_ELBO_LR_DECAY_STEP_SIZE: int = 50000, PTRAIN_LR_DECAY: float = 0.8, PTRAIN_LR_DECAY_STEP_SIZE: int = 1000,
         PRINT_EVERY: int = 100, DEBUG_SAVE_DIR: str = None, PTRAIN_ITER: int = 0, PTRAIN_LR: float = None, PTRAIN_ALG: BoolAndString = False,
         MINIBATCH_T: int = 0, NUM_LAYERS: int = 5, KERNEL_SIZE: int = 3, NUM_RESBLOCKS: int = 2,
         OTHER_COND_INPUTS: bool = False):
@@ -402,8 +396,6 @@ def train_NN_minibatch(DEVICE, NN_ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: in
     theta_dict = {k: torch.tensor(v).unsqueeze(0) for k, v in PARAMS_DICT.items()}
     
     #Training loop
-    # if BYPASS_NAN:
-    #         torch.autograd.set_detect_anomaly(True)
     print(f'\nStarting autoencoder training. {PTRAIN_ITER} pre-training iterations and {ELBO_ITER} ELBO training iterations for {T_ITER} total iterations specified.')    
     net.train()
     with tqdm(total = T_ITER, desc = f'Learning SDE and hidden parameters.', position = -1) as tq:
@@ -421,13 +413,7 @@ def train_NN_minibatch(DEVICE, NN_ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: in
             nan_count = 0
             #Check for NaNs in x.
             if torch.isnan(C_PATH).any():
-                if BYPASS_NAN:
-                    nan_count += 1
-                    print(f'\nnan_count = {nan_count}')
-                    print(f'\nWarning. NaN in x at niter: {it}. Using `torch.nan_to_num` to bypass. Check gradient clipping and learning rate to start.')
-                    C_PATH = torch.nan_to_num(C_PATH)
-                else:
-                    raise ValueError(f'\nnan in x at niter: {it}. Check gradient clipping and learning rate to start.')
+                raise ValueError(f'\nnan in x at niter: {it}. Check gradient clipping and learning rate to start.')
 
             if PTRAIN_ALG and it < PTRAIN_ITER:
                 ptrain_opt.zero_grad()

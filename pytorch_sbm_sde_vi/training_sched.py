@@ -18,16 +18,17 @@ from obs_and_flow import *
 from SBM_SDE_classes import *
 
 '''
-This module containins the `calc_log_lik` and `training` functions for pre-training and ELBO training of the soil biogeochemical model SDE systems.
+This module containins the `calc_log_lik` and `train` functions for pre-training and ELBO training of the soil biogeochemical model SDE systems.
 '''
 
+#Declare typing combinations.
 DictOfTensors = Dict[str, torch.Tensor]
 DictOfNpArrays = Dict[str, np.ndarray]
 Number = Union[int, float]
 BoolAndString = Union[bool, str]
 
 ###############################
-##TRAINING AND ELBO FUNCTIONS##
+##ELBO OPTIMIZATION FUNCTIONS##
 ###############################
 
 def calc_log_lik1(C_PATH: torch.Tensor,
@@ -78,12 +79,12 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
         SBM_SDE_CLASS: str, DIFFUSION_TYPE: str, INIT_PRIOR : torch.distributions.distribution.Distribution, 
         PRIOR_DIST_DETAILS_DICT: DictOfTensors, FIX_THETA_DICT = None, LEARN_CO2: bool = False,
         THETA_DIST = None, THETA_POST_DIST = None, THETA_POST_INIT = None,
-        BYPASS_NAN: bool = False, ELBO_LR_DECAY: float = 0.8, ELBO_LR_DECAY_STEP_SIZE: int = 50000,
+        ELBO_LR_DECAY: float = 0.8, ELBO_LR_DECAY_STEP_SIZE: int = 50000,
         PRINT_EVERY: int = 100, DEBUG_SAVE_DIR: str = None, PTRAIN_ITER: int = 0, PTRAIN_LR: float = None, PTRAIN_ALG: BoolAndString = False,
         NUM_LAYERS: int = 5):
 
     #Sum to get total training iterations.
-    T_ITER = ELBO_ITER + PTRAIN_ITER
+    T_ITER = PTRAIN_ITER + ELBO_WARMUP_ITER + ELBO_ITER
 
     #Instantiate SBM_SDE object based on specified model and diffusion type.
     SBM_SDE_class_dict = {
@@ -155,29 +156,34 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
             mean_state_obs = torch.mean(obs_model.mu, -1)[None, None, :]
     elif not PTRAIN_ALG and PTRAIN_ITER != 0:
         raise Error('Pre-training iterations specified without PTRAIN_ALG input. Must request PTRAIN_ALG = "L1" or "L2".')
+
     ELBO_params = list(net.parameters()) + list(q_theta.parameters())
     ELBO_opt = optim.Adamax(ELBO_params, lr = ELBO_LR)
+
+    #Set optimizer LR scheduler.
+    ELBO_WARMUP_FACTOR = ELBO_WARMUP_LR / ELBO_LR
+    def calc_lr_factor(epoch: int, ELBO_WARMUP_ITER: int, PTRAIN_ITER: int, ELBO_WARMUP_LR):
+        if it < PTRAIN_ITER + ELBO_WARMUP_ITER:
+        else:
+            return min(ELBO_WARM_UP_LR_
+
+    ELBO_sched = optim.lr_scheduler.LambdaLR(ELBO_opt, lr_lambda = calc_lr_factor, last_epoch = -1)
+
     
-    net.train()    
     #Training loop
-    print(f'\nStarting autoencoder training. {PTRAIN_ITER} pre-training iterations and {ELBO_ITER} ELBO training iterations for {T_ITER} total iterations specified.')        
+    print(f'\nStarting autoencoder training. {PTRAIN_ITER} pre-training iterations, {ELBO_WARMUP_ITER} ELBO warmup iterations, and {ELBO_ITER} ELBO training iterations for {T_ITER} total iterations specified.')        
+    net.train()        
     with tqdm(total = T_ITER, desc = f'Learning SDE and hidden parameters.', position = -1) as tq:
-        for it in range(T_ITER):
+        for epoch in range(T_ITER):
             C_PATH, log_prob = net(BATCH_SIZE) #Obtain paths with solutions to times including t0.
             
             #NaN handling            
             nan_count = 0
             #Check for NaNs in x.
             if torch.isnan(C_PATH).any():
-                if BYPASS_NAN:
-                    nan_count += 1
-                    print(f'nan_count = {nan_count}')
-                    print(f'Warning. NaN in x at niter: {it}. Using `torch.nan_to_num` to bypass. Check gradient clipping and learning rate to start.')
-                    C_PATH = torch.nan_to_num(C_PATH)
-                else:
-                    raise ValueError(f'nan in x at niter: {it}. Check gradient clipping and learning rate to start.')
+                raise ValueError(f'nan in x at niter: {epoch}. Check gradient clipping and learning rate to start.')
             
-            if PTRAIN_ALG and it < PTRAIN_ITER:
+            if PTRAIN_ALG and epoch < PTRAIN_ITER:
                 ptrain_opt.zero_grad()
 
                 if PTRAIN_ALG == 'L1':
@@ -192,8 +198,8 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                     best_loss_norm = norm if norm < best_loss_norm else best_loss_norm
                     norm_losses.append(norm.item())
 
-                if (it + 1) % PRINT_EVERY == 0:
-                    print(f'\nMoving average norm loss at {it + 1} iterations is: {sum(norm_losses[-10:]) / len(norm_losses[-10:])}. Best norm loss value is: {best_loss_norm}.')
+                if (epoch + 1) % PRINT_EVERY == 0:
+                    print(f'\nMoving average norm loss at {epoch + 1} iterations is: {sum(norm_losses[-10:]) / len(norm_losses[-10:])}. Best norm loss value is: {best_loss_norm}.')
                     print('\nC_PATH mean =', C_PATH.mean(-2))
                     print('\nC_PATH =', C_PATH)
 
@@ -226,10 +232,10 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                 best_loss_ELBO = ELBO if ELBO < best_loss_ELBO else best_loss_ELBO
                 ELBO_losses.append(ELBO.item())
 
-                if (it + 1) % PRINT_EVERY == 0:
-                    print(f'\ndrift at {it + 1} iterations: {drift}')
-                    print(f'\ndiffusion_sqrt at {it + 1} iterations = {diffusion_sqrt}')
-                    print(f'\nMoving average ELBO loss at {it + 1} iterations is: {sum(ELBO_losses[-10:]) / len(ELBO_losses[-10:])}. Best ELBO loss value is: {best_loss_ELBO}.')
+                if (epoch + 1) % PRINT_EVERY == 0:
+                    print(f'\ndrift at {epoch + 1} iterations: {drift}')
+                    print(f'\ndiffusion_sqrt at {epoch + 1} iterations = {diffusion_sqrt}')
+                    print(f'\nMoving average ELBO loss at {epoch + 1} iterations is: {sum(ELBO_losses[-10:]) / len(ELBO_losses[-10:])}. Best ELBO loss value is: {best_loss_ELBO}.')
                     if LEARN_CO2:
                         print('\nC_PATH with CO2 mean =', x_add_CO2.mean(-2))
                         print('\nC_PATH with CO2 =', x_add_CO2)
@@ -243,13 +249,13 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                 torch.nn.utils.clip_grad_norm_(ELBO_params, 5.0)
                 ELBO_opt.step()
 
-                if it % ELBO_LR_DECAY_STEP_SIZE == 0:
+                if epoch % ELBO_LR_DECAY_STEP_SIZE == 0:
                     ELBO_opt.param_groups[0]['lr'] *= ELBO_LR_DECAY
 
             if DEBUG_SAVE_DIR:
                 to_save = {'model': net, 'model_state_dict': net.state_dict(), 'ELBO_opt_state_dict': ELBO_opt.state_dict(), 
                         'ptrain_opt_state_dict': ptrain_opt.state_dict(), 'q_theta': q_theta}
-                debug_saver.save(to_save, it + 1)
+                debug_saver.save(to_save, epoch + 1)
 
             tq.update()
 
@@ -261,7 +267,7 @@ def train_NN_old(DEVICE, NN_ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
         OBS_CSV_STR: str, OBS_ERROR_SCALE: float, T: float, DT: float, N: int,
         T_SPAN_TENSOR: torch.Tensor, I_S_TENSOR: torch.Tensor, I_D_TENSOR: torch.Tensor, TEMP_TENSOR: torch.Tensor, TEMP_REF: float,
         SBM_SDE_CLASS: str, DIFFUSION_TYPE: str, INIT_PRIOR: torch.distributions.distribution.Distribution,
-        PARAMS_DICT: DictOfNpArrays, LEARN_CO2: bool = False, BYPASS_NAN: bool = False,
+        PARAMS_DICT: DictOfNpArrays, LEARN_CO2: bool = False,
         NN_ELBO_LR_DECAY: float = 0.8, NN_ELBO_LR_DECAY_STEP_SIZE: int = 50000,
         PRINT_EVERY: int = 100, DEBUG_SAVE_DIR: str = None, PTRAIN_ITER: int = 0, PTRAIN_LR: float = None, PTRAIN_ALG: BoolAndString = False,
         NUM_LAYERS: int = 5):
@@ -322,12 +328,10 @@ def train_NN_old(DEVICE, NN_ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
     theta_dict = {k: torch.tensor(v).unsqueeze(0) for k, v in PARAMS_DICT.items()}
     
     #Training loop
-    # if BYPASS_NAN:
-    #         torch.autograd.set_detect_anomaly(True)
     print(f'\nStarting autoencoder training. {PTRAIN_ITER} pre-training iterations and {ELBO_ITER} ELBO training iterations for {T_ITER} total iterations specified.')    
     net.train()
     with tqdm(total = T_ITER, desc = f'Learning SDE and hidden parameters.', position = -1) as tq:
-        for it in range(T_ITER):
+        for epoch in range(T_ITER):
             
             C_PATH, log_prob = net(BATCH_SIZE) #Obtain paths with solutions to times including t0.
             
@@ -335,15 +339,9 @@ def train_NN_old(DEVICE, NN_ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
             nan_count = 0
             #Check for NaNs in x.
             if torch.isnan(C_PATH).any():
-                if BYPASS_NAN:
-                    nan_count += 1
-                    print(f'\nnan_count = {nan_count}')
-                    print(f'\nWarning. NaN in x at niter: {it}. Using `torch.nan_to_num` to bypass. Check gradient clipping and learning rate to start.')
-                    C_PATH = torch.nan_to_num(C_PATH)
-                else:
-                    raise ValueError(f'\nnan in x at niter: {it}. Check gradient clipping and learning rate to start.')
+                raise ValueError(f'\nnan in x at niter: {epoch}. Check gradient clipping and learning rate to start.')
 
-            if PTRAIN_ALG and it < PTRAIN_ITER:
+            if PTRAIN_ALG and epoch < PTRAIN_ITER:
                 ptrain_opt.zero_grad()
 
                 if PTRAIN_ALG == 'L1':
@@ -358,8 +356,8 @@ def train_NN_old(DEVICE, NN_ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                     best_loss_norm = norm if norm < best_loss_norm else best_loss_norm
                     norm_losses.append(norm.item())
 
-                if (it + 1) % PRINT_EVERY == 0:
-                    print(f'\nMoving average norm loss at {it + 1} iterations is: {sum(norm_losses[-10:]) / len(norm_losses[-10:])}. Best norm loss value is: {best_loss_norm}.')
+                if (epoch + 1) % PRINT_EVERY == 0:
+                    print(f'\nMoving average norm loss at {epoch + 1} iterations is: {sum(norm_losses[-10:]) / len(norm_losses[-10:])}. Best norm loss value is: {best_loss_norm}.')
                     print('\nC_PATH mean =', C_PATH.mean(-2))
                     print('\nC_PATH =', C_PATH)
 
@@ -384,10 +382,10 @@ def train_NN_old(DEVICE, NN_ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                 ELBO_losses.append(ELBO.item())
 
                 # Print info
-                if (it + 1) % PRINT_EVERY == 0:
-                    print(f'\ndrift at {it + 1} iterations: {drift}')
-                    print(f'\ndiffusion_sqrt at {it + 1} iterations = {diffusion_sqrt}')
-                    print(f'\nMoving average ELBO loss at {it + 1} iterations is: {sum(ELBO_losses[-10:]) / len(ELBO_losses[-10:])}. Best ELBO loss value is: {best_loss_ELBO}.')
+                if (epoch + 1) % PRINT_EVERY == 0:
+                    print(f'\ndrift at {epoch + 1} iterations: {drift}')
+                    print(f'\ndiffusion_sqrt at {epoch + 1} iterations = {diffusion_sqrt}')
+                    print(f'\nMoving average ELBO loss at {epoch + 1} iterations is: {sum(ELBO_losses[-10:]) / len(ELBO_losses[-10:])}. Best ELBO loss value is: {best_loss_ELBO}.')
                     if LEARN_CO2:
                         print('\nC_PATH with CO2 mean =', x_add_CO2.mean(-2))
                         print('\nC_PATH with CO2 =', x_add_CO2)
@@ -400,13 +398,13 @@ def train_NN_old(DEVICE, NN_ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                 torch.nn.utils.clip_grad_norm_(nn_ELBO_params, 5.0)
                 nn_ELBO_opt.step()
 
-                if it % NN_ELBO_LR_DECAY_STEP_SIZE == 0:
+                if epoch % NN_ELBO_LR_DECAY_STEP_SIZE == 0:
                     nn_ELBO_opt.param_groups[0]['lr'] *= NN_ELBO_LR_DECAY
 
             if DEBUG_SAVE_DIR:
                 to_save = {'model': net, 'model_state_dict': net.state_dict(), 'ELBO_opt_state_dict': nn_ELBO_opt.state_dict(), 
                         'ptrain_opt_state_dict': ptrain_opt.state_dict()}
-                debug_saver.save(to_save, it + 1)
+                debug_saver.save(to_save, epoch + 1)
 
             tq.update()
 
