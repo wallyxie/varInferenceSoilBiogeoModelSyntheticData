@@ -71,7 +71,7 @@ state_dim_SCON = 3
 SBM_SDE_class = 'SCON'
 diffusion_type = 'SS'
 learn_CO2 = True
-theta_dist = 'RescaledLogitNormal' #String needs to be exact name of the distribution class. Options are 'TruncatedNormal' and 'RescaledLogitNormal'.
+theta_dist = 'TruncatedNormal' #String needs to be exact name of the distribution class. Options are 'TruncatedNormal' and 'RescaledLogitNormal'.
 fix_theta_dict = None
 
 #Load parameterization of priors.

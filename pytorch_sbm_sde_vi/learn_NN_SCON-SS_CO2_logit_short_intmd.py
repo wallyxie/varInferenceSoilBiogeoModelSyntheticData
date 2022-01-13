@@ -93,7 +93,7 @@ net, obs_model, norm_hist, ELBO_hist, SBM_SDE_instance = train_NN_old(active_dev
         t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
         SBM_SDE_class, diffusion_type, x0_prior_SCON,
         params_dict, learn_CO2,
-        NN_ELBO_LR_DECAY = nn_elbo_lr_decay, NN_ELBO_LR_DECAY_STEP_SIZE = nn_elbo_lr_decay_step_size, PTRAIN_LR_DECAY = ptrain_lr_decay, PTRAIN_LR_DECAY_STEP_SIZE = ptrain_lr_decay_step_size,
+        NN_ELBO_LR_DECAY = nn_elbo_lr_decay, NN_ELBO_LR_DECAY_STEP_SIZE = nn_elbo_lr_decay_step_size,
         PRINT_EVERY = 10, DEBUG_SAVE_DIR = None, PTRAIN_ITER = ptrain_iter, PTRAIN_LR = ptrain_lr, PTRAIN_ALG = ptrain_alg,
         NUM_LAYERS = num_layers)
 print('Training finished. Moving to saving of output files.')
