@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 #Module imports
 from SBM_SDE_classes import *
 from obs_and_flow_base import *
-from training_sched import *
+from training import *
 from plotting import *
 from mean_field import *
 
@@ -51,10 +51,10 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-elbo_iter = 85000
-elbo_lr = 1e-3
-elbo_lr_decay = 0.8
-elbo_decay_step_size = 10000
+elbo_iter = 155000
+elbo_lr = 1e-4
+elbo_lr_decay = 0.95
+elbo_decay_step_size = 5000
 ptrain_iter = 0
 ptrain_lr = 1e-4
 ptrain_alg = 'L1'

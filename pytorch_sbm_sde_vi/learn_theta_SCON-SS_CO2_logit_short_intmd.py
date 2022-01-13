@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 #Module imports
 from SBM_SDE_classes import *
 from obs_and_flow_base import *
-from training_sched import *
+from training import *
 from plotting import *
 from mean_field import *
 
