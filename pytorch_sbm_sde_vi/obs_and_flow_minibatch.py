@@ -259,11 +259,11 @@ class SDEFlowMinibatch(nn.Module):
         # NOTE: This currently assumes a regular time gap between observations!
         steps_bw_obs = OBS_MODEL_MINIBATCH.idx[1] - OBS_MODEL_MINIBATCH.idx[0]
         reps = [self.state_dim * steps_bw_obs] * (len(OBS_MODEL_MINIBATCH.idx) - 1)
-        future_reps = torch.tensor([self.state_dim] + reps).to(self.device)
+        future_reps = torch.Tensor([self.state_dim] + reps).to(self.device)
         future_obs = OBS_MODEL_MINIBATCH.mu.repeat_interleave(future_reps, -1) # (obs_dim, n * state_dim)
 
         #past observation count
-        past_reps = torch.tensor(reps + [self.state_dim]).to(self.device)
+        past_reps = torch.Tensor(reps + [self.state_dim]).to(self.device)
         past_obs = OBS_MODEL_MINIBATCH.mu.repeat_interleave(past_reps, -1) # (obs_dim, n * state_dim)
 
         #Combine time cond_inputs.
@@ -273,7 +273,7 @@ class SDEFlowMinibatch(nn.Module):
             cond_inputs_list.append(OTHER_INPUTS)
 
         if FIX_THETA_DICT is not None:
-            fix_theta_tensor = torch.tensor(list(FIX_THETA_DICT.values())) # (num_fixed_params, )
+            fix_theta_tensor = torch.Tensor(list(FIX_THETA_DICT.values())) # (num_fixed_params, )
             fix_theta_tensor = fix_theta_tensor[:, None].repeat(1, N * self.state_dim) # (num_fixed_params, n * state_dim)
             cond_inputs_list.append(fix_theta_tensor)
 
