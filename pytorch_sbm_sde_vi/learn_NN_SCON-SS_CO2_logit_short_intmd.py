@@ -110,7 +110,6 @@ SBM_SDE_instance_save_string = os.path.join(outputs_folder, 'SBM_SDE_instance' +
 torch.save(net, net_save_string)
 torch.save(net.state_dict(), net_state_dict_save_string) #For loading net on CPU.
 torch.save(obs_model, obs_model_save_string)
-torch.save(norm_hist, norm_save_string)
 torch.save(ELBO_hist, ELBO_save_string)
 torch.save(SBM_SDE_instance, SBM_SDE_instance_save_string)
 print('Output files saving finished. Moving to plotting.')
