@@ -237,17 +237,18 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                 ELBO_losses.append(ELBO.item())
 
                 if (epoch + 1) % PRINT_EVERY == 0:
-                    print(f'\ndrift at {epoch + 1} iterations: {drift}')
-                    print(f'\ndiffusion_sqrt at {epoch + 1} iterations = {diffusion_sqrt}')
-                    print(f'\nMoving average ELBO loss at {epoch + 1} iterations is: {sum(ELBO_losses[-10:]) / len(ELBO_losses[-10:])}. Best ELBO loss value is: {best_loss_ELBO}.')
+                    print(f'\nMoving average ELBO at {epoch + 1} iterations = {sum(ELBO_losses[-10:]) / len(ELBO_losses[-10:])}. Best ELBO value is: {best_loss_ELBO}.')
+                    print(f"\nLearning rate at {epoch + 1} iterations = {ELBO_opt.param_groups[0]['lr']}") 
                     if LEARN_CO2:
-                        print('\nC_PATH with CO2 mean =', x_add_CO2.mean(-2))
-                        print('\nC_PATH with CO2 =', x_add_CO2)
+                        print(f'\nC_PATH with CO2 mean = \n{x_add_CO2.mean(-2)}')
+                        print(f'\nC_PATH with CO2 = \n{x_add_CO2}')
                     else:
-                        print('\nC_PATH mean =', C_PATH.mean(-2))
-                        print('\nC_PATH =', C_PATH)
-                    print('\ntheta_dict means: ', {key: theta_dict[key].mean() for key in param_names})
-                    print('\nparent_loc_scale_dict: ', parent_loc_scale_dict)
+                        print(f'\nC_PATH mean = \n{C_PATH.mean(-2)}')
+                        print(f'\nC_PATH = \n{C_PATH}')
+                    print(f'\ndrift at {epoch + 1} iterations = \n{drift}')
+                    print(f'\ndiffusion_sqrt at {epoch + 1} iterations = \n{diffusion_sqrt}')
+                    print(f'\ntheta_dict means at {epoch + 1} iterations = \n{{key: theta_dict[key].mean() for key in param_names}}')
+                    print(f'\nparent_loc_scale_dict at {epoch + 1} iterations = \n{parent_loc_scale_dict}')
 
                 ELBO.backward()
                 torch.nn.utils.clip_grad_norm_(ELBO_params, 5.0)
@@ -400,15 +401,16 @@ def train_nn(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
 
                 # Print info
                 if (epoch + 1) % PRINT_EVERY == 0:
-                    print(f'\ndrift at {epoch + 1} iterations: {drift}')
-                    print(f'\ndiffusion_sqrt at {epoch + 1} iterations = {diffusion_sqrt}')
-                    print(f'\nMoving average ELBO loss at {epoch + 1} iterations is: {sum(ELBO_losses[-10:]) / len(ELBO_losses[-10:])}. Best ELBO loss value is: {best_loss_ELBO}.')
+                    print(f'\nMoving average ELBO at {epoch + 1} iterations = {sum(ELBO_losses[-10:]) / len(ELBO_losses[-10:])}. Best ELBO value is: {best_loss_ELBO}.')
+                    print(f"\nLearning rate at {epoch + 1} iterations = {ELBO_opt.param_groups[0]['lr']}") 
                     if LEARN_CO2:
-                        print('\nC_PATH with CO2 mean =', x_add_CO2.mean(-2))
-                        print('\nC_PATH with CO2 =', x_add_CO2)
+                        print(f'\nC_PATH with CO2 mean = \n{x_add_CO2.mean(-2)}')
+                        print(f'\nC_PATH with CO2 = \n{x_add_CO2}')
                     else:
-                        print('\nC_PATH mean =', C_PATH.mean(-2))
-                        print('\nC_PATH =', C_PATH)
+                        print(f'\nC_PATH mean = \n{C_PATH.mean(-2)}')
+                        print(f'\nC_PATH = \n{C_PATH}')
+                    print(f'\ndrift at {epoch + 1} iterations = \n{drift}')
+                    print(f'\ndiffusion_sqrt at {epoch + 1} iterations = \n{diffusion_sqrt}')
 
                 # Take gradient step
                 ELBO.backward()
