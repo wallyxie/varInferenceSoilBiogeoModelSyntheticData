@@ -247,7 +247,7 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                         print(f'\nC_PATH = \n{C_PATH}')
                     print(f'\ndrift at {epoch + 1} iterations = \n{drift}')
                     print(f'\ndiffusion_sqrt at {epoch + 1} iterations = \n{diffusion_sqrt}')
-                    print(f'\ntheta_dict means at {epoch + 1} iterations = \n{{key: theta_dict[key].mean() for key in param_names}}')
+                    print('\ntheta_dict means at {epoch + 1} iterations = \n', {key: theta_dict[key].mean() for key in param_names})
                     print(f'\nparent_loc_scale_dict at {epoch + 1} iterations = \n{parent_loc_scale_dict}')
 
                 ELBO.backward()
