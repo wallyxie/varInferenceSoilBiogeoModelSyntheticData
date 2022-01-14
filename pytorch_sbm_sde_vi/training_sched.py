@@ -79,8 +79,8 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
         SBM_SDE_CLASS: str, DIFFUSION_TYPE: str, INIT_PRIOR : torch.distributions.distribution.Distribution, 
         PRIOR_DIST_DETAILS_DICT: DictOfTensors, FIX_THETA_DICT = None, LEARN_CO2: bool = False,
         THETA_DIST = None, THETA_POST_DIST = None, THETA_POST_INIT = None,
-        ELBO_LR_DECAY: float = 0.8, ELBO_LR_DECAY_STEP_SIZE: int = 50000,
-        PRINT_EVERY: int = 100, DEBUG_SAVE_DIR: str = None, PTRAIN_ITER: int = 0, PTRAIN_LR: float = None, PTRAIN_ALG: BoolAndString = False,
+        ELBO_WARMUP_ITER = 1000, ELBO_WARMUP_INIT_LR = 1e-6, ELBO_LR_DECAY: float = 0.8, ELBO_LR_DECAY_STEP_SIZE: int = 1000,
+        PRINT_EVERY: int = 100, DEBUG_SAVE_DIR: str = None, PTRAIN_ITER: int = 0, PTRAIN_LR: float = 1e-3, PTRAIN_ALG: BoolAndString = False,
         NUM_LAYERS: int = 5):
 
     #Sum to get total training iterations.
@@ -161,14 +161,18 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
     ELBO_opt = optim.Adamax(ELBO_params, lr = ELBO_LR)
 
     #Set optimizer LR scheduler.
-    ELBO_WARMUP_FACTOR = ELBO_WARMUP_LR / ELBO_LR
-    def calc_lr_factor(epoch: int, ELBO_WARMUP_ITER: int, PTRAIN_ITER: int, ELBO_WARMUP_LR):
-        if it < PTRAIN_ITER + ELBO_WARMUP_ITER:
+    ELBO_opt.param_groups[0]['lr'] = ELBO_WARMUP_INIT_LR
+    elbo_post_warmup_factor = ELBO_LR / ELBO_WARMUP_INIT_LR
+
+    def calc_lr_factor(epoch):
+        if epoch < PTRAIN_ITER + ELBO_WARMUP_ITER:
+            return 1
+        elif epoch == PTRAIN_ITER + ELBO_WARMUP_ITER:
+            return elbo_post_warmup_factor
         else:
-            return min(ELBO_WARM_UP_LR_
+            return min(1, epoch % ELBO_LR_DECAY_STEP_SIZE + ELBO_LR_DECAY)
 
     ELBO_sched = optim.lr_scheduler.LambdaLR(ELBO_opt, lr_lambda = calc_lr_factor, last_epoch = -1)
-
     
     #Training loop
     print(f'\nStarting autoencoder training. {PTRAIN_ITER} pre-training iterations, {ELBO_WARMUP_ITER} ELBO warmup iterations, and {ELBO_ITER} ELBO training iterations for {T_ITER} total iterations specified.')        
@@ -249,8 +253,7 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                 torch.nn.utils.clip_grad_norm_(ELBO_params, 5.0)
                 ELBO_opt.step()
 
-                if epoch % ELBO_LR_DECAY_STEP_SIZE == 0:
-                    ELBO_opt.param_groups[0]['lr'] *= ELBO_LR_DECAY
+                ELBO_sched.step()
 
             if DEBUG_SAVE_DIR:
                 to_save = {'model': net, 'model_state_dict': net.state_dict(), 'ELBO_opt_state_dict': ELBO_opt.state_dict(), 
@@ -263,13 +266,13 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
     
     return net, q_theta, priors, obs_model, norm_losses, ELBO_losses, SBM_SDE
 
-def train_NN_old(DEVICE, NN_ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
+def train_nn(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
         OBS_CSV_STR: str, OBS_ERROR_SCALE: float, T: float, DT: float, N: int,
         T_SPAN_TENSOR: torch.Tensor, I_S_TENSOR: torch.Tensor, I_D_TENSOR: torch.Tensor, TEMP_TENSOR: torch.Tensor, TEMP_REF: float,
         SBM_SDE_CLASS: str, DIFFUSION_TYPE: str, INIT_PRIOR: torch.distributions.distribution.Distribution,
         PARAMS_DICT: DictOfNpArrays, LEARN_CO2: bool = False,
-        NN_ELBO_LR_DECAY: float = 0.8, NN_ELBO_LR_DECAY_STEP_SIZE: int = 50000,
-        PRINT_EVERY: int = 100, DEBUG_SAVE_DIR: str = None, PTRAIN_ITER: int = 0, PTRAIN_LR: float = None, PTRAIN_ALG: BoolAndString = False,
+        ELBO_WARMUP_ITER = 1000, ELBO_WARMUP_INIT_LR = 1e-6, ELBO_LR_DECAY: float = 0.8, ELBO_LR_DECAY_STEP_SIZE: int = 1000,
+        PRINT_EVERY: int = 100, DEBUG_SAVE_DIR: str = None, PTRAIN_ITER: int = 0, PTRAIN_LR: float = 1e-3, PTRAIN_ALG: BoolAndString = False,
         NUM_LAYERS: int = 5):
 
     #Sum to get total training iterations.
@@ -320,8 +323,22 @@ def train_NN_old(DEVICE, NN_ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
         raise Error('Pre-training iterations specified without PTRAIN_ALG input. Must request PTRAIN_ALG = "L1" or "L2".')
 
     #Separate neural network optimizer.
-    nn_ELBO_params = net.parameters()
-    nn_ELBO_opt = optim.Adamax(nn_ELBO_params, lr = NN_ELBO_LR)
+    ELBO_params = net.parameters()
+    ELBO_opt = optim.Adamax(ELBO_params, lr = ELBO_LR)
+
+    #Set optimizer LR scheduler.
+    ELBO_opt.param_groups[0]['lr'] = ELBO_WARMUP_INIT_LR
+    elbo_post_warmup_factor = ELBO_LR / ELBO_WARMUP_INIT_LR
+
+    def calc_lr_factor(epoch):
+        if epoch < PTRAIN_ITER + ELBO_WARMUP_ITER:
+            return 1
+        elif epoch == PTRAIN_ITER + ELBO_WARMUP_ITER:
+            return elbo_post_warmup_factor
+        else:
+            return min(1, epoch % ELBO_LR_DECAY_STEP_SIZE + ELBO_LR_DECAY)
+
+    ELBO_sched = optim.lr_scheduler.LambdaLR(ELBO_opt, lr_lambda = calc_lr_factor, last_epoch = -1)
 
     #Convert dictionary of fixed parameter Numpy arrays to [1, num_params] tensor and dictionary of size [1] tensors.
     theta = torch.tensor([v.item() for v in list(PARAMS_DICT.values())])[None, :] # torch.Size([1, num_params])
@@ -366,7 +383,7 @@ def train_NN_old(DEVICE, NN_ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                 ptrain_opt.step()
 
             else:
-                nn_ELBO_opt.zero_grad()
+                ELBO_opt.zero_grad()
 
                 # Compute likelihood and ELBO
                 # Negative ELBO: -log p(theta) + log q(theta) - log p(y_0|x_0, theta) [already accounted for in obs_model output when learning x_0] + log q(x|theta) - log p(x|theta) - log p(y|x, theta)
@@ -395,14 +412,13 @@ def train_NN_old(DEVICE, NN_ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
 
                 # Take gradient step
                 ELBO.backward()
-                torch.nn.utils.clip_grad_norm_(nn_ELBO_params, 5.0)
-                nn_ELBO_opt.step()
+                torch.nn.utils.clip_grad_norm_(ELBO_params, 5.0)
+                ELBO_opt.step()
 
-                if epoch % NN_ELBO_LR_DECAY_STEP_SIZE == 0:
-                    nn_ELBO_opt.param_groups[0]['lr'] *= NN_ELBO_LR_DECAY
+                ELBO_sched.step()                
 
             if DEBUG_SAVE_DIR:
-                to_save = {'model': net, 'model_state_dict': net.state_dict(), 'ELBO_opt_state_dict': nn_ELBO_opt.state_dict(), 
+                to_save = {'model': net, 'model_state_dict': net.state_dict(), 'ELBO_opt_state_dict': ELBO_opt.state_dict(), 
                         'ptrain_opt_state_dict': ptrain_opt.state_dict()}
                 debug_saver.save(to_save, epoch + 1)
 

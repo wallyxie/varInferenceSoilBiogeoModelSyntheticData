@@ -48,15 +48,14 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-elbo_iter = 85000
+elbo_iter = 100000
 elbo_lr = 1e-2
-elbo_lr_decay = 0.8
-elbo_decay_step_size = 10000
+elbo_lr_decay = 0.6
+elbo_lr_decay_step_size = 2000
+elbo_warmup_iter = 500
+elbo_warmup_init_lr = 1e-6
 ptrain_iter = 0
-ptrain_lr = 1e-4
 ptrain_alg = 'L1'
-ptrain_lr_decay = 0.9
-ptrain_decay_step_size = 1000
 batch_size = 31
 eval_batch_size = 31
 obs_error_scale = 0.1
@@ -96,7 +95,7 @@ net, q_theta, p_theta, obs_model, norm_hist, ELBO_hist, SBM_SDE_instance = train
         t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
         SBM_SDE_class, diffusion_type, x0_prior_SCON,
         SCON_SS_priors_details, fix_theta_dict, learn_CO2, theta_dist, 
-        ELBO_LR_DECAY = elbo_lr_decay, ELBO_LR_DECAY_STEP_SIZE = elbo_decay_step_size, PTRAIN_LR_DECAY = ptrain_lr_decay, PTRAIN_LR_DECAY_STEP_SIZE = ptrain_decay_step_size,
+        ELBO_WARMUP_ITER = elbo_warmup_iter, ELBO_WARMUP_INIT_LR = elbo_warmup_init_lr, ELBO_LR_DECAY = elbo_lr_decay, ELBO_LR_DECAY_STEP_SIZE = elbo_lr_decay_step_size,
         PRINT_EVERY = 10, DEBUG_SAVE_DIR = None, PTRAIN_ITER = ptrain_iter, PTRAIN_LR = ptrain_lr, PTRAIN_ALG = ptrain_alg,
         NUM_LAYERS = num_layers)
 print('Training finished. Moving to saving of output files.')
@@ -104,14 +103,13 @@ print('Training finished. Moving to saving of output files.')
 #Save net and ELBO files.
 now = datetime.now()
 now_string = 'SCON-SS_fix_u_M_a_Ea_CO2_logit_short_intmd' + now.strftime('_%Y_%m_%d_%H_%M_%S')
-save_string = f'_iter_{elbo_iter}_piter_{ptrain_iter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_lr_{elbo_lr}_sd_scale_{prior_scale_factor}_{now_string}.pt'
+save_string = f'_iter_{elbo_iter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_lr_{elbo_lr}_sd_scale_{prior_scale_factor}_{now_string}.pt'
 outputs_folder = 'training_pt_outputs/'
 net_save_string = os.path.join(outputs_folder, 'net' + save_string)
 net_state_dict_save_string = os.path.join(outputs_folder,'net_state_dict' + save_string)
 q_theta_save_string = os.path.join(outputs_folder, 'q_theta' + save_string)
 p_theta_save_string = os.path.join(outputs_folder, 'p_theta' + save_string)
 obs_model_save_string = os.path.join(outputs_folder, 'obs_model' + save_string)
-norm_save_string = os.path.join(outputs_folder, 'norm' + save_string)
 ELBO_save_string = os.path.join(outputs_folder, 'ELBO' + save_string)
 SBM_SDE_instance_save_string = os.path.join(outputs_folder, 'SBM_SDE_instance' + save_string)
 torch.save(net, net_save_string)
@@ -141,9 +139,9 @@ true_theta = torch.load(os.path.join('generated_data/', 'SCON-SS_CO2_logit_short
 net.eval()
 x, _ = net(eval_batch_size)
 plots_folder = 'training_plots/'
-plot_elbo(ELBO_hist, elbo_iter, ptrain_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, prior_scale_factor, plots_folder, now_string, xmin = int(elbo_iter * 0.2))
+plot_elbo(ELBO_hist, elbo_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, prior_scale_factor, plots_folder, now_string, xmin = elbo_warmup_iter + elbo_iter / 2)
 print('ELBO plotting finished.')
-plot_states_post(x, q_theta, obs_model, SBM_SDE_instance, elbo_iter, ptrain_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, prior_scale_factor, plots_folder, now_string, fix_theta_dict, learn_CO2, ymin_list = [0, 0, 0, 0], ymax_list = [70., 8., 11., 0.025])
+plot_states_post(x, q_theta, obs_model, SBM_SDE_instance, elbo_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, prior_scale_factor, plots_folder, now_string, fix_theta_dict, learn_CO2, ymin_list = [0, 0, 0, 0], ymax_list = [70., 8., 11., 0.025])
 print('States fit plotting finished.')
-plot_theta(p_theta, q_theta, true_theta, elbo_iter, ptrain_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, prior_scale_factor, plots_folder, now_string)
+plot_theta(p_theta, q_theta, true_theta, elbo_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, prior_scale_factor, plots_folder, now_string)
 print('Prior-posterior pair plotting finished.')
