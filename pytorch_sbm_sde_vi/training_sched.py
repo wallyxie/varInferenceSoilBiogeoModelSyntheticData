@@ -276,7 +276,7 @@ def train_nn(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
         NUM_LAYERS: int = 5):
 
     #Sum to get total training iterations.
-    T_ITER = ELBO_ITER + PTRAIN_ITER
+    T_ITER = PTRAIN_ITER + ELBO_WARMUP_ITER + ELBO_ITER
 
     #Instantiate SBM_SDE object based on specified model and diffusion type.
     SBM_SDE_class_dict = {
