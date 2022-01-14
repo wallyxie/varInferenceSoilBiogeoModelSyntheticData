@@ -161,16 +161,15 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
     ELBO_opt = optim.Adamax(ELBO_params, lr = ELBO_LR)
 
     #Set optimizer LR scheduler.
-    ELBO_opt.param_groups[0]['lr'] = ELBO_WARMUP_INIT_LR
-    elbo_post_warmup_factor = ELBO_LR / ELBO_WARMUP_INIT_LR
+    ELBO_opt.param_groups[0]['lr'] = ELBO_LR
+    elbo_warmup_factor = ELBO_WARMUP_INIT_LR / ELBO_LR
 
     def calc_lr_factor(epoch):
         if epoch < PTRAIN_ITER + ELBO_WARMUP_ITER:
-            return 1
-        elif epoch == PTRAIN_ITER + ELBO_WARMUP_ITER:
-            return elbo_post_warmup_factor
+            return elbo_warmup_factor
         else:
-            return min(1, epoch % ELBO_LR_DECAY_STEP_SIZE + ELBO_LR_DECAY)
+            elbo_decay_factor = ELBO_LR_DECAY ** math.floor((epoch - PTRAIN_ITER - ELBO_WARMUP_ITER) / ELBO_LR_DECAY_STEP_SIZE)
+            return min(1, elbo_decay_factor if elbo_decay_factor != 0 else 1)
 
     ELBO_sched = optim.lr_scheduler.LambdaLR(ELBO_opt, lr_lambda = calc_lr_factor, last_epoch = -1)
     
@@ -247,14 +246,14 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                         print(f'\nC_PATH = \n{C_PATH}')
                     print(f'\ndrift at {epoch + 1} iterations = \n{drift}')
                     print(f'\ndiffusion_sqrt at {epoch + 1} iterations = \n{diffusion_sqrt}')
-                    print('\ntheta_dict means at {epoch + 1} iterations = \n', {key: theta_dict[key].mean() for key in param_names})
+                    print('\ntheta_dict means = \n', {key: theta_dict[key].mean() for key in param_names})
                     print(f'\nparent_loc_scale_dict at {epoch + 1} iterations = \n{parent_loc_scale_dict}')
 
                 ELBO.backward()
                 torch.nn.utils.clip_grad_norm_(ELBO_params, 5.0)
                 ELBO_opt.step()
 
-                ELBO_sched.step()
+            ELBO_sched.step()
 
             if DEBUG_SAVE_DIR:
                 to_save = {'model': net, 'model_state_dict': net.state_dict(), 'ELBO_opt_state_dict': ELBO_opt.state_dict(), 
@@ -328,16 +327,15 @@ def train_nn(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
     ELBO_opt = optim.Adamax(ELBO_params, lr = ELBO_LR)
 
     #Set optimizer LR scheduler.
-    ELBO_opt.param_groups[0]['lr'] = ELBO_WARMUP_INIT_LR
-    elbo_post_warmup_factor = ELBO_LR / ELBO_WARMUP_INIT_LR
+    ELBO_opt.param_groups[0]['lr'] = ELBO_LR
+    elbo_warmup_factor = ELBO_WARMUP_INIT_LR / ELBO_LR
 
     def calc_lr_factor(epoch):
         if epoch < PTRAIN_ITER + ELBO_WARMUP_ITER:
-            return 1
-        elif epoch == PTRAIN_ITER + ELBO_WARMUP_ITER:
-            return elbo_post_warmup_factor
+            return elbo_warmup_factor
         else:
-            return min(1, epoch % ELBO_LR_DECAY_STEP_SIZE + ELBO_LR_DECAY)
+            elbo_decay_factor = ELBO_LR_DECAY ** math.floor((epoch - PTRAIN_ITER - ELBO_WARMUP_ITER) / ELBO_LR_DECAY_STEP_SIZE)
+            return min(1, elbo_decay_factor if elbo_decay_factor != 0 else 1)
 
     ELBO_sched = optim.lr_scheduler.LambdaLR(ELBO_opt, lr_lambda = calc_lr_factor, last_epoch = -1)
 
@@ -417,7 +415,7 @@ def train_nn(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                 torch.nn.utils.clip_grad_norm_(ELBO_params, 5.0)
                 ELBO_opt.step()
 
-                ELBO_sched.step()                
+            ELBO_sched.step()                
 
             if DEBUG_SAVE_DIR:
                 to_save = {'model': net, 'model_state_dict': net.state_dict(), 'ELBO_opt_state_dict': ELBO_opt.state_dict(), 
