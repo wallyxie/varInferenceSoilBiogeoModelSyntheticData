@@ -139,7 +139,7 @@ true_theta = torch.load(os.path.join('generated_data/', 'SCON-SS_CO2_logit_short
 net.eval()
 x, _ = net(eval_batch_size)
 plots_folder = 'training_plots/'
-plot_elbo(ELBO_hist, elbo_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, prior_scale_factor, plots_folder, now_string, xmin = elbo_warmup_iter + elbo_iter / 2)
+plot_elbo(ELBO_hist, elbo_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, prior_scale_factor, plots_folder, now_string, xmin = elbo_warmup_iter + int(elbo_iter / 2))
 print('ELBO plotting finished.')
 plot_states_post(x, q_theta, obs_model, SBM_SDE_instance, elbo_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, prior_scale_factor, plots_folder, now_string, fix_theta_dict, learn_CO2, ymin_list = [0, 0, 0, 0], ymax_list = [70., 8., 11., 0.025])
 print('States fit plotting finished.')

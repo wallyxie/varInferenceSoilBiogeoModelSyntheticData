@@ -48,11 +48,11 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-elbo_iter = 10
+elbo_iter = 14
 elbo_lr = 1e-2
 elbo_lr_decay = 0.6
 elbo_lr_decay_step_size = 1000
-elbo_warmup_iter = 10
+elbo_warmup_iter = 14
 elbo_warmup_init_lr = 1e-6
 ptrain_iter = 0
 ptrain_alg = 'L1'
@@ -128,7 +128,7 @@ SBM_SDE_instance = torch.load(SBM_SDE_instance_save_string)
 net.eval()
 x, _ = net(eval_batch_size)
 plots_folder = 'training_plots/'
-plot_elbo(ELBO_hist, elbo_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, prior_scale_factor, plots_folder, now_string, xmin = elbo_warmup_iter + elbo_iter / 2)
+plot_elbo(ELBO_hist, elbo_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, prior_scale_factor, plots_folder, now_string, xmin = elbo_warmup_iter + int(elbo_iter / 2))
 print('ELBO plotting finished.')
 params_dict_tensor = {k: torch.tensor(v).unsqueeze(0) for k, v in params_dict.items()}
 plot_states_NN(x, params_dict_tensor, obs_model, SBM_SDE_instance, elbo_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, prior_scale_factor, plots_folder, now_string, learn_CO2, ymin_list = [0, 0, 0, 0], ymax_list = [70., 5., 8., 0.025])
