@@ -51,10 +51,10 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-elbo_iter = 100000
+elbo_iter = 10
 elbo_lr = 1e-2
 elbo_lr_decay = 0.6
-elbo_lr_decay_step_size = 2000
+elbo_lr_decay_step_size = 10
 elbo_warmup_iter = 500
 elbo_warmup_init_lr = 1e-6
 ptrain_iter = 0
@@ -99,7 +99,7 @@ net, q_theta, p_theta, obs_model, norm_hist, ELBO_hist, SBM_SDE_instance = train
         SBM_SDE_class, diffusion_type, x0_prior_SCON,
         SCON_SS_priors_details, fix_theta_dict, learn_CO2, theta_dist, 
         ELBO_WARMUP_ITER = elbo_warmup_iter, ELBO_WARMUP_INIT_LR = elbo_warmup_init_lr, ELBO_LR_DECAY = elbo_lr_decay, ELBO_LR_DECAY_STEP_SIZE = elbo_lr_decay_step_size,
-        PRINT_EVERY = 10, DEBUG_SAVE_DIR = None, PTRAIN_ITER = ptrain_iter, PTRAIN_LR = ptrain_lr, PTRAIN_ALG = ptrain_alg,
+        PRINT_EVERY = 10, DEBUG_SAVE_DIR = None, PTRAIN_ITER = ptrain_iter, PTRAIN_ALG = ptrain_alg,
         NUM_LAYERS = num_layers)
 print('Training finished. Moving to saving of output files.')
 
