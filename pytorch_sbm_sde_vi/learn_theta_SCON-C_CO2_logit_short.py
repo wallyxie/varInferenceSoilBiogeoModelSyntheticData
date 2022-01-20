@@ -19,7 +19,7 @@ import matplotlib.pyplot as plt
 
 #Module imports
 from SBM_SDE_classes import *
-from obs_and_flow_rezero import *
+from obs_and_flow import *
 from training import *
 from plotting import *
 from mean_field import *
@@ -65,7 +65,7 @@ num_layers = 5
 #Specify desired SBM SDE model type and details.
 state_dim_SCON = 3
 SBM_SDE_class = 'SCON'
-diffusion_type = 'SS'
+diffusion_type = 'C'
 learn_CO2 = True
 theta_dist = 'RescaledLogitNormal' #String needs to be exact name of the distribution class. Options are 'TruncatedNormal' and 'RescaledLogitNormal'.
 fix_theta_dict = None
@@ -102,7 +102,7 @@ print('Training finished. Moving to saving of output files.')
 
 #Save net and ELBO files.
 now = datetime.now()
-now_string = 'SCON-SS_CO2_logit_short_rezero' + now.strftime('_%Y_%m_%d_%H_%M_%S')
+now_string = 'SCON-C_CO2_logit_short' + now.strftime('_%Y_%m_%d_%H_%M_%S')
 save_string = f'_iter_{elbo_iter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_lr_{elbo_lr}_sd_scale_{prior_scale_factor}_{now_string}.pt'
 outputs_folder = 'training_pt_outputs/'
 net_save_string = os.path.join(outputs_folder, 'net' + save_string)
