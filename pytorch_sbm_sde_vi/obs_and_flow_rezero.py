@@ -144,6 +144,9 @@ class AffineLayer(nn.Module):
         self.second_block = nn.Sequential(ResNetBlock(h_cha + cond_inputs, h_cha, first = False), MaskedConv1d('B', h_cha,  2, 3, stride, 1, bias = False))
         
         self.unpack = True if cond_inputs > 1 else False
+        #Re-zero trick parameters.
+        self.alpha = nn.Parameter(torch.Tensor([0.1])) 
+        self.gamma = nn.Parameter(torch.Tensor([0.]))
 
     def forward(self, x, cond_inputs): # x.shape == (batch_size, 1, n * state_dim)
         if self.unpack:
@@ -152,9 +155,10 @@ class AffineLayer(nn.Module):
         first_block = self.first_block(x) # (batch_size, h_cha, n * state_dim)
         feature_vec = torch.cat([first_block, cond_inputs], 1) # (batch_size, h_cha + obs_dim + 1, n * state_dim)
         output = self.second_block(feature_vec) # (batch_size, 2, n * state_dim)
-        mu, sigma = torch.chunk(output, 2, 1) # (batch_size, 1, n * state_dim)
-        sigma = LowerBound.apply(sigma, 1e-8)
-        x = mu + sigma * x # (batch_size, 1, n * state_dim)
+        #Re-zero trick.
+        mu, sigma = torch.chunk(self.alpha * output, 2, 1) # (batch_size, 1, n * state_dim)
+        sigma = (self.gamma * sigma).exp()
+        x = self.alpha * mu + sigma * x # (batch_size, 1, n * state_dim)
         return x, -torch.log(sigma) # each of shape (batch_size, 1, n * state_dim)
 
 class PermutationLayer(nn.Module):
@@ -178,7 +182,6 @@ class SoftplusLayer(nn.Module):
         self.softplus = nn.Softplus()
     
     def forward(self, x):
-        # in.shape == out.shape == (batch_size, 1, n * state_dim)
         y = self.softplus(x)
         return y, -torch.log(-torch.expm1(-y))
 
@@ -213,6 +216,7 @@ class BatchNormLayer(nn.Module):
         else:
             mean = self.running_mean
             var = self.running_var
+        # mean.shape == var.shape == (n * state_dim, )
 
         x_hat = (inputs - mean) / var.sqrt() # (batch_size, n * state_dim)
         y = torch.exp(self.log_gamma) * x_hat + self.beta # (batch_size, n * state_dim)
