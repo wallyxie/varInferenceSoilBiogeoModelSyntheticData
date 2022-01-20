@@ -30,8 +30,8 @@ def csv_to_obs_df(df_csv_string, dim, T, obs_error_scale):
     '''
     obs_df_full = pd.read_csv(df_csv_string)
     obs_df = obs_df_full[obs_df_full['hour'] <= T]    
-    obs_times = np.array(obs_df['hour'])    
-    obs_means = torch.Tensor(np.array(obs_df.drop(columns = 'hour')))    
+    obs_times = torch.Tensor(np.array(obs_df['hour']))    
+    obs_means = torch.Tensor(np.array(obs_df.drop(columns = 'hour')))
     obs_means_T = obs_means.T
     obs_error_sd =  obs_error_scale * torch.mean(obs_means_T, 1)
     obs_error_sd_re = obs_error_sd.reshape([1, dim]) #Need to reshape observation error tensor for input into ObsModel class.
@@ -259,11 +259,11 @@ class SDEFlowMinibatch(nn.Module):
         # NOTE: This currently assumes a regular time gap between observations!
         steps_bw_obs = OBS_MODEL_MINIBATCH.idx[1] - OBS_MODEL_MINIBATCH.idx[0]
         reps = [self.state_dim * steps_bw_obs] * (len(OBS_MODEL_MINIBATCH.idx) - 1)
-        future_reps = torch.tensor([self.state_dim] + reps).to(self.device)
+        future_reps = torch.Tensor([self.state_dim] + reps).to(self.device)
         future_obs = OBS_MODEL_MINIBATCH.mu.repeat_interleave(future_reps, -1) # (obs_dim, n * state_dim)
 
         #past observation count
-        past_reps = torch.tensor(reps + [self.state_dim]).to(self.device)
+        past_reps = torch.Tensor(reps + [self.state_dim]).to(self.device)
         past_obs = OBS_MODEL_MINIBATCH.mu.repeat_interleave(past_reps, -1) # (obs_dim, n * state_dim)
 
         #Combine time cond_inputs.
@@ -273,7 +273,7 @@ class SDEFlowMinibatch(nn.Module):
             cond_inputs_list.append(OTHER_INPUTS)
 
         if FIX_THETA_DICT is not None:
-            fix_theta_tensor = torch.tensor(list(FIX_THETA_DICT.values())) # (num_fixed_params, )
+            fix_theta_tensor = torch.Tensor(list(FIX_THETA_DICT.values())) # (num_fixed_params, )
             fix_theta_tensor = fix_theta_tensor[:, None].repeat(1, N * self.state_dim) # (num_fixed_params, n * state_dim)
             cond_inputs_list.append(fix_theta_tensor)
 
@@ -350,7 +350,7 @@ class ObsModel(nn.Module):
         self.times = TIMES # (n_obs, )
         self.dt = DT
         self.idx = self.get_idx(TIMES, DT)        
-        self.mu = torch.Tensor(MU) # (obs_dim, n_obs)
+        self.mu = MU # (obs_dim, n_obs)
         self.scale = SCALE # (1, obs_dim)
         self.obs_dim = self.mu.shape[0]
         

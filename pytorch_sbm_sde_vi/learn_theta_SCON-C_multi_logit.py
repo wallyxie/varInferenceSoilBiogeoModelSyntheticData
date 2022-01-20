@@ -22,8 +22,6 @@ from obs_and_flow import *
 from training import *
 from plotting import *
 from mean_field import *
-from TruncatedNormal import *
-from LogitNormal import *
 
 #Other imports
 from tqdm import tqdm
@@ -82,7 +80,7 @@ temp_tensor = temp_gen(t_span_tensor, temp_ref, temp_rise).to(active_device)
 i_s_tensor = i_s(t_span_tensor).to(active_device) #Exogenous SOC input function
 i_d_tensor = i_d(t_span_tensor).to(active_device) #Exogenous DOC input function
 
-#Generate observation model.
+#Assign path to observations .csv file.
 csv_data_path = os.path.join('generated_data/', 'SCON-C_no_CO2_logit_alt_sample_y_t_1000_dt_0-01_sd_scale_0-333.csv')
 
 #Call training loop function for SCON-C.

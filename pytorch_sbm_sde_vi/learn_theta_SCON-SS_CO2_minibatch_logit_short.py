@@ -23,7 +23,6 @@ from plotting import * #Need to update versions of plotting scripts for minibatc
 from mean_field import *
 
 #PyTorch settings
-active_device = torch.device('cpu')
 if torch.cuda.is_available():
     print('CUDA device detected.')
     active_device = torch.device('cuda')
@@ -90,16 +89,17 @@ temp_tensor = temp_gen(t_span_tensor, temp_ref, temp_rise).to(active_device)
 i_s_tensor = i_s(t_span_tensor).to(active_device) #Exogenous SOC input function
 i_d_tensor = i_d(t_span_tensor).to(active_device) #Exogenous DOC input function
 
-#Generate observation model.
+#Assign path to observations .csv file.
 csv_data_path = os.path.join('generated_data/', 'SCON-SS_CO2_logit_short_2021_11_17_20_16_sample_y_t_5000_dt_0-01_sd_scale_0-25.csv')
 
 #Call training loop function for SCON-SS.
-net, q_theta, p_theta, obs_model, norm, ELBO, SBM_SDE_instance = train_minibatch(active_device, elbo_lr, elbo_iter, batch_size,
+net, q_theta, p_theta, obs_model, norm, ELBO, SBM_SDE_instance = train_minibatch(
+        active_device, elbo_lr, elbo_iter, batch_size,
         csv_data_path, obs_error_scale, t, dt_flow, n,
         t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
         SBM_SDE_class, diffusion_type, x0_prior_SCON,
         SCON_SS_priors_details, fix_theta_dict, learn_CO2, theta_dist,
-        ELBO_LR_DECAY = elbo_lr_decay, ELBO_DECAY_STEP_SIZE = elbo_decay_step_size, PTRAIN_LR_DECAY = ptrain_lr_decay, PTRAIN_DECAY_STEP_SIZE = ptrain_decay_step_size,
+        ELBO_LR_DECAY = elbo_lr_decay, ELBO_LR_DECAY_STEP_SIZE = elbo_decay_step_size, PTRAIN_LR_DECAY = ptrain_lr_decay, PTRAIN_LR_DECAY_STEP_SIZE = ptrain_decay_step_size,
         PRINT_EVERY = 1, DEBUG_SAVE_DIR = None, PTRAIN_ITER = ptrain_iter, PTRAIN_LR = ptrain_lr, PTRAIN_ALG = ptrain_alg,
         MINIBATCH_T = minibatch_t, NUM_LAYERS = num_layers, KERNEL_SIZE = kernel_size, NUM_RESBLOCKS = num_resblocks,
         THETA_COND = theta_cond, OTHER_COND_INPUTS = other_cond_inputs)
