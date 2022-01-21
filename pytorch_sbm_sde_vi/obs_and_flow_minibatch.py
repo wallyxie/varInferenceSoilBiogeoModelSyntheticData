@@ -357,7 +357,7 @@ class ObsModel(nn.Module):
         self.times = TIMES # (n_obs, )
         self.dt = DT
         self.idx = self.get_idx(TIMES, DT)        
-        self.mu = torch.Tensor(MU) # (obs_dim, n_obs)
+        self.mu = MU # (obs_dim, n_obs)
         self.scale = SCALE # (1, obs_dim)
         self.obs_dim = self.mu.shape[0]
         
@@ -380,7 +380,8 @@ class ObsModelMinibatch(ObsModel):
         self.obs_every = self.idx[1] - self.idx[0]
         
     def forward(self, x, theta, lidx=0, ridx=None):
-        obs_lidx = int(torch.ceil(lidx / self.obs_every))
+        active_lidx = lidx if lidx == 0 else lidx + 1
+        obs_lidx = int(torch.ceil(active_lidx / self.obs_every))
         if ridx is None:
             obs_ridx = self.mu.shape[1]
         else:
