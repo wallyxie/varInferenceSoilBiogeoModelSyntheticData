@@ -310,14 +310,13 @@ class SDEFlow(nn.Module):
 
 class ObsModel(nn.Module):
 
-    def __init__(self, DEVICE, TIMES, DT, MU, SCALE):
+    def __init__(self, TIMES, DT, MU, SCALE):
         super().__init__()
-        self.device = DEVICE
         self.times = TIMES # (n_obs, )
         self.dt = DT
         self.idx = self.get_idx(TIMES, DT)        
-        self.mu = torch.Tensor(MU).to(DEVICE) # (obs_dim, n_obs)
-        self.scale = SCALE # (1, obs_dim)
+        self.mu = torch.Tensor(MU) # (obs_dim, n_obs)
+        self.scale = torch.Tensor(SCALE) # (1, obs_dim)
         self.obs_dim = self.mu.shape[0]
         
     def forward(self, x, theta):

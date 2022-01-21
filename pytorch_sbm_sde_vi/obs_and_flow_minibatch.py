@@ -305,17 +305,17 @@ class SDEFlowMinibatch(nn.Module):
         # lidx - left index
         # ridx - left index
         buffer = self.state_dim*(ridx - lidx)
-        lidx = max((lidx*self.state_dim) - self.window, 0)
-        ridx = ridx * self.state_dim
+        active_lidx = max((lidx*self.state_dim) - self.window, 0)
+        active_ridx = ridx * self.state_dim
         
         theta = kwargs.get("theta", None)
 
         base_dist = D.normal.Normal(loc = 0., scale = LowerBound.apply(self.scale, 1e-6))
         eps = base_dist.sample([bsz, self.state_dim * self.n]).to(self.device)
-        log_prob = base_dist.log_prob(eps).permute(0, 2, 1)[:, :, lidx:ridx]
+        log_prob = base_dist.log_prob(eps).permute(0, 2, 1)[:, :, active_lidx:active_ridx]
         
-        cond_inputs = self.cond_inputs[None, :, lidx:ridx].repeat(bsz, 1, 1)
-        eps = eps.permute(0, 2, 1)[:, :, lidx:ridx]
+        cond_inputs = self.cond_inputs[None, :, active_lidx:active_ridx].repeat(bsz, 1, 1)
+        eps = eps.permute(0, 2, 1)[:, :, active_lidx:active_ridx]
 
         ildjs = []
         for layer in self.layers:
@@ -326,10 +326,17 @@ class SDEFlowMinibatch(nn.Module):
             log_prob += ildj
         
         eps = eps[:, :, -buffer:]
-        log_prob = log_prob[:, :, -buffer:]
+        log_prob = log_prob[:, :, -buffer:] # (batch_size, 1, n * state_dim)
+
+        # Compute log q(x_{u:v}|theta) (exclude u-1 unless lidx = 0)
+        if lidx == 0:
+            log_prob = log_prob.sum(-1).squeeze(-1) # (batch_size, )
+        else:
+            log_prob = log_prob.reshape(bsz, -1, self.state_dim)[:, 1:, :].sum((-1, -2))
+        assert log_prob.shape == (bsz, )
             
         #return eps.reshape(bsz, -1, self.state_dim).transpose(2, 1), log_prob
-        return eps.reshape(bsz, -1, self.state_dim), log_prob
+        return eps.reshape(bsz, -1, self.state_dim), log_prob # (batch_size, minibatch_size, state_dim), (batch_size, )
     
     @property
     def window(self):
@@ -350,7 +357,7 @@ class ObsModel(nn.Module):
         self.times = TIMES # (n_obs, )
         self.dt = DT
         self.idx = self.get_idx(TIMES, DT)        
-        self.mu = MU # (obs_dim, n_obs)
+        self.mu = torch.Tensor(MU) # (obs_dim, n_obs)
         self.scale = SCALE # (1, obs_dim)
         self.obs_dim = self.mu.shape[0]
         
