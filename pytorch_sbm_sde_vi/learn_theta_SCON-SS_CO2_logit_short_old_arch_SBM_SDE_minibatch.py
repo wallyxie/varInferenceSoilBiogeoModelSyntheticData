@@ -19,7 +19,7 @@ import matplotlib.pyplot as plt
 
 #Module imports
 from obs_and_flow import *
-from training_old_SBM_SDE_minibatch import *
+from training_old_arch_SBM_SDE_minibatch import *
 from plotting import *
 from mean_field import *
 
