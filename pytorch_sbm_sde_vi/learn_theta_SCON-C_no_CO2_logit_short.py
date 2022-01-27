@@ -3,6 +3,7 @@ import math
 import sys
 from datetime import datetime
 import os.path
+from collections import namedtuple
 
 #Torch imports
 import torch
@@ -61,6 +62,9 @@ num_layers = 5
 reverse = False
 base_state = False
 
+TrainArgs = namedtuple('TrainArgs', 'elbo_iter elbo_lr elbo_lr_decay elbo_lr_decay_step_size elbo_warmup_iter elbo_warmup_lr ptrain_iter ptrain_alg batch_size obs_error_scale prior_scale_factor num_layers reverse base_state')
+train_args = TrainArgs(elbo_iter, elbo_lr, elbo_lr_decay, elbo_lr_decay_step_size, elbo_warmup_iter, elbo_warmup_lr, ptrain_iter, ptrain_alg, batch_size, obs_error_scale, prior_scale_factor, num_layers, reverse, base_state)
+
 #Specify desired SBM SDE model type and details.
 state_dim_SCON = 3
 SBM_SDE_class = 'SCON'
@@ -104,6 +108,7 @@ now = datetime.now()
 now_string = 'SCON-C_no_CO2_logit_short' + now.strftime('_%Y_%m_%d_%H_%M_%S')
 save_string = f'_iter_{elbo_iter}_warmup_{elbo_warmup_iter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_lr_{elbo_lr}_decay_step_{elbo_lr_decay_step_size}_warmup_lr_{elbo_warmup_lr}_sd_scale_{prior_scale_factor}_{now_string}.pt'
 outputs_folder = 'training_pt_outputs/'
+train_args_save_string = os.path.join(outputs_folder, 'train_args' + save_string)
 net_save_string = os.path.join(outputs_folder, 'net' + save_string)
 net_state_dict_save_string = os.path.join(outputs_folder,'net_state_dict' + save_string)
 q_theta_save_string = os.path.join(outputs_folder, 'q_theta' + save_string)
@@ -111,8 +116,9 @@ p_theta_save_string = os.path.join(outputs_folder, 'p_theta' + save_string)
 obs_model_save_string = os.path.join(outputs_folder, 'obs_model' + save_string)
 ELBO_save_string = os.path.join(outputs_folder, 'ELBO' + save_string)
 SBM_SDE_instance_save_string = os.path.join(outputs_folder, 'SBM_SDE_instance' + save_string)
-torch.save(net, net_save_string)
-torch.save(net.state_dict(), net_state_dict_save_string) #For loading net on CPU.
+torch.save(train_args, train_args_save_string)
+torch.save(net, net_save_string, _use_new_zipfile_serialization = False)
+torch.save(net.state_dict(), net_state_dict_save_string, _use_new_zipfile_serialization = False) #For loading net on CPU.
 torch.save(q_theta, q_theta_save_string)
 torch.save(p_theta, p_theta_save_string)
 torch.save(obs_model, obs_model_save_string)

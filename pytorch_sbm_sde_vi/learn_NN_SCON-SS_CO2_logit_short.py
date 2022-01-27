@@ -3,6 +3,7 @@ import math
 import sys
 from datetime import datetime
 import os.path
+from collections import namedtuple
 
 #Torch imports
 import torch
@@ -58,6 +59,11 @@ eval_batch_size = 31
 obs_error_scale = 0.1
 prior_scale_factor = 0.25
 num_layers = 5
+reverse = False
+base_state = False
+
+TrainArgs = namedtuple('TrainArgs', 'elbo_iter elbo_lr elbo_lr_decay elbo_lr_decay_step_size elbo_warmup_iter elbo_warmup_lr ptrain_iter ptrain_alg batch_size obs_error_scale prior_scale_factor num_layers reverse base_state')
+train_args = TrainArgs(elbo_iter, elbo_lr, elbo_lr_decay, elbo_lr_decay_step_size, elbo_warmup_iter, elbo_warmup_lr, ptrain_iter, ptrain_alg, batch_size, obs_error_scale, prior_scale_factor, num_layers, reverse, base_state)
 
 #Specify desired SBM SDE model type and details.
 state_dim_SCON = 3
@@ -91,7 +97,7 @@ net, obs_model, norm_hist, ELBO_hist, SBM_SDE_instance = train_nn(active_device,
         params_dict, learn_CO2,
         ELBO_WARMUP_ITER = elbo_warmup_iter, ELBO_WARMUP_INIT_LR = elbo_warmup_lr, ELBO_LR_DECAY = elbo_lr_decay, ELBO_LR_DECAY_STEP_SIZE = elbo_lr_decay_step_size,
         PRINT_EVERY = 1, DEBUG_SAVE_DIR = None, PTRAIN_ITER = ptrain_iter, PTRAIN_ALG = ptrain_alg,
-        NUM_LAYERS = num_layers)
+        NUM_LAYERS = num_layers, REVERSE = reverse, BASE_STATE = base_state)
 print('Training finished. Moving to saving of output files.')
 
 #Save net and ELBO files.
@@ -99,11 +105,13 @@ now = datetime.now()
 now_string = 'SCON-SS_CO2_NN_only' + now.strftime('_%Y_%m_%d_%H_%M_%S')
 save_string = f'_iter_{elbo_iter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_lr_{elbo_lr}_decay_step_{elbo_lr_decay_step_size}_sd_scale_{prior_scale_factor}_{now_string}.pt'
 outputs_folder = 'training_pt_outputs/'
+train_args_save_string = os.path.join(outputs_folder, 'train_args' + save_string)
 net_save_string = os.path.join(outputs_folder, 'net' + save_string)
 net_state_dict_save_string = os.path.join(outputs_folder,'net_state_dict' + save_string)
 obs_model_save_string = os.path.join(outputs_folder, 'obs_model' + save_string)
 ELBO_save_string = os.path.join(outputs_folder, 'ELBO' + save_string)
 SBM_SDE_instance_save_string = os.path.join(outputs_folder, 'SBM_SDE_instance' + save_string)
+torch.save(train_args, train_args_save_string)
 torch.save(net, net_save_string)
 torch.save(net.state_dict(), net_state_dict_save_string) #For loading net on CPU.
 torch.save(obs_model, obs_model_save_string)
