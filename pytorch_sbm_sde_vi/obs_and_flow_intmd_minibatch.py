@@ -266,7 +266,7 @@ class SDEFlow(nn.Module):
         self.permutation = [PermutationLayer(STATE_DIM, REVERSE = self.reverse) for _ in range(NUM_LAYERS)]
         self.batch_norm = nn.ModuleList([BatchNormLayer(STATE_DIM * N) for _ in range(NUM_LAYERS - 1)])
         self.positive = POSITIVE
-        if positive:
+        if self.positive:
             self.SP = SoftplusLayer()
         
     def forward(self, BATCH_SIZE, *args, **kwargs):
