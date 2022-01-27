@@ -16,10 +16,8 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 #Module imports
-from obs_and_flow_minibatch import *
 from training_minibatch import *
 from plotting import * #Need to update versions of plotting scripts for minibatching.
-from mean_field import *
 
 #PyTorch settings
 if torch.cuda.is_available():

@@ -311,7 +311,7 @@ class SDEFlowMinibatch(nn.Module):
         theta = kwargs.get("theta", None)
 
         base_dist = D.normal.Normal(loc = 0., scale = LowerBound.apply(self.scale, 1e-6))
-        eps = base_dist.sample([bsz, self.state_dim * self.n]).to(self.device)
+        eps = base_dist.rsample([bsz, self.state_dim * self.n]).to(self.device)
         log_prob = base_dist.log_prob(eps).permute(0, 2, 1)[:, :, active_lidx:active_ridx]
         
         cond_inputs = self.cond_inputs[None, :, active_lidx:active_ridx].repeat(bsz, 1, 1)

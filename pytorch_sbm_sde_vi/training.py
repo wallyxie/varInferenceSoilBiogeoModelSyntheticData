@@ -14,7 +14,7 @@ import torch.optim as optim
 
 #Module imports
 from mean_field import *
-from obs_and_flow import *
+from obs_and_flow_rev import *
 from SBM_SDE_classes import *
 
 '''

@@ -251,7 +251,7 @@ class SDEFlow(nn.Module):
             self.SP = SoftplusLayer()
         
     def forward(self, BATCH_SIZE, *args, **kwargs):
-        eps = self.base_dist.sample([BATCH_SIZE, 1, self.state_dim * self.n]).to(self.device)
+        eps = self.base_dist.rsample([BATCH_SIZE, 1, self.state_dim * self.n]).to(self.device)
         log_prob = self.base_dist.log_prob(eps).sum(-1) # (batch_size, 1)
         
         #obs_tile = self.obs_model.mu[None, :, 1:, None].repeat(self.batch_size, self.state_dim, 1, 50).reshape(self.batch_size, self.state_dim, -1)

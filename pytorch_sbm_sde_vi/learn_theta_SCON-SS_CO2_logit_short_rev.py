@@ -18,10 +18,8 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 #Module imports
-from obs_and_flow_rev import *
 from training import *
 from plotting import *
-from mean_field import *
 
 #PyTorch settings
 if torch.cuda.is_available():

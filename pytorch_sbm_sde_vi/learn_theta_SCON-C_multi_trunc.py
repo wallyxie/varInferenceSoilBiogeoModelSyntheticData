@@ -17,10 +17,8 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 #Module imports
-from obs_and_flow import *
 from training import *
 from plotting import *
-from mean_field import *
 
 #Other imports
 from tqdm import tqdm
