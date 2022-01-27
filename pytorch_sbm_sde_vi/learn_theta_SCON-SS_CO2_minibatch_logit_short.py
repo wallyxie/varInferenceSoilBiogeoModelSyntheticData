@@ -148,5 +148,5 @@ plots_folder = 'training_plots/'
 #print('ELBO plotting finished.')
 #plot_states_post(x, q_theta, obs_model, SBM_SDE_instance, elbo_iter, ptrain_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, prior_scale_factor, plots_folder, now_string, learn_CO2, ymin_list = [0, 0, 0, 0], ymax_list = [60., 5., 8., 0.025])
 #print('States fit plotting finished.')
-plot_theta(p_theta, q_theta, true_theta, elbo_iter, ptrain_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, prior_scale_factor, plots_folder, now_string)
+plot_theta(p_theta, q_theta, true_theta, elbo_iter, elbo_warmup_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, elbo_warmup_lr, prior_scale_factor, plots_folder, now_string)
 print('Prior-posterior pair plotting finished.')

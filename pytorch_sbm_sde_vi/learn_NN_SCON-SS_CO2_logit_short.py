@@ -52,7 +52,7 @@ elbo_lr = 1e-2
 elbo_lr_decay = 0.7
 elbo_lr_decay_step_size = 5000
 elbo_warmup_iter = 0
-elbo_warmup_init_lr = 1e-6
+elbo_warmup_lr = 1e-6
 ptrain_iter = 0
 ptrain_alg = 'L1'
 batch_size = 31
@@ -91,7 +91,7 @@ net, obs_model, norm_hist, ELBO_hist, SBM_SDE_instance = train_nn(active_device,
         t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
         SBM_SDE_class, diffusion_type, x0_prior_SCON,
         params_dict, learn_CO2,
-        ELBO_WARMUP_ITER = elbo_warmup_iter, ELBO_WARMUP_INIT_LR = elbo_warmup_init_lr, ELBO_LR_DECAY = elbo_lr_decay, ELBO_LR_DECAY_STEP_SIZE = elbo_lr_decay_step_size,
+        ELBO_WARMUP_ITER = elbo_warmup_iter, ELBO_WARMUP_INIT_LR = elbo_warmup_lr, ELBO_LR_DECAY = elbo_lr_decay, ELBO_LR_DECAY_STEP_SIZE = elbo_lr_decay_step_size,
         PRINT_EVERY = 1, DEBUG_SAVE_DIR = None, PTRAIN_ITER = ptrain_iter, PTRAIN_ALG = ptrain_alg,
         NUM_LAYERS = num_layers)
 print('Training finished. Moving to saving of output files.')
@@ -126,8 +126,8 @@ SBM_SDE_instance = torch.load(SBM_SDE_instance_save_string)
 net.eval()
 x, _ = net(eval_batch_size)
 plots_folder = 'training_plots/'
-plot_elbo(ELBO_hist, elbo_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, prior_scale_factor, plots_folder, now_string, xmin = elbo_warmup_iter + int(elbo_iter / 2))
+plot_elbo(ELBO_hist, elbo_iter, elbo_warmup_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, elbo_warmup_lr, prior_scale_factor, plots_folder, now_string, xmin = elbo_warmup_iter + int(elbo_iter / 2))
 print('ELBO plotting finished.')
 params_dict_tensor = {k: torch.tensor(v).unsqueeze(0) for k, v in params_dict.items()}
-plot_states_NN(x, params_dict_tensor, obs_model, SBM_SDE_instance, elbo_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, prior_scale_factor, plots_folder, now_string, learn_CO2, ymin_list = [0, 0, 0, 0], ymax_list = [70., 5., 8., 0.025])
+plot_states_NN(x, params_dict_tensor, obs_model, SBM_SDE_instance, elbo_iter, elbo_warmup_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, elbo_warmup_lr, prior_scale_factor, plots_folder, now_string, learn_CO2, ymin_list = [0, 0, 0, 0], ymax_list = [70., 5., 8., 0.025])
 print('States fit plotting finished.')
