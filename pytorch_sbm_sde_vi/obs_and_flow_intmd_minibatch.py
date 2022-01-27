@@ -270,13 +270,12 @@ class SDEFlow(nn.Module):
             self.SP = SoftplusLayer()
         
     def forward(self, BATCH_SIZE, *args, **kwargs):
-        eps = self.base_dist.rsample([BATCH_SIZE, 1, self.state_dim * self.n]).to(self.device)
-        #print('Base layer', eps)
+        if self.base_state:
+            eps = self.base_dist.rsample([BATCH_SIZE]).to(self.device)
+        else:
+            eps = self.base_dist.rsample([BATCH_SIZE, 1, self.state_dim * self.n]).to(self.device)
         log_prob = self.base_dist.log_prob(eps).sum(-1) # (batch_size, 1)
         
-        #obs_tile = self.obs_model.mu[None, :, 1:, None].repeat(self.batch_size, self.state_dim, 1, 50).reshape(self.batch_size, self.state_dim, -1)
-        #times = torch.arange(self.dt, self.t + self.dt, self.dt, device = eps.device)[(None,) * 2].repeat(self.batch_size, self.state_dim, 1).transpose(-2, -1).reshape(self.batch_size, 1, -1)
-
         # NOTE: This currently assumes a regular time gap between observations!
         steps_bw_obs = self.obs_model.idx[1] - self.obs_model.idx[0]
         reps = torch.ones(len(self.obs_model.idx), dtype=torch.long).to(self.device) * self.state_dim
