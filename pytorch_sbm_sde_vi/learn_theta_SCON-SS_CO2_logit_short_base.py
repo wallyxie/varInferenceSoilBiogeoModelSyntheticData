@@ -18,7 +18,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 #Module imports
-from training_rev import *
+from training_base import *
 from plotting import *
 
 #PyTorch settings
@@ -58,7 +58,6 @@ eval_batch_size = 31
 obs_error_scale = 0.1
 prior_scale_factor = 0.25
 num_layers = 5
-reverse = True
 
 #Specify desired SBM SDE model type and details.
 state_dim_SCON = 3
@@ -95,12 +94,12 @@ net, q_theta, p_theta, obs_model, norm_hist, ELBO_hist, SBM_SDE_instance = train
         SCON_SS_priors_details, fix_theta_dict, learn_CO2, theta_dist, 
         ELBO_WARMUP_ITER = elbo_warmup_iter, ELBO_WARMUP_INIT_LR = elbo_warmup_lr, ELBO_LR_DECAY = elbo_lr_decay, ELBO_LR_DECAY_STEP_SIZE = elbo_lr_decay_step_size,
         PRINT_EVERY = 1, DEBUG_SAVE_DIR = None, PTRAIN_ITER = ptrain_iter, PTRAIN_ALG = ptrain_alg,
-        NUM_LAYERS = num_layers, REVERSE = reverse)
+        NUM_LAYERS = num_layers)
 print('Training finished. Moving to saving of output files.')
 
 #Save net and ELBO files.
 now = datetime.now()
-now_string = 'SCON-SS_CO2_logit_short_rev' + now.strftime('_%Y_%m_%d_%H_%M_%S')
+now_string = 'SCON-SS_CO2_logit_short' + now.strftime('_%Y_%m_%d_%H_%M_%S')
 save_string = f'_iter_{elbo_iter}_warmup_{elbo_warmup_iter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_lr_{elbo_lr}_warmup_lr_{elbo_warmup_lr}_sd_scale_{prior_scale_factor}_{now_string}.pt'
 outputs_folder = 'training_pt_outputs/'
 net_save_string = os.path.join(outputs_folder, 'net' + save_string)

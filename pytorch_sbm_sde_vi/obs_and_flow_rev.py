@@ -136,23 +136,23 @@ class ResNetBlockUnMasked(nn.Module):
 
 class AffineLayer(nn.Module):
     
-    def __init__(self, cond_inputs, stride, h_cha = 96):
-        # cond_inputs = cond_inputs + obs_dim = 1 + obs_dim = 4 by default (w/o CO2)
+    def __init__(self, COND_INPUTS, stride, h_cha = 96):
+        # COND_INPUTS = COND_INPUTS + obs_dim = 1 + obs_dim = 4 by default (w/o CO2)
         super().__init__()
-        self.feature_net = nn.Sequential(ResNetBlockUnMasked(cond_inputs, h_cha), ResNetBlockUnMasked(h_cha, cond_inputs))
+        self.feature_net = nn.Sequential(ResNetBlockUnMasked(COND_INPUTS, h_cha), ResNetBlockUnMasked(h_cha, COND_INPUTS))
         self.first_block = ResNetBlock(1, h_cha, first = True)
-        self.second_block = nn.Sequential(ResNetBlock(h_cha + cond_inputs, h_cha, first = False), MaskedConv1d('B', h_cha,  2, 3, stride, 1, bias = False))
+        self.second_block = nn.Sequential(ResNetBlock(h_cha + COND_INPUTS, h_cha, first = False), MaskedConv1d('B', h_cha,  2, 3, stride, 1, bias = False))
         
-        self.unpack = True if cond_inputs > 1 else False
+        self.unpack = True if COND_INPUTS > 1 else False
 
-    def forward(self, x, cond_inputs): # x.shape == (batch_size, 1, n * state_dim)
+    def forward(self, x, COND_INPUTS): # x.shape == (batch_size, 1, n * state_dim)
         if self.unpack:
-            cond_inputs = torch.cat([*cond_inputs], 1) # (batch_size, obs_dim + 1, n * state_dim)
-        #print(cond_inputs[0, :, 0], cond_inputs[0, :, 60], cond_inputs[0, :, 65])
-        cond_inputs = self.feature_net(cond_inputs) # (batch_size, obs_dim + 1, n * state_dim)
+            COND_INPUTS = torch.cat([*COND_INPUTS], 1) # (batch_size, obs_dim + 1, n * state_dim)
+        #print(COND_INPUTS[0, :, 0], COND_INPUTS[0, :, 60], COND_INPUTS[0, :, 65])
+        COND_INPUTS = self.feature_net(COND_INPUTS) # (batch_size, obs_dim + 1, n * state_dim)
         first_block = self.first_block(x) # (batch_size, h_cha, n * state_dim)
-        #print(first_block.shape, cond_inputs.shape)
-        feature_vec = torch.cat([first_block, cond_inputs], 1) # (batch_size, h_cha + obs_dim + 1, n * state_dim)
+        #print(first_block.shape, COND_INPUTS.shape)
+        feature_vec = torch.cat([first_block, COND_INPUTS], 1) # (batch_size, h_cha + obs_dim + 1, n * state_dim)
         output = self.second_block(feature_vec) # (batch_size, 2, n * state_dim)
         mu, sigma = torch.chunk(output, 2, 1) # (batch_size, 1, n * state_dim)
         #print('mu and sigma shapes:', mu.shape, sigma.shape)
@@ -235,7 +235,8 @@ class BatchNormLayer(nn.Module):
 class SDEFlow(nn.Module):
 
     def __init__(self, DEVICE, OBS_MODEL, STATE_DIM, T, DT, N,
-                 I_S_TENSOR = None, I_D_TENSOR = None, cond_inputs = 1, num_layers = 5, POSITIVE = True, REVERSE = True):
+                 I_S_TENSOR = None, I_D_TENSOR = None, COND_INPUTS = 1, NUM_LAYERS = 5, POSITIVE = True,
+                 REVERSE = False, BASE_STATE = False):
         super().__init__()
         self.device = DEVICE
         self.obs_model = OBS_MODEL
@@ -243,17 +244,27 @@ class SDEFlow(nn.Module):
         self.t = T
         self.dt = DT
         self.n = N
-        if cond_inputs == 3:
+
+        self.base_state = BASE_STATE
+        if self.base_state:
+            base_loc_SOC, base_loc_DOC, base_loc_MBC = torch.split(nn.Parameter(torch.zeros(1, self.state_dim)), 1, -1)
+            base_scale_SOC, base_scale_DOC, base_scale_MBC = torch.split(nn.Parameter(torch.ones(1, self.state_dim)), 1, -1)
+            base_loc = torch.cat(base_loc_SOC.expand([1, self.n]), base_loc_DOC.expand([1, self.n]), base_loc_MBC.expand([1, self.n]), 1)
+            base_scale = torch.cat(base_scale_SOC.expand([1, self.n]), base_scale_DOC.expand([1, self.n]), base_scale_MBC.expand([1, self.n]), 1)
+            self.base_dist = D.normal.Normal(loc = base_loc, scale = base_scale)                
+        else:
+            self.base_dist = D.normal.Normal(loc = 0., scale = 1.)
+
+        self.cond_inputs = COND_INPUTS  
+        if self.cond_inputs == 3:
             self.i_tensor = torch.stack((I_S_TENSOR.reshape(-1), I_D_TENSOR.reshape(-1)))[None, :, :].repeat_interleave(3, -1)
 
-        self.base_dist = D.normal.Normal(loc = 0., scale = 1.)
-        self.cond_inputs = cond_inputs        
-        self.num_layers = num_layers
+        self.num_layers = NUM_LAYERS
         self.reverse = REVERSE
 
-        self.affine = nn.ModuleList([AffineLayer(cond_inputs + self.obs_model.obs_dim, 1) for _ in range(num_layers)])
-        self.permutation = [PermutationLayer(STATE_DIM, REVERSE = self.reverse) for _ in range(num_layers)]
-        self.batch_norm = nn.ModuleList([BatchNormLayer(STATE_DIM * N) for _ in range(num_layers - 1)])
+        self.affine = nn.ModuleList([AffineLayer(COND_INPUTS + self.obs_model.obs_dim, 1) for _ in range(NUM_LAYERS)])
+        self.permutation = [PermutationLayer(STATE_DIM, REVERSE = self.reverse) for _ in range(NUM_LAYERS)]
+        self.batch_norm = nn.ModuleList([BatchNormLayer(STATE_DIM * N) for _ in range(NUM_LAYERS - 1)])
         self.positive = POSITIVE
         if positive:
             self.SP = SoftplusLayer()
