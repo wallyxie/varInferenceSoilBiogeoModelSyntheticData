@@ -162,7 +162,7 @@ class AffineLayer(nn.Module):
 
 class PermutationLayer(nn.Module):
     
-    def __init__(self, STATE_DIM, REVERSE=False):
+    def __init__(self, STATE_DIM, REVERSE = False):
         super().__init__()
         self.state_dim = STATE_DIM
         self.index_1 = torch.randperm(STATE_DIM)
@@ -235,7 +235,7 @@ class BatchNormLayer(nn.Module):
 class SDEFlow(nn.Module):
 
     def __init__(self, DEVICE, OBS_MODEL, STATE_DIM, T, DT, N,
-                 I_S_TENSOR = None, I_D_TENSOR = None, cond_inputs = 1, num_layers = 5, positive=True, reverse=False):
+                 I_S_TENSOR = None, I_D_TENSOR = None, cond_inputs = 1, num_layers = 5, POSITIVE = True, REVERSE = True):
         super().__init__()
         self.device = DEVICE
         self.obs_model = OBS_MODEL
@@ -249,11 +249,12 @@ class SDEFlow(nn.Module):
         self.base_dist = D.normal.Normal(loc = 0., scale = 1.)
         self.cond_inputs = cond_inputs        
         self.num_layers = num_layers
+        self.reverse = REVERSE
 
         self.affine = nn.ModuleList([AffineLayer(cond_inputs + self.obs_model.obs_dim, 1) for _ in range(num_layers)])
-        self.permutation = [PermutationLayer(STATE_DIM, REVERSE=reverse) for _ in range(num_layers)]
+        self.permutation = [PermutationLayer(STATE_DIM, REVERSE = self.reverse) for _ in range(num_layers)]
         self.batch_norm = nn.ModuleList([BatchNormLayer(STATE_DIM * N) for _ in range(num_layers - 1)])
-        self.positive = positive
+        self.positive = POSITIVE
         if positive:
             self.SP = SoftplusLayer()
         

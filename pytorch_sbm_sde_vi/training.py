@@ -65,7 +65,7 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
         THETA_DIST = None, THETA_POST_DIST = None, THETA_POST_INIT = None,
         ELBO_WARMUP_ITER = 1000, ELBO_WARMUP_INIT_LR = 1e-6, ELBO_LR_DECAY: float = 0.8, ELBO_LR_DECAY_STEP_SIZE: int = 1000,
         PRINT_EVERY: int = 100, DEBUG_SAVE_DIR: str = None, PTRAIN_ITER: int = 0, PTRAIN_LR: float = 1e-3, PTRAIN_ALG: BoolAndString = False,
-        NUM_LAYERS: int = 5):
+        NUM_LAYERS: int = 5, REVERSE: bool = False):
 
     #Sum to get total training iterations.
     T_ITER = PTRAIN_ITER + ELBO_WARMUP_ITER + ELBO_ITER
@@ -95,7 +95,7 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
         mean_state_obs = torch.mean(obs_model.mu, -1)[None, None, :]
 
     #Establish neural network.
-    net = SDEFlow(DEVICE, obs_model, SBM_SDE.state_dim, T, DT, N, num_layers = NUM_LAYERS).to(DEVICE)
+    net = SDEFlow(DEVICE, obs_model, SBM_SDE.state_dim, T, DT, N, num_layers = NUM_LAYERS, REVERSE = REVERSE).to(DEVICE)
 
     #Initiate model debugging saver.
     if DEBUG_SAVE_DIR:
