@@ -59,7 +59,7 @@ eval_batch_size = 31
 obs_error_scale = 0.1
 prior_scale_factor = 0.25
 num_layers = 5
-reverse = False
+reverse = True
 base_state = False
 
 TrainArgs = namedtuple('TrainArgs', 'elbo_iter elbo_lr elbo_lr_decay elbo_lr_decay_step_size elbo_warmup_iter elbo_warmup_lr ptrain_iter ptrain_alg batch_size obs_error_scale prior_scale_factor num_layers reverse base_state')
