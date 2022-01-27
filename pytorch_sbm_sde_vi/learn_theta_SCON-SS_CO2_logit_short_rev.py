@@ -18,7 +18,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 #Module imports
-from training_rev import *
+from training import *
 from plotting import *
 
 #PyTorch settings
@@ -59,6 +59,7 @@ obs_error_scale = 0.1
 prior_scale_factor = 0.25
 num_layers = 5
 reverse = True
+base_state = False
 
 #Specify desired SBM SDE model type and details.
 state_dim_SCON = 3
@@ -95,7 +96,7 @@ net, q_theta, p_theta, obs_model, norm_hist, ELBO_hist, SBM_SDE_instance = train
         SCON_SS_priors_details, fix_theta_dict, learn_CO2, theta_dist, 
         ELBO_WARMUP_ITER = elbo_warmup_iter, ELBO_WARMUP_INIT_LR = elbo_warmup_lr, ELBO_LR_DECAY = elbo_lr_decay, ELBO_LR_DECAY_STEP_SIZE = elbo_lr_decay_step_size,
         PRINT_EVERY = 1, DEBUG_SAVE_DIR = None, PTRAIN_ITER = ptrain_iter, PTRAIN_ALG = ptrain_alg,
-        NUM_LAYERS = num_layers, REVERSE = reverse)
+        NUM_LAYERS = num_layers, REVERSE = reverse, BASE_STATE = base_state)
 print('Training finished. Moving to saving of output files.')
 
 #Save net and ELBO files.
