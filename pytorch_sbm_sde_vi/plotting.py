@@ -109,7 +109,7 @@ def plot_states_NN(x, params_dict, obs_model, SBM_SDE_CLASS, niter, warmup_iter,
         #plt.title(f'Approximate posterior $q(x|\\theta, y)$\nNumber of samples = {eval_batch_size}\nTimestep = {dt}\nIterations = {niter}')
     plt.xlabel('Hour')
     #plt.tight_layout()
-    fig.set_size_inches(15, 22)
+    fig.set_size_inches(15, 25)
     fig.savefig(os.path.join(plots_folder, f'net_iter_{niter}_warmup_{warmup_iter}_t_{t}_dt_{dt}_batch_{batch_size}_samples_{eval_batch_size}_layers_{num_layers}_lr_{train_lr}_decay_step_{decay_step}_warmup_lr_{warmup_lr}_sd_scale_{sd_scale}_{now_string}.png'), dpi = 300)
 
 
