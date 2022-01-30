@@ -111,22 +111,21 @@ net_state_dict_save_string = os.path.join(outputs_folder,'net_state_dict' + save
 obs_model_save_string = os.path.join(outputs_folder, 'obs_model' + save_string)
 ELBO_save_string = os.path.join(outputs_folder, 'ELBO' + save_string)
 SBM_SDE_instance_save_string = os.path.join(outputs_folder, 'SBM_SDE_instance' + save_string)
-torch.save(train_args, train_args_save_string)
-torch.save(net, net_save_string)
-torch.save(net.state_dict(), net_state_dict_save_string) #For loading net on CPU.
-torch.save(obs_model, obs_model_save_string)
-torch.save(ELBO_hist, ELBO_save_string)
-torch.save(SBM_SDE_instance, SBM_SDE_instance_save_string)
+torch.save(train_args, train_args_save_string, _use_new_zipfile_serialization = False)
+torch.save(net, net_save_string, _use_new_zipfile_serialization = False)
+torch.save(net.state_dict(), net_state_dict_save_string, _use_new_zipfile_serialization = False) #For loading net on CPU.
+torch.save(obs_model, obs_model_save_string, _use_new_zipfile_serialization = False)
+torch.save(ELBO_hist, ELBO_save_string, _use_new_zipfile_serialization = False)
+torch.save(SBM_SDE_instance, SBM_SDE_instance_save_string, _use_new_zipfile_serialization = False)
 print('Output files saving finished. Moving to plotting.')
 
 #Release some CUDA memory and load .pt files.
 torch.cuda.empty_cache()
-net = torch.load(net_save_string)
-net.to(active_device)
-obs_model = torch.load(obs_model_save_string)
-obs_model.to(active_device)
-ELBO_hist = torch.load(ELBO_save_string)
-SBM_SDE_instance = torch.load(SBM_SDE_instance_save_string)
+obs_model = torch.load(obs_model_save_string, map_location = active_device)
+net = SDEFlow(active_device, obs_model, state_dim_SCON, t, dt_flow, n, NUM_LAYERS = num_layers, REVERSE = reverse, BASE_STATE = base_state)
+net.load_state_dict(torch.load(net_state_dict_save_string, map_location = active_device))
+SBM_SDE_instance = torch.load(SBM_SDE_instance_save_string, map_location = active_device)
+ELBO_hist = torch.load(ELBO_save_string, map_location = active_device)
 
 #Plot training posterior results and ELBO history.
 net.eval()

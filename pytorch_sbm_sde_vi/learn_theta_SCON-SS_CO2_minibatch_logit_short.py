@@ -115,14 +115,14 @@ obs_model_save_string = os.path.join(outputs_folder, 'obs_model' + save_string)
 norm_save_string = os.path.join(outputs_folder, 'norm' + save_string)
 ELBO_save_string = os.path.join(outputs_folder, 'ELBO' + save_string)
 SBM_SDE_instance_save_string = os.path.join(outputs_folder, 'SBM_SDE_instance' + save_string)
-torch.save(net, net_save_string)
-torch.save(net.state_dict(), net_state_dict_save_string) #For loading net on CPU.
-torch.save(q_theta, q_theta_save_string)
-torch.save(p_theta, p_theta_save_string)
-torch.save(obs_model, obs_model_save_string)
-torch.save(norm, norm_save_string)
-torch.save(ELBO, ELBO_save_string)
-torch.save(SBM_SDE_instance, SBM_SDE_instance_save_string)
+torch.save(train_args, train_args_save_string, _use_new_zipfile_serialization = False)
+torch.save(net, net_save_string, _use_new_zipfile_serialization = False)
+torch.save(net.state_dict(), net_state_dict_save_string, _use_new_zipfile_serialization = False) #For loading net on CPU.
+torch.save(q_theta, q_theta_save_string, _use_new_zipfile_serialization = False)
+torch.save(p_theta, p_theta_save_string, _use_new_zipfile_serialization = False)
+torch.save(obs_model, obs_model_save_string, _use_new_zipfile_serialization = False)
+torch.save(ELBO_hist, ELBO_save_string, _use_new_zipfile_serialization = False)
+torch.save(SBM_SDE_instance, SBM_SDE_instance_save_string, _use_new_zipfile_serialization = False)
 print('Output files saving finished. Moving to plotting.')
 
 #Release some CUDA memory and load .pt files.
