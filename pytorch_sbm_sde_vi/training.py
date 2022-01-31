@@ -87,7 +87,7 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
     else:
         obs_dim = SBM_SDE.state_dim
     obs_times, obs_means, obs_error = csv_to_obs_df(OBS_CSV_STR, obs_dim, T, OBS_ERROR_SCALE) #csv_to_obs_df function in obs_and_flow module
-    obs_model = ObsModel(TIMES = obs_times, DT = DT, MU = obs_means, SCALE = obs_error).to(DEVICE)
+    obs_model = ObsModel(DEVICE = DEVICE, TIMES = obs_times, DT = DT, MU = obs_means, SCALE = obs_error).to(DEVICE)
 
     if LEARN_CO2 and PTRAIN_ITER != 0 and PTRAIN_ALG:
         mean_state_obs = torch.mean(obs_model.mu[:-1, :], -1)[None, None, :]
@@ -279,7 +279,7 @@ def train_nn(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
     else:
         obs_dim = SBM_SDE.state_dim
     obs_times, obs_means, obs_error = csv_to_obs_df(OBS_CSV_STR, obs_dim, T, OBS_ERROR_SCALE) #csv_to_obs_df function in obs_and_flow module
-    obs_model = ObsModel(TIMES = obs_times, DT = DT, MU = obs_means, SCALE = obs_error).to(DEVICE)
+    obs_model = ObsModel(DEVICE = DEVICE, TIMES = obs_times, DT = DT, MU = obs_means, SCALE = obs_error).to(DEVICE)
 
     #Establish neural network.
     net = SDEFlow(DEVICE, obs_model, SBM_SDE.state_dim, T, DT, N, NUM_LAYERS = NUM_LAYERS, REVERSE = REVERSE, BASE_STATE = BASE_STATE).to(DEVICE)
