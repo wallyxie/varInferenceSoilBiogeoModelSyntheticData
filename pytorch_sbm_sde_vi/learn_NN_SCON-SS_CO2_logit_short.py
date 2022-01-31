@@ -119,14 +119,6 @@ torch.save(ELBO_hist, ELBO_save_string, _use_new_zipfile_serialization = False)
 torch.save(SBM_SDE_instance, SBM_SDE_instance_save_string, _use_new_zipfile_serialization = False)
 print('Output files saving finished. Moving to plotting.')
 
-#Release some CUDA memory and load .pt files.
-torch.cuda.empty_cache()
-obs_model = torch.load(obs_model_save_string, map_location = active_device)
-net = SDEFlow(active_device, obs_model, state_dim_SCON, t, dt_flow, n, NUM_LAYERS = num_layers, REVERSE = reverse, BASE_STATE = base_state)
-net.load_state_dict(torch.load(net_state_dict_save_string, map_location = active_device))
-SBM_SDE_instance = torch.load(SBM_SDE_instance_save_string, map_location = active_device)
-ELBO_hist = torch.load(ELBO_save_string, map_location = active_device)
-
 #Plot training posterior results and ELBO history.
 net.eval()
 x, _ = net(eval_batch_size)

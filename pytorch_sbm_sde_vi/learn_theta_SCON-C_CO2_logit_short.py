@@ -126,17 +126,6 @@ torch.save(ELBO_hist, ELBO_save_string, _use_new_zipfile_serialization = False)
 torch.save(SBM_SDE_instance, SBM_SDE_instance_save_string, _use_new_zipfile_serialization = False)
 print('Output files saving finished. Moving to plotting.')
 
-#Release some CUDA memory and load .pt files.
-torch.cuda.empty_cache()
-obs_model = torch.load(obs_model_save_string, map_location = active_device)
-net = SDEFlow(active_device, obs_model, state_dim_SCON, t, dt_flow, n, NUM_LAYERS = num_layers, REVERSE = reverse, BASE_STATE = base_state)
-net.load_state_dict(torch.load(net_state_dict_save_string, map_location = active_device))
-p_theta = torch.load(p_theta_save_string, map_location = active_device)
-q_theta = torch.load(q_theta_save_string, map_location = active_device)
-SBM_SDE_instance = torch.load(SBM_SDE_instance_save_string, map_location = active_device)
-ELBO_hist = torch.load(ELBO_save_string, map_location = active_device)
-true_theta = torch.load(os.path.join('generated_data/', 'SCON-C_CO2_logit_short_2022_01_20_08_53_sample_y_t_5000_dt_0-01_sd_scale_0-25_rsample.pt'), map_location = active_device)
-
 #Plot training posterior results and ELBO history.
 net.eval()
 x, _ = net(eval_batch_size)
@@ -145,5 +134,6 @@ plot_elbo(ELBO_hist, elbo_iter, elbo_warmup_iter, t, dt_flow, batch_size, eval_b
 print('ELBO plotting finished.')
 plot_states_post(x, q_theta, obs_model, SBM_SDE_instance, elbo_iter, elbo_warmup_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, elbo_lr_decay_step_size, elbo_warmup_lr, prior_scale_factor, plots_folder, now_string, fix_theta_dict, learn_CO2, ymin_list = [0, 0, 0, 0], ymax_list = [70., 8., 11., 0.025])
 print('States fit plotting finished.')
+true_theta = torch.load(os.path.join('generated_data/', 'SCON-C_CO2_logit_short_2022_01_20_08_53_sample_y_t_5000_dt_0-01_sd_scale_0-25_rsample.pt'), map_location = active_device)
 plot_theta(p_theta, q_theta, true_theta, elbo_iter, elbo_warmup_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, elbo_lr_decay_step_size, elbo_warmup_lr, prior_scale_factor, plots_folder, now_string)
 print('Prior-posterior pair plotting finished.')
