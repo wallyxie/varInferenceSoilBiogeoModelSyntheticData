@@ -31,22 +31,6 @@ BoolAndString = Union[bool, str]
 ##ELBO OPTIMIZATION FUNCTIONS##
 ###############################
 
-def calc_log_lik1(C_PATH: torch.Tensor,
-        PARAMS_DICT: DictOfTensors,
-        DT: float, 
-        SBM_SDE_CLASS, 
-        INIT_PRIOR,
-        ):
-
-    drift, diffusion_sqrt = SBM_SDE_CLASS.drift_diffusion(C_PATH, PARAMS_DICT) #Appropriate indexing of tensors corresponding to data generating process now handled in `drift_diffusion` class method. Recall that drift diffusion will use C_PATH[:, :-1, :], I_S_TENSOR[:, 1:, :], I_D_TENSOR[:, 1:, :], TEMP_TENSOR[:, 1:, :]. 
-    euler_maruyama_state_sample_object = D.multivariate_normal.MultivariateNormal(loc = C_PATH[:, :-1, :] + drift * DT, scale_tril = diffusion_sqrt * math.sqrt(DT)) #C_PATH[:, :-1, :] + drift * DT will diverge from C_PATH if C_PATH values not compatible with x0 and theta. Algorithm aims to minimize gap between computed drift and actual gradient between x_n and x_{n+1}. 
-
-    # Compute log p(x|theta) = log p(x|x0, theta) + log p(x0|theta)
-    ll = euler_maruyama_state_sample_object.log_prob(C_PATH[:, 1:, :]).sum(-1) # log p(x|x0, theta)
-    ll += INIT_PRIOR.log_prob(C_PATH[:, 0, :]) # log p(x0|theta)
-
-    return ll, drift, diffusion_sqrt
-
 def calc_log_lik2(C_PATH: torch.Tensor,
         PARAMS_DICT: DictOfTensors,
         DT: float, 
@@ -81,7 +65,7 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
         THETA_DIST = None, THETA_POST_DIST = None, THETA_POST_INIT = None,
         ELBO_WARMUP_ITER = 1000, ELBO_WARMUP_INIT_LR = 1e-6, ELBO_LR_DECAY: float = 0.8, ELBO_LR_DECAY_STEP_SIZE: int = 1000,
         PRINT_EVERY: int = 100, DEBUG_SAVE_DIR: str = None, PTRAIN_ITER: int = 0, PTRAIN_LR: float = 1e-3, PTRAIN_ALG: BoolAndString = False,
-        NUM_LAYERS: int = 5):
+        NUM_LAYERS: int = 5, REVERSE: bool = False, BASE_STATE: bool = False):
 
     #Sum to get total training iterations.
     T_ITER = PTRAIN_ITER + ELBO_WARMUP_ITER + ELBO_ITER
@@ -103,7 +87,7 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
     else:
         obs_dim = SBM_SDE.state_dim
     obs_times, obs_means, obs_error = csv_to_obs_df(OBS_CSV_STR, obs_dim, T, OBS_ERROR_SCALE) #csv_to_obs_df function in obs_and_flow module
-    obs_model = ObsModel(TIMES = obs_times, DT = DT, MU = obs_means, SCALE = obs_error).to(DEVICE)
+    obs_model = ObsModel(DEVICE = DEVICE, TIMES = obs_times, DT = DT, MU = obs_means, SCALE = obs_error).to(DEVICE)
 
     if LEARN_CO2 and PTRAIN_ITER != 0 and PTRAIN_ALG:
         mean_state_obs = torch.mean(obs_model.mu[:-1, :], -1)[None, None, :]
@@ -111,7 +95,7 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
         mean_state_obs = torch.mean(obs_model.mu, -1)[None, None, :]
 
     #Establish neural network.
-    net = SDEFlow(DEVICE, obs_model, SBM_SDE.state_dim, T, DT, N, num_layers = NUM_LAYERS).to(DEVICE)
+    net = SDEFlow(DEVICE, obs_model, SBM_SDE.state_dim, T, DT, N, NUM_LAYERS = NUM_LAYERS, REVERSE = REVERSE, BASE_STATE = BASE_STATE).to(DEVICE)
 
     #Initiate model debugging saver.
     if DEBUG_SAVE_DIR:
@@ -273,7 +257,7 @@ def train_nn(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
         PARAMS_DICT: DictOfNpArrays, LEARN_CO2: bool = False,
         ELBO_WARMUP_ITER = 1000, ELBO_WARMUP_INIT_LR = 1e-6, ELBO_LR_DECAY: float = 0.8, ELBO_LR_DECAY_STEP_SIZE: int = 1000,
         PRINT_EVERY: int = 100, DEBUG_SAVE_DIR: str = None, PTRAIN_ITER: int = 0, PTRAIN_LR: float = 1e-3, PTRAIN_ALG: BoolAndString = False,
-        NUM_LAYERS: int = 5):
+        NUM_LAYERS: int = 5, REVERSE: bool = False, BASE_STATE: bool = False):
 
     #Sum to get total training iterations.
     T_ITER = PTRAIN_ITER + ELBO_WARMUP_ITER + ELBO_ITER
@@ -295,10 +279,10 @@ def train_nn(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
     else:
         obs_dim = SBM_SDE.state_dim
     obs_times, obs_means, obs_error = csv_to_obs_df(OBS_CSV_STR, obs_dim, T, OBS_ERROR_SCALE) #csv_to_obs_df function in obs_and_flow module
-    obs_model = ObsModel(TIMES = obs_times, DT = DT, MU = obs_means, SCALE = obs_error).to(DEVICE)
+    obs_model = ObsModel(DEVICE = DEVICE, TIMES = obs_times, DT = DT, MU = obs_means, SCALE = obs_error).to(DEVICE)
 
     #Establish neural network.
-    net = SDEFlow(DEVICE, obs_model, SBM_SDE.state_dim, T, DT, N, num_layers = NUM_LAYERS).to(DEVICE)
+    net = SDEFlow(DEVICE, obs_model, SBM_SDE.state_dim, T, DT, N, NUM_LAYERS = NUM_LAYERS, REVERSE = REVERSE, BASE_STATE = BASE_STATE).to(DEVICE)
     
     #Initiate model debugging saver.
     if DEBUG_SAVE_DIR:

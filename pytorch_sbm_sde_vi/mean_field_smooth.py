@@ -2,12 +2,12 @@
 import torch
 from torch import nn
 import torch.distributions as D
-from TruncatedNormal import *
-from LogitNormal import *
 from torch.autograd import Function
 
 #Module imports
 from obs_and_flow import LowerBound
+from TruncatedNormal import *
+from LogitNormal import *
 
 '''
 This module defines the MeanField class for mean field VI inference of the soil biogeochemical model SDE system parameters.

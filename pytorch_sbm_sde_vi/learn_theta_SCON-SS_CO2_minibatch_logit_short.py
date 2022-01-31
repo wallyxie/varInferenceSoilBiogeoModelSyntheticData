@@ -17,10 +17,8 @@ import matplotlib.pyplot as plt
 
 #Module imports
 from SBM_SDE_classes_minibatch import *
-from obs_and_flow_minibatch import *
 from training_minibatch import *
 from plotting import * #Need to update versions of plotting scripts for minibatching.
-from mean_field import *
 
 #PyTorch settings
 if torch.cuda.is_available():
@@ -113,18 +111,19 @@ outputs_folder = 'training_pt_outputs/'
 net_save_string = os.path.join(outputs_folder, 'net' + save_string)
 net_state_dict_save_string = os.path.join(outputs_folder,'net_state_dict' + save_string)
 q_theta_save_string = os.path.join(outputs_folder, 'q_theta' + save_string)
+q_theta_state_dict_save_string = os.path.join(outputs_folder, 'q_theta_state_dict' + save_string)
 p_theta_save_string = os.path.join(outputs_folder, 'p_theta' + save_string)
 obs_model_save_string = os.path.join(outputs_folder, 'obs_model' + save_string)
-norm_save_string = os.path.join(outputs_folder, 'norm' + save_string)
 ELBO_save_string = os.path.join(outputs_folder, 'ELBO' + save_string)
 SBM_SDE_instance_save_string = os.path.join(outputs_folder, 'SBM_SDE_instance' + save_string)
+torch.save(train_args, train_args_save_string)
 torch.save(net, net_save_string)
 torch.save(net.state_dict(), net_state_dict_save_string) #For loading net on CPU.
 torch.save(q_theta, q_theta_save_string)
+torch.save(q_theta.state_dict(), q_theta_state_dict_save_string)
 torch.save(p_theta, p_theta_save_string)
 torch.save(obs_model, obs_model_save_string)
-torch.save(norm, norm_save_string)
-torch.save(ELBO, ELBO_save_string)
+torch.save(ELBO_hist, ELBO_save_string)
 torch.save(SBM_SDE_instance, SBM_SDE_instance_save_string)
 print('Output files saving finished. Moving to plotting.')
 
@@ -149,5 +148,5 @@ plots_folder = 'training_plots/'
 #print('ELBO plotting finished.')
 #plot_states_post(x, q_theta, obs_model, SBM_SDE_instance, elbo_iter, ptrain_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, prior_scale_factor, plots_folder, now_string, learn_CO2, ymin_list = [0, 0, 0, 0], ymax_list = [60., 5., 8., 0.025])
 #print('States fit plotting finished.')
-plot_theta(p_theta, q_theta, true_theta, elbo_iter, ptrain_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, prior_scale_factor, plots_folder, now_string)
+plot_theta(p_theta, q_theta, true_theta, elbo_iter, elbo_warmup_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, elbo_warmup_lr, prior_scale_factor, plots_folder, now_string)
 print('Prior-posterior pair plotting finished.')
