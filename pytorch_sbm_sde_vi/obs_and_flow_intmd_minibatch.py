@@ -281,9 +281,9 @@ class SDEFlow(nn.Module):
         reps = torch.ones(len(self.obs_model.idx), dtype=torch.long).to(self.device) * self.state_dim
         reps[1:] *= steps_bw_obs
         obs_tile = self.obs_model.mu[None, :, :].repeat_interleave(reps, -1).repeat( \
-            BATCH_SIZE, 1, 1) # (batch_size, obs_dim, state_dim * n)
+            BATCH_SIZE, 1, 1).to(self.device) # (batch_size, obs_dim, state_dim * n)
         times = torch.arange(0, self.t + self.dt, self.dt, device = eps.device)[None, None, :].repeat( \
-            BATCH_SIZE, self.state_dim, 1).transpose(-2, -1).reshape(BATCH_SIZE, 1, -1)
+            BATCH_SIZE, self.state_dim, 1).transpose(-2, -1).reshape(BATCH_SIZE, 1, -1).to(self.device)
         
         if self.cond_inputs == 3:
             i_tensor = self.i_tensor.repeat(BATCH_SIZE, 1, 1)
