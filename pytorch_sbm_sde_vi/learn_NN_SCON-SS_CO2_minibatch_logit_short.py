@@ -18,6 +18,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 #Module imports
+from SBM_SDE_classes_minibatch import *
 from training_minibatch import *
 #from plotting import *
 
