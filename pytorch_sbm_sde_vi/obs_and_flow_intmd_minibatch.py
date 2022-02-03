@@ -98,6 +98,9 @@ class ResNetBlock(nn.Module):
         else:
             self.conv_skip = nn.Identity()
 
+        kernel = 3 # hard coded in self.conv1 & 2 above
+        self.window = (kernel - 1) + 1*first
+
     def forward(self, x):
         residual = x
         x = self.act1(self.bn1(self.conv1(x)))
@@ -127,6 +130,9 @@ class ResNetBlockUnMasked(nn.Module):
             self.conv_skip = nn.Conv1d(inp_cha,  out_cha, 3, stride, 1, bias=False)
         else:
             self.conv_skip = nn.Identity()
+
+        kernel = 3 # hard coded in self.conv1 & 2 above
+        self.window = (kernel - 1) + 1 * (inp_cha != out_cha or stride > 1)
 
     def forward(self, x):
         residual = x
@@ -159,6 +165,25 @@ class AffineLayer(nn.Module):
         sigma = LowerBound.apply(sigma, 1e-8)
         x = mu + sigma * x # (batch_size, 1, n * state_dim)
         return x, -torch.log(sigma) # each of shape (batch_size, 1, n * state_dim)
+
+    @property
+    def window(self):
+        # Feature net
+        left_win, right_win = 0, 0
+        for l in self.feature_net: # since unmasked, window extends both sides
+            left_win += l.window
+            right_win += l.window
+
+        # First block
+        # NOTE: reverse masking not yet supported; this would extend right_win as well
+        left_win += self.first_block.window
+
+        # Second block
+        left_win += 3//2
+        for l in self.second_block[:-1]:
+            left_win += l.window
+
+        return (left_win, right_win)
 
 class PermutationLayer(nn.Module):
     
@@ -207,7 +232,7 @@ class BatchNormLayer(nn.Module):
         #print(self.training)
         if self.training:
             # Compute mean and var across batch
-            self.batch_mean = inputs.mean(0)
+            self.batch_mean = inputs.mean(0) # (n * state_dim)
             self.batch_var = (inputs - self.batch_mean).pow(2).mean(0) + self.eps
 
             self.running_mean.mul_(self.momentum)
@@ -231,12 +256,50 @@ class BatchNormLayer(nn.Module):
 
         # y.shape == (batch_size, 1, n * state_dim), ildj.shape == (1, 1, n * state_dim)
         return y[:, None, :], ildj[None, None, :]
+
+class BatchNormLayerMinibatch(nn.Module):
     
-class SDEFlow(nn.Module):
+    def __init__(self, num_inputs, momentum = 1e-2, eps = 1e-5, affine = True):
+        super(BatchNormLayerMinibatch, self).__init__()
+
+        self.log_gamma = nn.Parameter(torch.rand(num_inputs)) if affine else torch.zeros(num_inputs)
+        self.beta = nn.Parameter(torch.rand(num_inputs)) if affine else torch.zeros(num_inputs)
+        self.momentum = momentum
+        self.eps = eps
+
+        self.register_buffer('running_mean', torch.zeros(num_inputs))
+        self.register_buffer('running_var', torch.ones(num_inputs))
+
+    def forward(self, inputs, *args, **kwargs):
+        inputs = inputs.squeeze(1) # (batch_size, n * state_dim)
+        if self.training:
+            # Compute mean and var across batch
+            self.batch_mean = inputs.mean() # scalar
+            self.batch_var = (inputs - self.batch_mean).pow(2).mean() + self.eps
+
+            self.running_mean.mul_(self.momentum)
+            self.running_var.mul_(self.momentum)
+
+            self.running_mean.add_(self.batch_mean.data * (1 - self.momentum))
+            self.running_var.add_(self.batch_var.data * (1 - self.momentum))
+
+            mean = self.batch_mean
+            var = self.batch_var
+        else:
+            mean = self.running_mean
+            var = self.running_var
+        
+        x_hat = (inputs - mean) / var.sqrt() # (batch_size, n * state_dim)
+        y = torch.exp(self.log_gamma) * x_hat + self.beta # (batch_size, n * state_dim)
+        ildj = -self.log_gamma + 0.5 * torch.log(var) # (1, )
+
+        return y[:, None, :], ildj[None, None, :]
+    
+class SDEFlowMinibatch(nn.Module):
 
     def __init__(self, DEVICE, OBS_MODEL, STATE_DIM, T, DT, N,
                  I_S_TENSOR = None, I_D_TENSOR = None, COND_INPUTS = 1, NUM_LAYERS = 5, POSITIVE = True,
-                 REVERSE = False, BASE_STATE = False):
+                 REVERSE = False, BASE_STATE = False, UNIBATCH_MODE = False):
         super().__init__()
         self.device = DEVICE
         self.obs_model = OBS_MODEL
@@ -245,6 +308,7 @@ class SDEFlow(nn.Module):
         self.dt = DT
         self.n = N
 
+        # Init learnable base distribution
         self.base_state = BASE_STATE
         if self.base_state:
             base_loc_SOC, base_loc_DOC, base_loc_MBC = torch.split(nn.Parameter(torch.zeros(1, self.state_dim)), 1, -1)
@@ -255,27 +319,51 @@ class SDEFlow(nn.Module):
         else:
             self.base_dist = D.normal.Normal(loc = 0., scale = 1.)
 
-        self.cond_inputs = COND_INPUTS  
+        self.cond_inputs = COND_INPUTS
         if self.cond_inputs == 3:
             self.i_tensor = torch.stack((I_S_TENSOR.reshape(-1), I_D_TENSOR.reshape(-1)))[None, :, :].repeat_interleave(3, -1)
 
         self.num_layers = NUM_LAYERS
         self.reverse = REVERSE
+        self.unibatch_mode = UNIBATCH_MODE
 
         self.affine = nn.ModuleList([AffineLayer(COND_INPUTS + self.obs_model.obs_dim, 1) for _ in range(NUM_LAYERS)])
         self.permutation = [PermutationLayer(STATE_DIM, REVERSE = self.reverse) for _ in range(NUM_LAYERS)]
-        self.batch_norm = nn.ModuleList([BatchNormLayer(STATE_DIM * N) for _ in range(NUM_LAYERS - 1)])
+        if self.unibatch_mode:
+            print('Using conventional batch norm')
+            self.batch_norm = nn.ModuleList([BatchNormLayer(STATE_DIM * N) for _ in range(NUM_LAYERS - 1)])
+        else:
+            print('Using global batch norm')
+            self.batch_norm = nn.ModuleList([BatchNormLayerMinibatch(1) for _ in range(NUM_LAYERS - 1)])
         self.positive = POSITIVE
         if self.positive:
             self.SP = SoftplusLayer()
         
-    def forward(self, BATCH_SIZE, *args, **kwargs):
+    def forward(self, BATCH_SIZE, LIDX, RIDX, *args, **kwargs):
+        # lidx - left index
+        # ridx - right index
+
+        if self.unibatch_mode:
+            assert LIDX == 0 and RIDX == self.n
+        
+        buffer_size = self.state_dim*(RIDX - LIDX)
+        left_win, right_win = self.window
+        active_lidx = max((LIDX*self.state_dim) - left_win, 0)
+        active_ridx = min((RIDX*self.state_dim) + right_win, self.n*self.state_dim)
+        #print('lidx, ridx, active lidx, active ridx', LIDX, RIDX, active_lidx, active_ridx)
+
+        # Base distribution
         if self.base_state:
             eps = self.base_dist.rsample([BATCH_SIZE]).to(self.device)
         else:
             eps = self.base_dist.rsample([BATCH_SIZE, 1, self.state_dim * self.n]).to(self.device)
-        log_prob = self.base_dist.log_prob(eps).sum(-1) # (batch_size, 1)
+        log_prob = self.base_dist.log_prob(eps) # (batch_size, 1, n * state_dim) 
+
+        # Subset to minibatch
+        eps = eps[:, :, active_lidx:active_ridx]
+        log_prob = log_prob[:, :, active_lidx:active_ridx]
         
+        # Features
         # NOTE: This currently assumes a regular time gap between observations!
         steps_bw_obs = self.obs_model.idx[1] - self.obs_model.idx[0]
         reps = torch.ones(len(self.obs_model.idx), dtype=torch.long).to(self.device) * self.state_dim
@@ -287,13 +375,14 @@ class SDEFlow(nn.Module):
         
         if self.cond_inputs == 3:
             i_tensor = self.i_tensor.repeat(BATCH_SIZE, 1, 1)
-            features = (obs_tile, times, i_tensor)
+            features = (obs_tile[:, :, active_lidx:active_ridx],
+                        times[:, :, active_lidx:active_ridx],
+                        i_tensor[:, :, active_lidx:active_ridx])
         else:
-            features = (obs_tile, times)
-        #print(obs_tile)
+            features = (obs_tile[:, :, active_lidx:active_ridx],
+                        times[:, :, active_lidx:active_ridx]) # (batch_size, num_features, minibatch_size) each
 
         ildjs = []
-        
         for i in range(self.num_layers):
             eps, cl_ildj = self.affine[i](self.permutation[i](eps), features) # (batch_size, 1, n * state_dim)
             #print('Coupling layer {}'.format(i), eps, cl_ildj)
@@ -308,26 +397,51 @@ class SDEFlow(nn.Module):
             ildjs.append(sp_ildj)
             #print('Softplus layer', eps, sp_ildj)
         
-        eps = eps.reshape(BATCH_SIZE, -1, self.state_dim) + 1e-6 # (batch_size, n, state_dim)
         for ildj in ildjs:
-            log_prob += ildj.sum(-1) # (batch_size, 1)
+            log_prob += ildj # (batch_size, 1, n * state_dim)
+
+        buffer_left = min(left_win, LIDX*self.state_dim)
+        buffer_right = eps.shape[-1] - min(right_win, (self.n - RIDX)*self.state_dim)
+        eps = eps[:, :, buffer_left:buffer_right]
+        log_prob = log_prob[:, :, buffer_left:buffer_right] # (batch_size, 1, minibatch_size * state_dim)
+        #print('buffer left, right', buffer_left, buffer_right)
+        assert eps.shape[-1] == buffer_size and log_prob.shape[-1] == buffer_size
+        #print(eps.shape[-1], buffer_size)
+
+        # Compute log q(x_{u:v}|theta) (exclude u-1 unless lidx = 0)
+        if LIDX == 0:
+            log_prob = log_prob.sum(-1).squeeze(-1) # (batch_size, )
+        else:
+            log_prob = log_prob.reshape(BATCH_SIZE, -1, self.state_dim)[:, 1:, :].sum((-1, -2))
+        assert log_prob.shape == (BATCH_SIZE, )
     
-        #return eps.reshape(BATCH_SIZE, self.state_dim, -1).permute(0, 2, 1) + 1e-6, log_prob
-        return eps, log_prob # (batch_size, n, state_dim), (batch_size, 1)
+        return eps.reshape(BATCH_SIZE, -1, self.state_dim), log_prob # (batch_size, minibatch_size, state_dim), (batch_size, )
+
+    @property
+    def window(self):
+        left_win, right_win = 0, 0
+        for i in range(self.num_layers):
+            left_i, right_i = self.affine[i].window
+            left_win += left_i
+            right_win += right_i
+
+        # Confused about this?
+        # win = int(np.ceil(win/self.state_dim) * self.state_dim)
+
+        return left_win, right_win
 
 ###################################################
 ##OBSERVATION MODEL RELATED CLASSES AND FUNCTIONS##
 ###################################################
 
 class ObsModel(nn.Module):
-
-    def __init__(self, DEVICE, TIMES, DT, MU, SCALE):
+    def __init__(self, TIMES, DT, MU, SCALE):
         super().__init__()
         self.times = TIMES # (n_obs, )
         self.dt = DT
         self.idx = self.get_idx(TIMES, DT)        
-        self.mu = torch.Tensor(MU).to(DEVICE) # (obs_dim, n_obs)
-        self.scale = torch.Tensor(SCALE).to(DEVICE) # (1, obs_dim)
+        self.mu = MU # (obs_dim, n_obs)
+        self.scale = SCALE # (1, obs_dim)
         self.obs_dim = self.mu.shape[0]
         
     def forward(self, x, theta):
@@ -335,10 +449,32 @@ class ObsModel(nn.Module):
         return torch.sum(obs_ll, [-1, -2]).mean()
 
     def get_idx(self, TIMES, DT):
-        return list((TIMES / DT).astype(int))
+        return torch.as_tensor((TIMES / DT)).long() #list((TIMES / DT).astype(int))
     
     def plt_dat(self):
         return self.mu, self.times
+
+class ObsModelMinibatch(ObsModel):
+    def __init__(self, TIMES, DT, MU, SCALE):
+        super().__init__(TIMES, DT, MU, SCALE)
+
+        # NOTE: Assumes regular obs_every interval starting from the 0th index,
+        # otherwise not sure how to convert from lidx/ridx to obs_lidx/obs_lidx
+        self.obs_every = self.idx[1] - self.idx[0]
+        
+    def forward(self, x, theta, lidx=0, ridx=None):
+        active_lidx = lidx if lidx == 0 else lidx + 1
+        obs_lidx = int(torch.ceil(active_lidx / self.obs_every))
+        if ridx is None:
+            obs_ridx = self.mu.shape[1]
+        else:
+            obs_ridx = int(torch.ceil(ridx / self.obs_every))
+        
+        loc = self.mu.permute(1, 0)[obs_lidx:obs_ridx, :] # (n_obs_minibatch, obs_dim)
+        idx = self.idx[obs_lidx:obs_ridx] - lidx
+        #print(torch.tensor(idx) - lidx)
+        obs_ll = D.normal.Normal(loc, self.scale).log_prob(x[:, idx, :]) # (batch_size, n_obs_minibatch, obs_dim)
+        return torch.sum(obs_ll, [-1, -2]).mean() # scalar
 
 ########################
 ##MISC MODEL DEBUGGING##

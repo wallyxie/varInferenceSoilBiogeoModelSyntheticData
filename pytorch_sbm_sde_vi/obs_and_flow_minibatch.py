@@ -233,7 +233,7 @@ class BatchNormLayer(nn.Module):
         
         x_hat = (inputs - mean) / var.sqrt() # (batch_size, n * state_dim)
         y = torch.exp(self.log_gamma) * x_hat + self.beta # (batch_size, n * state_dim)
-        ildj = -self.log_gamma + 0.5 * torch.log(var) # (n * state_dim, )
+        ildj = -self.log_gamma + 0.5 * torch.log(var) # (1, )
 
         return y[:, None, :], ildj[None, None, :]
     
