@@ -14,3 +14,4 @@ pytorch_sbm_sde_vi/python_notebooks/Plots.ipynb
 *y_dict*
 pytorch_sbm_sde_vi/python_notebooks/Plots_fix_u_M_a_Ea.ipynb
 *_CPU*
+pytorch_sbm_sde_vi/training_old_arch_SBM_SDE_minibatch.py
