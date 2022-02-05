@@ -4,7 +4,7 @@ from tqdm import tqdm
 from typing import Dict, Tuple, Union
 import platform
 
-#Torch imports
+#Torch-related imports
 import torch
 from torch.autograd import Function
 from torch import nn
@@ -12,12 +12,9 @@ import torch.distributions as D
 import torch.nn.functional as F
 import torch.optim as optim
 
-#PyData imports
-import numpy as np
-
 #Module imports
 from mean_field import *
-from obs_and_flow_minibatch import *
+from obs_and_flow_intmd_minibatch import *
 from SBM_SDE_classes_minibatch import *
 from TruncatedNormal import *
 from LogitNormal import *
@@ -93,16 +90,16 @@ def calc_log_lik_minibatch(C_PATH: torch.Tensor, # (batch_size, minibatch_size +
 def train_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
         OBS_CSV_STR: str, OBS_ERROR_SCALE: float, T: float, DT: float, N: int,
         T_SPAN_TENSOR: torch.Tensor, I_S_TENSOR: torch.Tensor, I_D_TENSOR: torch.Tensor, TEMP_TENSOR: torch.Tensor, TEMP_REF: float,
-        SBM_SDE_CLASS: str, DIFFUSION_TYPE: str, INIT_PRIOR: torch.distributions.distribution.Distribution,
+        SBM_SDE_CLASS: str, DIFFUSION_TYPE: str, INIT_PRIOR : torch.distributions.distribution.Distribution, 
         PRIOR_DIST_DETAILS_DICT: DictOfTensors, FIX_THETA_DICT = None, LEARN_CO2: bool = False,
-        THETA_DIST = None, THETA_POST_DIST = None, THETA_POST_INIT = None, LIK_DIST: str = 'Normal',
-        ELBO_LR_DECAY: float = 0.8, ELBO_LR_DECAY_STEP_SIZE: int = 50000, PTRAIN_LR_DECAY: float = 0.8, PTRAIN_LR_DECAY_STEP_SIZE: int = 1000,
-        PRINT_EVERY: int = 100, DEBUG_SAVE_DIR: str = None, PTRAIN_ITER: int = 0, PTRAIN_LR: float = None, PTRAIN_ALG: BoolAndString = False,
-        MINIBATCH_T: int = 0, NUM_LAYERS: int = 5, KERNEL_SIZE: int = 3, NUM_RESBLOCKS: int = 2,
-        THETA_COND: BoolAndString  = 'convolution', OTHER_COND_INPUTS: bool = False):
+        THETA_DIST = None, THETA_POST_DIST = None, THETA_POST_INIT = None,
+        ELBO_WARMUP_ITER = 1000, ELBO_WARMUP_INIT_LR = 1e-6, ELBO_LR_DECAY: float = 0.8, ELBO_LR_DECAY_STEP_SIZE: int = 1000,
+        PRINT_EVERY: int = 100, DEBUG_SAVE_DIR: str = None, PTRAIN_ITER: int = 0, PTRAIN_LR: float = 1e-3, PTRAIN_ALG: BoolAndString = False,
+        NUM_LAYERS: int = 5, REVERSE: bool = False, BASE_STATE: bool = False,
+        MINIBATCH_T: int = 0, LIK_DIST = 'Normal'):
 
     #Sum to get total training iterations.
-    T_ITER = ELBO_ITER + PTRAIN_ITER
+    T_ITER = PTRAIN_ITER + ELBO_WARMUP_ITER + ELBO_ITER
 
     #Instantiate SBM_SDE object based on specified model and diffusion type.
     SBM_SDE_class_dict = {
@@ -123,19 +120,33 @@ def train_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
     obs_times, obs_means, obs_error = csv_to_obs_df(OBS_CSV_STR, obs_dim, T, OBS_ERROR_SCALE) #csv_to_obs_df function in obs_and_flow module
     obs_model_minibatch = ObsModelMinibatch(TIMES = obs_times, DT = DT, MU = obs_means, SCALE = obs_error).to(DEVICE)
 
-    #Other_inputs presently consists of i and temperature tensors.
-    #Timestamps and theta conditional inputs added as conditional inputs in SDEFlowMinibatch.
-    if OTHER_COND_INPUTS:
-        temp_tensor_rescale = TEMP_TENSOR / torch.max(TEMP_TENSOR) #Rescale temp_tensor such that temp_tensor_rescale values <= 1, per Tom's suggestion to rescale large conditional inputs. 
-        other_inputs_pre = torch.cat([temp_tensor_rescale, I_S_TENSOR, I_D_TENSOR], 0) #Concatenate temp_tensor_rescale with exogenous input tensors.
-        other_inputs = other_inputs_pre.repeat([1, SBM_SDE.state_dim, 1]).squeeze(-1) #Arrive at shape torch.Size([other_inputs_dim, SBM_SDE_class.state_dim * N]) for use in SDEFlowMinibatch.
+    if LEARN_CO2 and PTRAIN_ITER != 0 and PTRAIN_ALG:
+        mean_state_obs = torch.mean(obs_model.mu[:-1, :], -1)[None, None, :]
+    elif not LEARN_CO2 and PTRAIN_ITER != 0 and PTRAIN_ALG:
+        mean_state_obs = torch.mean(obs_model.mu, -1)[None, None, :]
+
+    # Sample minibatch indices
+    minibatch_size = int(MINIBATCH_T / DT)
+    if 0 < minibatch_size < N and T % MINIBATCH_T == 0:
+        minibatch_indices = torch.arange(0, N - minibatch_size, minibatch_size) + 1
+        rand = torch.randint(len(minibatch_indices), (T_ITER, ))
+        batch_indices = minibatch_indices[rand]
+        print(f'Time series being chunked into {len(minibatch_indices)} minibatches at time step indices {minibatch_indices}. Check that this is the intended minibatch size.')
+
+        # Print warning unless each minibatch is used at least once
+        if torch.min(torch.bincount(rand)) == 0:
+            print('Warning: Not all minibatches are used at least once.')
     else:
-        other_inputs = None
+        # If minibatch_size is outside of acceptable range, then use full batch by default
+        print('Proceeding with uni-batching, because either minibatch_size >= N, or T % MINIBATCH_T != 0.')
+        batch_indices = None
 
     #Establish neural network.
-    net = SDEFlowMinibatch(DEVICE, obs_model_minibatch, SBM_SDE.state_dim, T, N, len(PRIOR_DIST_DETAILS_DICT), OTHER_INPUTS = other_inputs, FIX_THETA_DICT = FIX_THETA_DICT,
-            NUM_LAYERS = NUM_LAYERS, KERNEL_SIZE = KERNEL_SIZE, NUM_RESBLOCKS = NUM_RESBLOCKS, THETA_COND = THETA_COND)
-    
+    if batch_indices:
+        net = SDEFlowMinibatch(DEVICE, obs_model, SBM_SDE.state_dim, T, DT, N, NUM_LAYERS = NUM_LAYERS, REVERSE = REVERSE, BASE_STATE = BASE_STATE, UNIBATCH_MODE = False).to(DEVICE)
+    else:
+        net = SDEFlowMinibatch(DEVICE, obs_model, SBM_SDE.state_dim, T, DT, N, NUM_LAYERS = NUM_LAYERS, REVERSE = REVERSE, BASE_STATE = BASE_STATE, UNIBATCH_MODE = True).to(DEVICE)        
+
     #Initiate model debugging saver.
     if DEBUG_SAVE_DIR:
         debug_saver = ModelSaver(save_dir = DEBUG_SAVE_DIR)
@@ -174,61 +185,50 @@ def train_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
     if PTRAIN_ALG and PTRAIN_ITER != 0:
         ptrain_opt = optim.Adam(net.parameters(), lr = PTRAIN_LR)
         if LEARN_CO2:
-            mean_state_obs = torch.mean(obs_model_minibatch.mu[:-1, :], -1)[None, None, :]
+            mean_state_obs = torch.mean(obs_model.mu[:-1, :], -1)[None, None, :]
         else:
-            mean_state_obs = torch.mean(obs_model_minibatch.mu, -1)[None, None, :]
+            mean_state_obs = torch.mean(obs_model.mu, -1)[None, None, :]
     elif not PTRAIN_ALG and PTRAIN_ITER != 0:
         raise Error('Pre-training iterations specified without PTRAIN_ALG input. Must request PTRAIN_ALG = "L1" or "L2".')
+
     ELBO_params = list(net.parameters()) + list(q_theta.parameters())
     ELBO_opt = optim.Adamax(ELBO_params, lr = ELBO_LR)
 
-    # Sample minibatch indices
-    minibatch_size = int(MINIBATCH_T / DT)
-    if 0 < minibatch_size < N and T % MINIBATCH_T == 0:
-        minibatch_indices = torch.arange(0, N - minibatch_size, minibatch_size) + 1
-        rand = torch.randint(len(minibatch_indices), (T_ITER, ))
-        batch_indices = minibatch_indices[rand]
-        print(f'Time series being chunked into {len(minibatch_indices)} minibatches at time step indices {minibatch_indices}. Check that this is the intended minibatch size.')
+    #Set optimizer LR scheduler.
+    ELBO_opt.param_groups[0]['lr'] = ELBO_LR
+    elbo_warmup_factor = ELBO_WARMUP_INIT_LR / ELBO_LR
 
-        # Print warning unless each minibatch is used at least once
-        if torch.min(torch.bincount(rand)) == 0:
-            print('Warning: Not all minibatches are used at least once.')
-    else:
-        # If minibatch_size is outside of acceptable range, then use full batch by default
-        print('Proceeding with uni-batching, because either minibatch_size >= N, or T % MINIBATCH_T != 0.')
-        batch_indices = None
+    def calc_lr_factor(iteration):
+        if iteration < PTRAIN_ITER + ELBO_WARMUP_ITER:
+            return elbo_warmup_factor
+        else:
+            elbo_decay_factor = ELBO_LR_DECAY ** math.floor((iteration - PTRAIN_ITER - ELBO_WARMUP_ITER) / ELBO_LR_DECAY_STEP_SIZE)
+            return min(1, elbo_decay_factor if elbo_decay_factor != 0 else 1)
+
+    ELBO_sched = optim.lr_scheduler.LambdaLR(ELBO_opt, lr_lambda = calc_lr_factor, last_iteration = -1)
     
-    print(f'\nStarting autoencoder training. {PTRAIN_ITER} pre-training iterations and {ELBO_ITER} ELBO training iterations for {T_ITER} total iterations specified.')    
-    net.train()
+    #Training loop
+    print(f'\nStarting autoencoder training. {PTRAIN_ITER} pre-training iterations, {ELBO_WARMUP_ITER} ELBO warmup iterations, and {ELBO_ITER} ELBO training iterations for {T_ITER} total iterations specified.')        
+    net.train()        
     with tqdm(total = T_ITER, desc = f'Learning SDE and hidden parameters.', position = -1) as tq:
-        for it in range(T_ITER):
-            
-            # Sample (unknown) theta
-            theta_dict, theta, log_q_theta, parent_loc_scale_dict = q_theta(BATCH_SIZE)
-            log_p_theta = priors.log_prob(theta).sum(-1)
+        for iteration in range(T_ITER):
 
-            # Fix known theta
-            if FIX_THETA_DICT:
-                if platform.python_version() >= '3.9.0':
-                    theta_dict = theta_dict | FIX_THETA_DICT
-                else:
-                    theta_dict = {**theta_dict, **FIX_THETA_DICT}
-            
             # Sample x_{u-1:v}|y, theta (unless u = 0, then sample x_{u:v})
-            if batch_indices is not None:
-                lidx = max(0, batch_indices[it] - 1)              # u-1 if u > 0, else 0
-                ridx = min(N, batch_indices[it] + minibatch_size) # v
+            if batch_indices:
+                lidx = max(0, batch_indices[iteration] - 1)              # u-1 if u > 0, else 0
+                ridx = min(N, batch_indices[iteration] + minibatch_size) # v
             else:
                 lidx, ridx = 0, N
-            C_PATH, log_prob = net(BATCH_SIZE, lidx, ridx, theta = theta) #Obtain paths with solutions to times including t0.
+            
+            C_PATH, log_prob = net(BATCH_SIZE, lidx, ridx) #Obtain paths with solutions to times including t0.
             
             #NaN handling            
             nan_count = 0
             #Check for NaNs in x.
             if torch.isnan(C_PATH).any():
-                raise ValueError(f'\nnan in x at niter: {it}. Check gradient clipping and learning rate to start.')
-
-            if PTRAIN_ALG and it < PTRAIN_ITER:
+                raise ValueError(f'nan in x at niter: {iteration}. Check gradient clipping and learning rate to start.')
+            
+            if PTRAIN_ALG and iteration < PTRAIN_ITER:
                 ptrain_opt.zero_grad()
 
                 if PTRAIN_ALG == 'L1':
@@ -243,8 +243,8 @@ def train_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                     best_loss_norm = norm if norm < best_loss_norm else best_loss_norm
                     norm_losses.append(norm.item())
 
-                if (it + 1) % PRINT_EVERY == 0:
-                    print(f'\nMoving average norm loss at {it + 1} iterations is: {sum(norm_losses[-10:]) / len(norm_losses[-10:])}. Best norm loss value is: {best_loss_norm}.')
+                if (iteration + 1) % PRINT_EVERY == 0:
+                    print(f'\nMoving average norm loss at {iteration + 1} iterations is: {sum(norm_losses[-10:]) / len(norm_losses[-10:])}. Best norm loss value is: {best_loss_norm}.')
                     print('\nC_PATH mean =', C_PATH.mean(-2))
                     print('\nC_PATH =', C_PATH)
 
@@ -252,11 +252,19 @@ def train_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                 torch.nn.utils.clip_grad_norm_(net.parameters(), 3.0)                                
                 ptrain_opt.step()
 
-                if it % PTRAIN_LR_DECAY_STEP_SIZE == 0:
-                    ptrain_opt.param_groups[0]['lr'] *= PTRAIN_LR_DECAY
-
             else:
-                ELBO_opt.zero_grad()
+                ELBO_opt.zero_grad()                
+                
+                # Sample (unknown) theta                
+                theta_dict, theta, log_q_theta, parent_loc_scale_dict = q_theta(BATCH_SIZE)
+                log_p_theta = priors.log_prob(theta).sum(-1)
+
+                # Fix known theta
+                if FIX_THETA_DICT:
+                    if platform.python_version() >= '3.9.0':
+                        theta_dict = theta_dict | FIX_THETA_DICT
+                    else:
+                        theta_dict = {**theta_dict, **FIX_THETA_DICT}
 
                 # Compute likelihood and ELBO
                 # Negative ELBO: -log p(theta) + log q(theta) - log p(y_0|x_0, theta) [already accounted for in obs_model output when learning x_0] + log q(x|theta) - log p(x|theta) - log p(y|x, theta)
@@ -267,55 +275,53 @@ def train_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                     log_lik, drift, diffusion_sqrt = calc_log_lik_minibatch(C_PATH, theta_dict, DT, SBM_SDE, INIT_PRIOR, lidx, ridx, LIK_DIST)
                     ELBO = -log_p_theta.mean() + log_q_theta.mean() + N/minibatch_size * (log_prob.sum(-1).mean() - log_lik.mean() - obs_model_minibatch(C_PATH, theta_dict, lidx, ridx))
 
-                # Record ELBO history and best ELBO so far
+                #Negative ELBO: -log p(theta) + log q(theta) - log p(y_0|x_0, theta) [already accounted for in obs_model output when learning x_0] + log q(x|theta) - log p(x|theta) - log p(y|x, theta)
                 best_loss_ELBO = ELBO if ELBO < best_loss_ELBO else best_loss_ELBO
                 ELBO_losses.append(ELBO.item())
 
-                # Print info
-                if (it + 1) % PRINT_EVERY == 0:
-                    print(f'\ndrift at {it + 1} iterations: {drift}')
-                    print(f'\ndiffusion_sqrt at {it + 1} iterations = {diffusion_sqrt}')
-                    print(f'\nMoving average ELBO loss at {it + 1} iterations is: {sum(ELBO_losses[-10:]) / len(ELBO_losses[-10:])}. Best ELBO loss value is: {best_loss_ELBO}.')
+                if (iteration + 1) % PRINT_EVERY == 0:
+                    print(f'\nMoving average ELBO at {iteration + 1} iterations = {sum(ELBO_losses[-10:]) / len(ELBO_losses[-10:])}. Best ELBO value is: {best_loss_ELBO}.')
+                    print(f"\nLearning rate at {iteration + 1} iterations = {ELBO_opt.param_groups[0]['lr']}") 
                     if LEARN_CO2:
-                        print('\nC_PATH with CO2 mean =', x_add_CO2.mean(-2))
-                        print('\nC_PATH with CO2 =', x_add_CO2)
+                        print(f'\nC_PATH with CO2 mean = \n{x_add_CO2.mean(-2)}')
+                        print(f'\nC_PATH with CO2 = \n{x_add_CO2}')
                     else:
-                        print('\nC_PATH mean =', C_PATH.mean(-2))
-                        print('\nC_PATH =', C_PATH)
-                    print('\ntheta_dict means: ', {key: theta_dict[key].mean() for key in param_names})
-                    print('\nparent_loc_scale_dict: ', parent_loc_scale_dict)
+                        print(f'\nC_PATH mean = \n{C_PATH.mean(-2)}')
+                        print(f'\nC_PATH = \n{C_PATH}')
+                    print(f'\ndrift at {iteration + 1} iterations = \n{drift}')
+                    print(f'\ndiffusion_sqrt at {iteration + 1} iterations = \n{diffusion_sqrt}')
+                    print('\ntheta_dict means = \n', {key: theta_dict[key].mean() for key in param_names})
+                    print(f'\nparent_loc_scale_dict at {iteration + 1} iterations = \n{parent_loc_scale_dict}')
 
-                # Take gradient step
                 ELBO.backward()
                 torch.nn.utils.clip_grad_norm_(ELBO_params, 5.0)
                 ELBO_opt.step()
 
-                if it % ELBO_LR_DECAY_STEP_SIZE == 0:
-                    ELBO_opt.param_groups[0]['lr'] *= ELBO_LR_DECAY
+            ELBO_sched.step()
 
             if DEBUG_SAVE_DIR:
                 to_save = {'model': net, 'model_state_dict': net.state_dict(), 'ELBO_opt_state_dict': ELBO_opt.state_dict(), 
                         'ptrain_opt_state_dict': ptrain_opt.state_dict(), 'q_theta': q_theta}
-                debug_saver.save(to_save, it + 1)
+                debug_saver.save(to_save, iteration + 1)
 
             tq.update()
 
-    print('\nAll finished! Now, we need to check outputs to see if things worked...')
+    print('\nAll finished! Now, we need to check outputs to see if things worked...')            
     
-    return net, q_theta, priors, obs_model_minibatch, norm_losses, ELBO_losses, SBM_SDE
+    return net, q_theta, priors, obs_model, norm_losses, ELBO_losses, SBM_SDE, batch_indices
 
-def train_NN_minibatch(DEVICE, NN_ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
+def train_nn_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
         OBS_CSV_STR: str, OBS_ERROR_SCALE: float, T: float, DT: float, N: int,
         T_SPAN_TENSOR: torch.Tensor, I_S_TENSOR: torch.Tensor, I_D_TENSOR: torch.Tensor, TEMP_TENSOR: torch.Tensor, TEMP_REF: float,
         SBM_SDE_CLASS: str, DIFFUSION_TYPE: str, INIT_PRIOR: torch.distributions.distribution.Distribution,
-        PARAMS_DICT: DictOfNpArrays, LEARN_CO2: bool = False, LIK_DIST: str = 'Normal',
-        NN_ELBO_LR_DECAY: float = 0.8, NN_ELBO_LR_DECAY_STEP_SIZE: int = 50000, PTRAIN_LR_DECAY: float = 0.8, PTRAIN_LR_DECAY_STEP_SIZE: int = 1000,
-        PRINT_EVERY: int = 100, DEBUG_SAVE_DIR: str = None, PTRAIN_ITER: int = 0, PTRAIN_LR: float = None, PTRAIN_ALG: BoolAndString = False,
-        MINIBATCH_T: int = 0, NUM_LAYERS: int = 5, KERNEL_SIZE: int = 3, NUM_RESBLOCKS: int = 2,
-        OTHER_COND_INPUTS: bool = False):
+        PARAMS_DICT: DictOfNpArrays, LEARN_CO2: bool = False,
+        ELBO_WARMUP_ITER = 1000, ELBO_WARMUP_INIT_LR = 1e-6, ELBO_LR_DECAY: float = 0.8, ELBO_LR_DECAY_STEP_SIZE: int = 1000,
+        PRINT_EVERY: int = 100, DEBUG_SAVE_DIR: str = None, PTRAIN_ITER: int = 0, PTRAIN_LR: float = 1e-3, PTRAIN_ALG: BoolAndString = False,
+        NUM_LAYERS: int = 5, REVERSE: bool = False, BASE_STATE: bool = False,
+        MINIBATCH_T: int = 0, LIK_DIST = 'Normal'):
 
     #Sum to get total training iterations.
-    T_ITER = ELBO_ITER + PTRAIN_ITER
+    T_ITER = PTRAIN_ITER + ELBO_WARMUP_ITER + ELBO_ITER
 
     #Instantiate SBM_SDE object based on specified model and diffusion type.
     SBM_SDE_class_dict = {
@@ -336,45 +342,6 @@ def train_NN_minibatch(DEVICE, NN_ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: in
     obs_times, obs_means, obs_error = csv_to_obs_df(OBS_CSV_STR, obs_dim, T, OBS_ERROR_SCALE) #csv_to_obs_df function in obs_and_flow module
     obs_model_minibatch = ObsModelMinibatch(TIMES = obs_times, DT = DT, MU = obs_means, SCALE = obs_error).to(DEVICE)
 
-    #Other_inputs presently consists of i and temperature tensors.
-    #Timestamps and theta conditional inputs added as conditional inputs in SDEFlowMinibatch.
-    if OTHER_COND_INPUTS:
-        temp_tensor_rescale = TEMP_TENSOR / torch.max(TEMP_TENSOR) #Rescale temp_tensor such that temp_tensor_rescale values <= 1, per Tom's suggestion to rescale large conditional inputs. 
-        other_inputs_pre = torch.cat([temp_tensor_rescale, I_S_TENSOR, I_D_TENSOR], 0) #Concatenate temp_tensor_rescale with exogenous input tensors.
-        other_inputs = other_inputs_pre.repeat([1, SBM_SDE.state_dim, 1]).squeeze(-1) #Arrive at shape torch.Size([other_inputs_dim, SBM_SDE_class.state_dim * N]) for use in SDEFlowMinibatch.
-    else:
-        other_inputs = None
-
-    #Establish neural network.
-    net = SDEFlowMinibatch(DEVICE, obs_model_minibatch, SBM_SDE.state_dim, T, N, len(PARAMS_DICT), OTHER_INPUTS = other_inputs, FIX_THETA_DICT = None,
-            NUM_LAYERS = NUM_LAYERS, KERNEL_SIZE = KERNEL_SIZE, NUM_RESBLOCKS = NUM_RESBLOCKS, THETA_COND = False)
-    
-    #Initiate model debugging saver.
-    if DEBUG_SAVE_DIR:
-        debug_saver = ModelSaver(save_dir = DEBUG_SAVE_DIR)
-
-    param_names = list(PARAMS_DICT.keys())
-
-    #Record loss throughout training
-    best_loss_norm = 1e15
-    best_loss_ELBO = 1e15
-    norm_losses = []
-    ELBO_losses = []
-
-    #Initiate optimizers.
-    if PTRAIN_ALG and PTRAIN_ITER != 0:
-        ptrain_opt = optim.Adam(net.parameters(), lr = PTRAIN_LR)
-        if LEARN_CO2:
-            mean_state_obs = torch.mean(obs_model_minibatch.mu[:-1, :], -1)[None, None, :]
-        else:
-            mean_state_obs = torch.mean(obs_model_minibatch.mu, -1)[None, None, :]
-    elif not PTRAIN_ALG and PTRAIN_ITER != 0:
-        raise Error('Pre-training iterations specified without PTRAIN_ALG input. Must request PTRAIN_ALG = "L1" or "L2".')
-
-    #Separate neural network optimizer.
-    nn_ELBO_params = net.parameters()
-    nn_ELBO_opt = optim.Adamax(nn_ELBO_params, lr = NN_ELBO_LR)
-
     # Sample minibatch indices
     minibatch_size = int(MINIBATCH_T / DT)
     if 0 < minibatch_size < N and T % MINIBATCH_T == 0:
@@ -391,6 +358,51 @@ def train_NN_minibatch(DEVICE, NN_ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: in
         print('Proceeding with uni-batching, because either minibatch_size >= N, or T % MINIBATCH_T != 0.')
         batch_indices = None
 
+    #Establish neural network.
+    if batch_indices:
+        net = SDEFlowMinibatch(DEVICE, obs_model, SBM_SDE.state_dim, T, DT, N, NUM_LAYERS = NUM_LAYERS, REVERSE = REVERSE, BASE_STATE = BASE_STATE, UNIBATCH_MODE = False).to(DEVICE)
+    else:
+        net = SDEFlowMinibatch(DEVICE, obs_model, SBM_SDE.state_dim, T, DT, N, NUM_LAYERS = NUM_LAYERS, REVERSE = REVERSE, BASE_STATE = BASE_STATE, UNIBATCH_MODE = True).to(DEVICE)
+
+    #Initiate model debugging saver.
+    if DEBUG_SAVE_DIR:
+        debug_saver = ModelSaver(save_dir = DEBUG_SAVE_DIR)
+
+    param_names = list(PARAMS_DICT.keys())
+
+    #Record loss throughout training
+    best_loss_norm = 1e15
+    best_loss_ELBO = 1e15
+    norm_losses = []
+    ELBO_losses = []
+
+    #Initiate optimizers.
+    if PTRAIN_ALG and PTRAIN_ITER != 0:
+        ptrain_opt = optim.Adam(net.parameters(), lr = PTRAIN_LR)
+        if LEARN_CO2:
+            mean_state_obs = torch.mean(obs_model.mu[:-1, :], -1)[None, None, :]
+        else:
+            mean_state_obs = torch.mean(obs_model.mu, -1)[None, None, :]
+    elif not PTRAIN_ALG and PTRAIN_ITER != 0:
+        raise Error('Pre-training iterations specified without PTRAIN_ALG input. Must request PTRAIN_ALG = "L1" or "L2".')
+
+    #Separate neural network optimizer.
+    ELBO_params = net.parameters()
+    ELBO_opt = optim.Adamax(ELBO_params, lr = ELBO_LR)
+
+    #Set optimizer LR scheduler.
+    ELBO_opt.param_groups[0]['lr'] = ELBO_LR
+    elbo_warmup_factor = ELBO_WARMUP_INIT_LR / ELBO_LR
+
+    def calc_lr_factor(iteration):
+        if iteration < PTRAIN_ITER + ELBO_WARMUP_ITER:
+            return elbo_warmup_factor
+        else:
+            elbo_decay_factor = ELBO_LR_DECAY ** math.floor((iteration - PTRAIN_ITER - ELBO_WARMUP_ITER) / ELBO_LR_DECAY_STEP_SIZE)
+            return min(1, elbo_decay_factor if elbo_decay_factor != 0 else 1)
+
+    ELBO_sched = optim.lr_scheduler.LambdaLR(ELBO_opt, lr_lambda = calc_lr_factor, last_iteration = -1)
+
     #Convert dictionary of fixed parameter Numpy arrays to [1, num_params] tensor and dictionary of size [1] tensors.
     theta = torch.tensor([v.item() for v in list(PARAMS_DICT.values())])[None, :] # torch.Size([1, num_params])
     theta_dict = {k: torch.tensor(v).unsqueeze(0) for k, v in PARAMS_DICT.items()}
@@ -399,23 +411,24 @@ def train_NN_minibatch(DEVICE, NN_ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: in
     print(f'\nStarting autoencoder training. {PTRAIN_ITER} pre-training iterations and {ELBO_ITER} ELBO training iterations for {T_ITER} total iterations specified.')    
     net.train()
     with tqdm(total = T_ITER, desc = f'Learning SDE and hidden parameters.', position = -1) as tq:
-        for it in range(T_ITER):
-            
+        for iteration in range(T_ITER):
+
             # Sample x_{u-1:v}|y, theta (unless u = 0, then sample x_{u:v})
-            if batch_indices is not None:
-                lidx = max(0, batch_indices[it] - 1)              # u-1 if u > 0, else 0
-                ridx = min(N, batch_indices[it] + minibatch_size) # v
+            if batch_indices:
+                lidx = max(0, batch_indices[iteration] - 1)              # u-1 if u > 0, else 0
+                ridx = min(N, batch_indices[iteration] + minibatch_size) # v
             else:
                 lidx, ridx = 0, N
-            C_PATH, log_prob = net(BATCH_SIZE, lidx, ridx, theta = theta) #Obtain paths with solutions to times including t0.
+            
+            C_PATH, log_prob = net(BATCH_SIZE, lidx, ridx) #Obtain paths with solutions to times including t0.
             
             #NaN handling            
             nan_count = 0
             #Check for NaNs in x.
             if torch.isnan(C_PATH).any():
-                raise ValueError(f'\nnan in x at niter: {it}. Check gradient clipping and learning rate to start.')
+                raise ValueError(f'\nnan in x at niter: {iteration}. Check gradient clipping and learning rate to start.')
 
-            if PTRAIN_ALG and it < PTRAIN_ITER:
+            if PTRAIN_ALG and iteration < PTRAIN_ITER:
                 ptrain_opt.zero_grad()
 
                 if PTRAIN_ALG == 'L1':
@@ -430,8 +443,8 @@ def train_NN_minibatch(DEVICE, NN_ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: in
                     best_loss_norm = norm if norm < best_loss_norm else best_loss_norm
                     norm_losses.append(norm.item())
 
-                if (it + 1) % PRINT_EVERY == 0:
-                    print(f'\nMoving average norm loss at {it + 1} iterations is: {sum(norm_losses[-10:]) / len(norm_losses[-10:])}. Best norm loss value is: {best_loss_norm}.')
+                if (iteration + 1) % PRINT_EVERY == 0:
+                    print(f'\nMoving average norm loss at {iteration + 1} iterations is: {sum(norm_losses[-10:]) / len(norm_losses[-10:])}. Best norm loss value is: {best_loss_norm}.')
                     print('\nC_PATH mean =', C_PATH.mean(-2))
                     print('\nC_PATH =', C_PATH)
 
@@ -439,52 +452,49 @@ def train_NN_minibatch(DEVICE, NN_ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: in
                 torch.nn.utils.clip_grad_norm_(net.parameters(), 3.0)                                
                 ptrain_opt.step()
 
-                if it % PTRAIN_LR_DECAY_STEP_SIZE == 0:
-                    ptrain_opt.param_groups[0]['lr'] *= PTRAIN_LR_DECAY
-
             else:
-                nn_ELBO_opt.zero_grad()
+                ELBO_opt.zero_grad()
 
                 # Compute likelihood and ELBO
                 # Negative ELBO: -log p(theta) + log q(theta) - log p(y_0|x_0, theta) [already accounted for in obs_model output when learning x_0] + log q(x|theta) - log p(x|theta) - log p(y|x, theta)
                 if LEARN_CO2:
                     log_lik, drift, diffusion_sqrt, x_add_CO2 = calc_log_lik_minibatch_CO2(C_PATH, theta_dict, DT, SBM_SDE, INIT_PRIOR, lidx, ridx, LIK_DIST)
-                    ELBO = N/minibatch_size * (log_prob.sum(-1).mean() - log_lik.mean() - obs_model_minibatch(x_add_CO2, theta_dict, lidx, ridx))
+                    ELBO = -log_p_theta.mean() + log_q_theta.mean() + N/minibatch_size * (log_prob.sum(-1).mean() - log_lik.mean() - obs_model_minibatch(x_add_CO2, theta_dict, lidx, ridx))
                 else:
                     log_lik, drift, diffusion_sqrt = calc_log_lik_minibatch(C_PATH, theta_dict, DT, SBM_SDE, INIT_PRIOR, lidx, ridx, LIK_DIST)
-                    ELBO = N/minibatch_size * (log_prob.sum(-1).mean() - log_lik.mean() - obs_model_minibatch(C_PATH, theta_dict, lidx, ridx))
+                    ELBO = -log_p_theta.mean() + log_q_theta.mean() + N/minibatch_size * (log_prob.sum(-1).mean() - log_lik.mean() - obs_model_minibatch(C_PATH, theta_dict, lidx, ridx))
 
                 # Record ELBO history and best ELBO so far
                 best_loss_ELBO = ELBO if ELBO < best_loss_ELBO else best_loss_ELBO
                 ELBO_losses.append(ELBO.item())
 
                 # Print info
-                if (it + 1) % PRINT_EVERY == 0:
-                    print(f'\ndrift at {it + 1} iterations: {drift}')
-                    print(f'\ndiffusion_sqrt at {it + 1} iterations = {diffusion_sqrt}')
-                    print(f'\nMoving average ELBO loss at {it + 1} iterations is: {sum(ELBO_losses[-10:]) / len(ELBO_losses[-10:])}. Best ELBO loss value is: {best_loss_ELBO}.')
+                if (iteration + 1) % PRINT_EVERY == 0:
+                    print(f'\nMoving average ELBO at {iteration + 1} iterations = {sum(ELBO_losses[-10:]) / len(ELBO_losses[-10:])}. Best ELBO value is: {best_loss_ELBO}.')
+                    print(f"\nLearning rate at {iteration + 1} iterations = {ELBO_opt.param_groups[0]['lr']}") 
                     if LEARN_CO2:
-                        print('\nC_PATH with CO2 mean =', x_add_CO2.mean(-2))
-                        print('\nC_PATH with CO2 =', x_add_CO2)
+                        print(f'\nC_PATH with CO2 mean = \n{x_add_CO2.mean(-2)}')
+                        print(f'\nC_PATH with CO2 = \n{x_add_CO2}')
                     else:
-                        print('\nC_PATH mean =', C_PATH.mean(-2))
-                        print('\nC_PATH =', C_PATH)
+                        print(f'\nC_PATH mean = \n{C_PATH.mean(-2)}')
+                        print(f'\nC_PATH = \n{C_PATH}')
+                    print(f'\ndrift at {iteration + 1} iterations = \n{drift}')
+                    print(f'\ndiffusion_sqrt at {iteration + 1} iterations = \n{diffusion_sqrt}')
 
                 # Take gradient step
                 ELBO.backward()
-                torch.nn.utils.clip_grad_norm_(nn_ELBO_params, 5.0)
-                nn_ELBO_opt.step()
+                torch.nn.utils.clip_grad_norm_(ELBO_params, 5.0)
+                ELBO_opt.step()
 
-                if it % NN_ELBO_LR_DECAY_STEP_SIZE == 0:
-                    nn_ELBO_opt.param_groups[0]['lr'] *= NN_ELBO_LR_DECAY
+            ELBO_sched.step()                
 
             if DEBUG_SAVE_DIR:
-                to_save = {'model': net, 'model_state_dict': net.state_dict(), 'ELBO_opt_state_dict': nn_ELBO_opt.state_dict(), 
+                to_save = {'model': net, 'model_state_dict': net.state_dict(), 'ELBO_opt_state_dict': ELBO_opt.state_dict(), 
                         'ptrain_opt_state_dict': ptrain_opt.state_dict()}
-                debug_saver.save(to_save, it + 1)
+                debug_saver.save(to_save, iteration + 1)
 
             tq.update()
 
     print('\nAll finished! Now, we need to check outputs to see if things worked...')
     
-    return net, obs_model_minibatch, norm_losses, ELBO_losses, SBM_SDE
+    return net, obs_model, norm_losses, ELBO_losses, SBM_SDE, batch_indices

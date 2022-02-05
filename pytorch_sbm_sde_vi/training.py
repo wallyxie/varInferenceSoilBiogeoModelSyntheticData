@@ -16,6 +16,8 @@ import torch.optim as optim
 from mean_field import *
 from obs_and_flow import *
 from SBM_SDE_classes import *
+from TruncatedNormal import *
+from LogitNormal import *
 
 '''
 This module containins the `calc_log_lik` and `train` functions for pre-training and ELBO training of the soil biogeochemical model SDE systems.
@@ -148,29 +150,29 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
     ELBO_opt.param_groups[0]['lr'] = ELBO_LR
     elbo_warmup_factor = ELBO_WARMUP_INIT_LR / ELBO_LR
 
-    def calc_lr_factor(epoch):
-        if epoch < PTRAIN_ITER + ELBO_WARMUP_ITER:
+    def calc_lr_factor(iteration):
+        if iteration < PTRAIN_ITER + ELBO_WARMUP_ITER:
             return elbo_warmup_factor
         else:
-            elbo_decay_factor = ELBO_LR_DECAY ** math.floor((epoch - PTRAIN_ITER - ELBO_WARMUP_ITER) / ELBO_LR_DECAY_STEP_SIZE)
+            elbo_decay_factor = ELBO_LR_DECAY ** math.floor((iteration - PTRAIN_ITER - ELBO_WARMUP_ITER) / ELBO_LR_DECAY_STEP_SIZE)
             return min(1, elbo_decay_factor if elbo_decay_factor != 0 else 1)
 
-    ELBO_sched = optim.lr_scheduler.LambdaLR(ELBO_opt, lr_lambda = calc_lr_factor, last_epoch = -1)
+    ELBO_sched = optim.lr_scheduler.LambdaLR(ELBO_opt, lr_lambda = calc_lr_factor, last_iteration = -1)
     
     #Training loop
     print(f'\nStarting autoencoder training. {PTRAIN_ITER} pre-training iterations, {ELBO_WARMUP_ITER} ELBO warmup iterations, and {ELBO_ITER} ELBO training iterations for {T_ITER} total iterations specified.')        
     net.train()        
     with tqdm(total = T_ITER, desc = f'Learning SDE and hidden parameters.', position = -1) as tq:
-        for epoch in range(T_ITER):
+        for iteration in range(T_ITER):
             C_PATH, log_prob = net(BATCH_SIZE) #Obtain paths with solutions to times including t0.
             
             #NaN handling            
             nan_count = 0
             #Check for NaNs in x.
             if torch.isnan(C_PATH).any():
-                raise ValueError(f'nan in x at niter: {epoch}. Check gradient clipping and learning rate to start.')
+                raise ValueError(f'nan in x at niter: {iteration}. Check gradient clipping and learning rate to start.')
             
-            if PTRAIN_ALG and epoch < PTRAIN_ITER:
+            if PTRAIN_ALG and iteration < PTRAIN_ITER:
                 ptrain_opt.zero_grad()
 
                 if PTRAIN_ALG == 'L1':
@@ -185,8 +187,8 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                     best_loss_norm = norm if norm < best_loss_norm else best_loss_norm
                     norm_losses.append(norm.item())
 
-                if (epoch + 1) % PRINT_EVERY == 0:
-                    print(f'\nMoving average norm loss at {epoch + 1} iterations is: {sum(norm_losses[-10:]) / len(norm_losses[-10:])}. Best norm loss value is: {best_loss_norm}.')
+                if (iteration + 1) % PRINT_EVERY == 0:
+                    print(f'\nMoving average norm loss at {iteration + 1} iterations is: {sum(norm_losses[-10:]) / len(norm_losses[-10:])}. Best norm loss value is: {best_loss_norm}.')
                     print('\nC_PATH mean =', C_PATH.mean(-2))
                     print('\nC_PATH =', C_PATH)
 
@@ -219,19 +221,19 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                 best_loss_ELBO = ELBO if ELBO < best_loss_ELBO else best_loss_ELBO
                 ELBO_losses.append(ELBO.item())
 
-                if (epoch + 1) % PRINT_EVERY == 0:
-                    print(f'\nMoving average ELBO at {epoch + 1} iterations = {sum(ELBO_losses[-10:]) / len(ELBO_losses[-10:])}. Best ELBO value is: {best_loss_ELBO}.')
-                    print(f"\nLearning rate at {epoch + 1} iterations = {ELBO_opt.param_groups[0]['lr']}") 
+                if (iteration + 1) % PRINT_EVERY == 0:
+                    print(f'\nMoving average ELBO at {iteration + 1} iterations = {sum(ELBO_losses[-10:]) / len(ELBO_losses[-10:])}. Best ELBO value is: {best_loss_ELBO}.')
+                    print(f"\nLearning rate at {iteration + 1} iterations = {ELBO_opt.param_groups[0]['lr']}") 
                     if LEARN_CO2:
                         print(f'\nC_PATH with CO2 mean = \n{x_add_CO2.mean(-2)}')
                         print(f'\nC_PATH with CO2 = \n{x_add_CO2}')
                     else:
                         print(f'\nC_PATH mean = \n{C_PATH.mean(-2)}')
                         print(f'\nC_PATH = \n{C_PATH}')
-                    print(f'\ndrift at {epoch + 1} iterations = \n{drift}')
-                    print(f'\ndiffusion_sqrt at {epoch + 1} iterations = \n{diffusion_sqrt}')
+                    print(f'\ndrift at {iteration + 1} iterations = \n{drift}')
+                    print(f'\ndiffusion_sqrt at {iteration + 1} iterations = \n{diffusion_sqrt}')
                     print('\ntheta_dict means = \n', {key: theta_dict[key].mean() for key in param_names})
-                    print(f'\nparent_loc_scale_dict at {epoch + 1} iterations = \n{parent_loc_scale_dict}')
+                    print(f'\nparent_loc_scale_dict at {iteration + 1} iterations = \n{parent_loc_scale_dict}')
 
                 ELBO.backward()
                 torch.nn.utils.clip_grad_norm_(ELBO_params, 5.0)
@@ -242,7 +244,7 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
             if DEBUG_SAVE_DIR:
                 to_save = {'model': net, 'model_state_dict': net.state_dict(), 'ELBO_opt_state_dict': ELBO_opt.state_dict(), 
                         'ptrain_opt_state_dict': ptrain_opt.state_dict(), 'q_theta': q_theta}
-                debug_saver.save(to_save, epoch + 1)
+                debug_saver.save(to_save, iteration + 1)
 
             tq.update()
 
@@ -314,14 +316,14 @@ def train_nn(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
     ELBO_opt.param_groups[0]['lr'] = ELBO_LR
     elbo_warmup_factor = ELBO_WARMUP_INIT_LR / ELBO_LR
 
-    def calc_lr_factor(epoch):
-        if epoch < PTRAIN_ITER + ELBO_WARMUP_ITER:
+    def calc_lr_factor(iteration):
+        if iteration < PTRAIN_ITER + ELBO_WARMUP_ITER:
             return elbo_warmup_factor
         else:
-            elbo_decay_factor = ELBO_LR_DECAY ** math.floor((epoch - PTRAIN_ITER - ELBO_WARMUP_ITER) / ELBO_LR_DECAY_STEP_SIZE)
+            elbo_decay_factor = ELBO_LR_DECAY ** math.floor((iteration - PTRAIN_ITER - ELBO_WARMUP_ITER) / ELBO_LR_DECAY_STEP_SIZE)
             return min(1, elbo_decay_factor if elbo_decay_factor != 0 else 1)
 
-    ELBO_sched = optim.lr_scheduler.LambdaLR(ELBO_opt, lr_lambda = calc_lr_factor, last_epoch = -1)
+    ELBO_sched = optim.lr_scheduler.LambdaLR(ELBO_opt, lr_lambda = calc_lr_factor, last_iteration = -1)
 
     #Convert dictionary of fixed parameter Numpy arrays to [1, num_params] tensor and dictionary of size [1] tensors.
     theta = torch.tensor([v.item() for v in list(PARAMS_DICT.values())])[None, :] # torch.Size([1, num_params])
@@ -331,7 +333,7 @@ def train_nn(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
     print(f'\nStarting autoencoder training. {PTRAIN_ITER} pre-training iterations and {ELBO_ITER} ELBO training iterations for {T_ITER} total iterations specified.')    
     net.train()
     with tqdm(total = T_ITER, desc = f'Learning SDE and hidden parameters.', position = -1) as tq:
-        for epoch in range(T_ITER):
+        for iteration in range(T_ITER):
             
             C_PATH, log_prob = net(BATCH_SIZE) #Obtain paths with solutions to times including t0.
             
@@ -339,9 +341,9 @@ def train_nn(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
             nan_count = 0
             #Check for NaNs in x.
             if torch.isnan(C_PATH).any():
-                raise ValueError(f'\nnan in x at niter: {epoch}. Check gradient clipping and learning rate to start.')
+                raise ValueError(f'\nnan in x at niter: {iteration}. Check gradient clipping and learning rate to start.')
 
-            if PTRAIN_ALG and epoch < PTRAIN_ITER:
+            if PTRAIN_ALG and iteration < PTRAIN_ITER:
                 ptrain_opt.zero_grad()
 
                 if PTRAIN_ALG == 'L1':
@@ -356,8 +358,8 @@ def train_nn(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                     best_loss_norm = norm if norm < best_loss_norm else best_loss_norm
                     norm_losses.append(norm.item())
 
-                if (epoch + 1) % PRINT_EVERY == 0:
-                    print(f'\nMoving average norm loss at {epoch + 1} iterations is: {sum(norm_losses[-10:]) / len(norm_losses[-10:])}. Best norm loss value is: {best_loss_norm}.')
+                if (iteration + 1) % PRINT_EVERY == 0:
+                    print(f'\nMoving average norm loss at {iteration + 1} iterations is: {sum(norm_losses[-10:]) / len(norm_losses[-10:])}. Best norm loss value is: {best_loss_norm}.')
                     print('\nC_PATH mean =', C_PATH.mean(-2))
                     print('\nC_PATH =', C_PATH)
 
@@ -382,17 +384,17 @@ def train_nn(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                 ELBO_losses.append(ELBO.item())
 
                 # Print info
-                if (epoch + 1) % PRINT_EVERY == 0:
-                    print(f'\nMoving average ELBO at {epoch + 1} iterations = {sum(ELBO_losses[-10:]) / len(ELBO_losses[-10:])}. Best ELBO value is: {best_loss_ELBO}.')
-                    print(f"\nLearning rate at {epoch + 1} iterations = {ELBO_opt.param_groups[0]['lr']}") 
+                if (iteration + 1) % PRINT_EVERY == 0:
+                    print(f'\nMoving average ELBO at {iteration + 1} iterations = {sum(ELBO_losses[-10:]) / len(ELBO_losses[-10:])}. Best ELBO value is: {best_loss_ELBO}.')
+                    print(f"\nLearning rate at {iteration + 1} iterations = {ELBO_opt.param_groups[0]['lr']}") 
                     if LEARN_CO2:
                         print(f'\nC_PATH with CO2 mean = \n{x_add_CO2.mean(-2)}')
                         print(f'\nC_PATH with CO2 = \n{x_add_CO2}')
                     else:
                         print(f'\nC_PATH mean = \n{C_PATH.mean(-2)}')
                         print(f'\nC_PATH = \n{C_PATH}')
-                    print(f'\ndrift at {epoch + 1} iterations = \n{drift}')
-                    print(f'\ndiffusion_sqrt at {epoch + 1} iterations = \n{diffusion_sqrt}')
+                    print(f'\ndrift at {iteration + 1} iterations = \n{drift}')
+                    print(f'\ndiffusion_sqrt at {iteration + 1} iterations = \n{diffusion_sqrt}')
 
                 # Take gradient step
                 ELBO.backward()
@@ -404,7 +406,7 @@ def train_nn(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
             if DEBUG_SAVE_DIR:
                 to_save = {'model': net, 'model_state_dict': net.state_dict(), 'ELBO_opt_state_dict': ELBO_opt.state_dict(), 
                         'ptrain_opt_state_dict': ptrain_opt.state_dict()}
-                debug_saver.save(to_save, epoch + 1)
+                debug_saver.save(to_save, iteration + 1)
 
             tq.update()
 

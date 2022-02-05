@@ -19,8 +19,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 #Module imports
-from training import *
-from plotting import *
+from training_intmd_minibatch import *
 
 #PyTorch settings
 if torch.cuda.is_available():
@@ -37,6 +36,7 @@ torch.manual_seed(0)
 #IAF SSM time parameters
 dt_flow = 1.0 #Increased from 0.1 to reduce memory.
 t = 5000 #In hours.
+minibatch_t = 1000
 n = int(t / dt_flow) + 1
 t_span = np.linspace(0, t, n)
 t_span_tensor = torch.reshape(torch.Tensor(t_span), [1, n, 1]).to(active_device) #T_span needs to be converted to tensor object. Additionally, facilitates conversion of I_S and I_D to tensor objects.
@@ -62,8 +62,8 @@ num_layers = 5
 reverse = False
 base_state = False
 
-TrainArgs = namedtuple('TrainArgs', 'elbo_iter elbo_lr elbo_lr_decay elbo_lr_decay_step_size elbo_warmup_iter elbo_warmup_lr ptrain_iter ptrain_alg batch_size obs_error_scale prior_scale_factor num_layers reverse base_state')
-train_args = TrainArgs(elbo_iter, elbo_lr, elbo_lr_decay, elbo_lr_decay_step_size, elbo_warmup_iter, elbo_warmup_lr, ptrain_iter, ptrain_alg, batch_size, obs_error_scale, prior_scale_factor, num_layers, reverse, base_state)
+TrainArgs = namedtuple('TrainArgs', 'elbo_iter elbo_lr elbo_lr_decay elbo_lr_decay_step_size elbo_warmup_iter elbo_warmup_lr ptrain_iter ptrain_alg batch_size obs_error_scale prior_scale_factor num_layers reverse base_state minibatch_t')
+train_args = TrainArgs(elbo_iter, elbo_lr, elbo_lr_decay, elbo_lr_decay_step_size, elbo_warmup_iter, elbo_warmup_lr, ptrain_iter, ptrain_alg, batch_size, obs_error_scale, prior_scale_factor, num_layers, reverse, base_state, minibatch_t)
 
 #Specify desired SBM SDE model type and details.
 state_dim_SCON = 3
@@ -92,7 +92,7 @@ i_d_tensor = i_d(t_span_tensor).to(active_device) #Exogenous DOC input function
 csv_data_path = os.path.join('generated_data/', 'SCON-SS_CO2_logit_short_2021_11_17_20_16_sample_y_t_5000_dt_0-01_sd_scale_0-25.csv')
 
 #Call training loop function for SCON-SS.
-net, q_theta, p_theta, obs_model, norm_hist, ELBO_hist, SBM_SDE_instance = train(
+net, q_theta, p_theta, obs_model, norm_hist, ELBO_hist, SBM_SDE_instance, batch_indices = train_minibatch(
         active_device, elbo_lr, elbo_iter, batch_size,
         csv_data_path, obs_error_scale, t, dt_flow, n, 
         t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
@@ -100,7 +100,8 @@ net, q_theta, p_theta, obs_model, norm_hist, ELBO_hist, SBM_SDE_instance = train
         SCON_SS_priors_details, fix_theta_dict, learn_CO2, theta_dist, 
         ELBO_WARMUP_ITER = elbo_warmup_iter, ELBO_WARMUP_INIT_LR = elbo_warmup_lr, ELBO_LR_DECAY = elbo_lr_decay, ELBO_LR_DECAY_STEP_SIZE = elbo_lr_decay_step_size,
         PRINT_EVERY = 1, DEBUG_SAVE_DIR = None, PTRAIN_ITER = ptrain_iter, PTRAIN_ALG = ptrain_alg,
-        NUM_LAYERS = num_layers, REVERSE = reverse, BASE_STATE = base_state)
+        NUM_LAYERS = num_layers, REVERSE = reverse, BASE_STATE = base_state,
+        MINIBATCH_T = minibatch_t)
 print('Training finished. Moving to saving of output files.')
 
 #Save net and ELBO files.
@@ -117,6 +118,7 @@ p_theta_save_string = os.path.join(outputs_folder, 'p_theta' + save_string)
 obs_model_save_string = os.path.join(outputs_folder, 'obs_model' + save_string)
 ELBO_save_string = os.path.join(outputs_folder, 'ELBO' + save_string)
 SBM_SDE_instance_save_string = os.path.join(outputs_folder, 'SBM_SDE_instance' + save_string)
+batch_indices_save_string = os.path.join(outputs_folder, 'batch_indices' + save_string)
 torch.save(train_args, train_args_save_string)
 torch.save(net, net_save_string)
 torch.save(net.state_dict(), net_state_dict_save_string) #For loading net on CPU.
@@ -126,16 +128,5 @@ torch.save(p_theta, p_theta_save_string)
 torch.save(obs_model, obs_model_save_string)
 torch.save(ELBO_hist, ELBO_save_string)
 torch.save(SBM_SDE_instance, SBM_SDE_instance_save_string)
+torch.save(batch_indices, batch_indices_instance_save_string)
 print('Output files saving finished. Moving to plotting.')
-
-#Plot training posterior results and ELBO history.
-net.eval()
-x, _ = net(eval_batch_size)
-plots_folder = 'training_plots/'
-plot_elbo(ELBO_hist, elbo_iter, elbo_warmup_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, elbo_lr_decay_step_size, elbo_warmup_lr, prior_scale_factor, plots_folder, now_string, xmin = elbo_warmup_iter + int(elbo_iter / 2))
-print('ELBO plotting finished.')
-plot_states_post(x, q_theta, obs_model, SBM_SDE_instance, elbo_iter, elbo_warmup_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, elbo_lr_decay_step_size, elbo_warmup_lr, prior_scale_factor, plots_folder, now_string, fix_theta_dict, learn_CO2, ymin_list = [0, 0, 0, 0], ymax_list = [70., 8., 11., 0.025])
-print('States fit plotting finished.')
-true_theta = torch.load(os.path.join('generated_data/', 'SCON-SS_CO2_logit_short_2021_11_17_20_16_sample_y_t_5000_dt_0-01_sd_scale_0-25_rsample.pt'), map_location = active_device)
-plot_theta(p_theta, q_theta, true_theta, elbo_iter, elbo_warmup_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, elbo_lr_decay_step_size, elbo_warmup_lr, prior_scale_factor, plots_folder, now_string)
-print('Prior-posterior pair plotting finished.')
