@@ -35,8 +35,8 @@ torch.manual_seed(0)
 
 #IAF SSM time parameters
 dt_flow = 1.0 #Increased from 0.1 to reduce memory.
-t = 2000 #In hours.
-minibatch_t = 2000
+t = 1000 #In hours.
+minibatch_t = 500
 n = int(t / dt_flow) + 1
 t_span = np.linspace(0, t, n)
 t_span_tensor = torch.reshape(torch.Tensor(t_span), [1, n, 1]).to(active_device) #T_span needs to be converted to tensor object. Additionally, facilitates conversion of I_S and I_D to tensor objects.
@@ -46,11 +46,11 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-elbo_iter = 6
+elbo_iter = 50000
 elbo_lr = 1e-2
 elbo_lr_decay = 0.7
 elbo_lr_decay_step_size = 5000
-elbo_warmup_iter = 2
+elbo_warmup_iter = 5000
 elbo_warmup_lr = 1e-6
 ptrain_iter = 0
 ptrain_alg = 'L1'
@@ -128,5 +128,5 @@ torch.save(p_theta, p_theta_save_string)
 torch.save(obs_model, obs_model_save_string)
 torch.save(ELBO_hist, ELBO_save_string)
 torch.save(SBM_SDE_instance, SBM_SDE_instance_save_string)
-torch.save(batch_indices, batch_indices_instance_save_string)
+torch.save(batch_indices, batch_indices_save_string)
 print('Output files saving finished. Moving to plotting.')
