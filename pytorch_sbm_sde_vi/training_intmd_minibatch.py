@@ -205,7 +205,7 @@ def train_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
             elbo_decay_factor = ELBO_LR_DECAY ** math.floor((iteration - PTRAIN_ITER - ELBO_WARMUP_ITER) / ELBO_LR_DECAY_STEP_SIZE)
             return min(1, elbo_decay_factor if elbo_decay_factor != 0 else 1)
 
-    ELBO_sched = optim.lr_scheduler.LambdaLR(ELBO_opt, lr_lambda = calc_lr_factor, last_iteration = -1)
+    ELBO_sched = optim.lr_scheduler.LambdaLR(ELBO_opt, lr_lambda = calc_lr_factor)
     
     #Training loop
     print(f'\nStarting autoencoder training. {PTRAIN_ITER} pre-training iterations, {ELBO_WARMUP_ITER} ELBO warmup iterations, and {ELBO_ITER} ELBO training iterations for {T_ITER} total iterations specified.')        
@@ -401,7 +401,7 @@ def train_nn_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
             elbo_decay_factor = ELBO_LR_DECAY ** math.floor((iteration - PTRAIN_ITER - ELBO_WARMUP_ITER) / ELBO_LR_DECAY_STEP_SIZE)
             return min(1, elbo_decay_factor if elbo_decay_factor != 0 else 1)
 
-    ELBO_sched = optim.lr_scheduler.LambdaLR(ELBO_opt, lr_lambda = calc_lr_factor, last_iteration = -1)
+    ELBO_sched = optim.lr_scheduler.LambdaLR(ELBO_opt, lr_lambda = calc_lr_factor)
 
     #Convert dictionary of fixed parameter Numpy arrays to [1, num_params] tensor and dictionary of size [1] tensors.
     theta = torch.tensor([v.item() for v in list(PARAMS_DICT.values())])[None, :] # torch.Size([1, num_params])
