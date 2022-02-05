@@ -142,7 +142,7 @@ def train_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
         batch_indices = None
 
     #Establish neural network.
-    if batch_indices:
+    if batch_indices is not None:
         net = SDEFlowMinibatch(DEVICE, obs_model, SBM_SDE.state_dim, T, DT, N, NUM_LAYERS = NUM_LAYERS, REVERSE = REVERSE, BASE_STATE = BASE_STATE, UNIBATCH_MODE = False).to(DEVICE)
     else:
         net = SDEFlowMinibatch(DEVICE, obs_model, SBM_SDE.state_dim, T, DT, N, NUM_LAYERS = NUM_LAYERS, REVERSE = REVERSE, BASE_STATE = BASE_STATE, UNIBATCH_MODE = True).to(DEVICE)        
@@ -214,7 +214,7 @@ def train_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
         for iteration in range(T_ITER):
 
             # Sample x_{u-1:v}|y, theta (unless u = 0, then sample x_{u:v})
-            if batch_indices:
+            if batch_indices is not None:
                 lidx = max(0, batch_indices[iteration] - 1)              # u-1 if u > 0, else 0
                 ridx = min(N, batch_indices[iteration] + minibatch_size) # v
             else:
@@ -359,7 +359,7 @@ def train_nn_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
         batch_indices = None
 
     #Establish neural network.
-    if batch_indices:
+    if batch_indices is not None:
         net = SDEFlowMinibatch(DEVICE, obs_model, SBM_SDE.state_dim, T, DT, N, NUM_LAYERS = NUM_LAYERS, REVERSE = REVERSE, BASE_STATE = BASE_STATE, UNIBATCH_MODE = False).to(DEVICE)
     else:
         net = SDEFlowMinibatch(DEVICE, obs_model, SBM_SDE.state_dim, T, DT, N, NUM_LAYERS = NUM_LAYERS, REVERSE = REVERSE, BASE_STATE = BASE_STATE, UNIBATCH_MODE = True).to(DEVICE)
@@ -414,7 +414,7 @@ def train_nn_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
         for iteration in range(T_ITER):
 
             # Sample x_{u-1:v}|y, theta (unless u = 0, then sample x_{u:v})
-            if batch_indices:
+            if batch_indices is not None:
                 lidx = max(0, batch_indices[iteration] - 1)              # u-1 if u > 0, else 0
                 ridx = min(N, batch_indices[iteration] + minibatch_size) # v
             else:
