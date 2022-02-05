@@ -121,9 +121,9 @@ def train_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
     obs_model_minibatch = ObsModelMinibatch(TIMES = obs_times, DT = DT, MU = obs_means, SCALE = obs_error).to(DEVICE)
 
     if LEARN_CO2 and PTRAIN_ITER != 0 and PTRAIN_ALG:
-        mean_state_obs = torch.mean(obs_model.mu[:-1, :], -1)[None, None, :]
+        mean_state_obs = torch.mean(obs_model_minibatch.mu[:-1, :], -1)[None, None, :]
     elif not LEARN_CO2 and PTRAIN_ITER != 0 and PTRAIN_ALG:
-        mean_state_obs = torch.mean(obs_model.mu, -1)[None, None, :]
+        mean_state_obs = torch.mean(obs_model_minibatch.mu, -1)[None, None, :]
 
     # Sample minibatch indices
     minibatch_size = int(MINIBATCH_T / DT)
@@ -143,9 +143,9 @@ def train_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
 
     #Establish neural network.
     if batch_indices is not None:
-        net = SDEFlowMinibatch(DEVICE, obs_model, SBM_SDE.state_dim, T, DT, N, NUM_LAYERS = NUM_LAYERS, REVERSE = REVERSE, BASE_STATE = BASE_STATE, UNIBATCH_MODE = False).to(DEVICE)
+        net = SDEFlowMinibatch(DEVICE, obs_model_minibatch, SBM_SDE.state_dim, T, DT, N, NUM_LAYERS = NUM_LAYERS, REVERSE = REVERSE, BASE_STATE = BASE_STATE, UNIBATCH_MODE = False).to(DEVICE)
     else:
-        net = SDEFlowMinibatch(DEVICE, obs_model, SBM_SDE.state_dim, T, DT, N, NUM_LAYERS = NUM_LAYERS, REVERSE = REVERSE, BASE_STATE = BASE_STATE, UNIBATCH_MODE = True).to(DEVICE)        
+        net = SDEFlowMinibatch(DEVICE, obs_model_minibatch, SBM_SDE.state_dim, T, DT, N, NUM_LAYERS = NUM_LAYERS, REVERSE = REVERSE, BASE_STATE = BASE_STATE, UNIBATCH_MODE = True).to(DEVICE)        
 
     #Initiate model debugging saver.
     if DEBUG_SAVE_DIR:
@@ -185,9 +185,9 @@ def train_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
     if PTRAIN_ALG and PTRAIN_ITER != 0:
         ptrain_opt = optim.Adam(net.parameters(), lr = PTRAIN_LR)
         if LEARN_CO2:
-            mean_state_obs = torch.mean(obs_model.mu[:-1, :], -1)[None, None, :]
+            mean_state_obs = torch.mean(obs_model_minibatch.mu[:-1, :], -1)[None, None, :]
         else:
-            mean_state_obs = torch.mean(obs_model.mu, -1)[None, None, :]
+            mean_state_obs = torch.mean(obs_model_minibatch.mu, -1)[None, None, :]
     elif not PTRAIN_ALG and PTRAIN_ITER != 0:
         raise Error('Pre-training iterations specified without PTRAIN_ALG input. Must request PTRAIN_ALG = "L1" or "L2".')
 
@@ -308,7 +308,7 @@ def train_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
 
     print('\nAll finished! Now, we need to check outputs to see if things worked...')            
     
-    return net, q_theta, priors, obs_model, norm_losses, ELBO_losses, SBM_SDE, batch_indices
+    return net, q_theta, priors, obs_model_minibatch, norm_losses, ELBO_losses, SBM_SDE, batch_indices
 
 def train_nn_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
         OBS_CSV_STR: str, OBS_ERROR_SCALE: float, T: float, DT: float, N: int,
@@ -360,9 +360,9 @@ def train_nn_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
 
     #Establish neural network.
     if batch_indices is not None:
-        net = SDEFlowMinibatch(DEVICE, obs_model, SBM_SDE.state_dim, T, DT, N, NUM_LAYERS = NUM_LAYERS, REVERSE = REVERSE, BASE_STATE = BASE_STATE, UNIBATCH_MODE = False).to(DEVICE)
+        net = SDEFlowMinibatch(DEVICE, obs_model_minibatch, SBM_SDE.state_dim, T, DT, N, NUM_LAYERS = NUM_LAYERS, REVERSE = REVERSE, BASE_STATE = BASE_STATE, UNIBATCH_MODE = False).to(DEVICE)
     else:
-        net = SDEFlowMinibatch(DEVICE, obs_model, SBM_SDE.state_dim, T, DT, N, NUM_LAYERS = NUM_LAYERS, REVERSE = REVERSE, BASE_STATE = BASE_STATE, UNIBATCH_MODE = True).to(DEVICE)
+        net = SDEFlowMinibatch(DEVICE, obs_model_minibatch, SBM_SDE.state_dim, T, DT, N, NUM_LAYERS = NUM_LAYERS, REVERSE = REVERSE, BASE_STATE = BASE_STATE, UNIBATCH_MODE = True).to(DEVICE)
 
     #Initiate model debugging saver.
     if DEBUG_SAVE_DIR:
