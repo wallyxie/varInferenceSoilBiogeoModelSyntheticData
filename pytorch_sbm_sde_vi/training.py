@@ -33,12 +33,12 @@ BoolAndString = Union[bool, str]
 ##ELBO OPTIMIZATION FUNCTIONS##
 ###############################
 
-def calc_log_lik2(C_PATH: torch.Tensor,
+def calc_log_lik(C_PATH: torch.Tensor,
         PARAMS_DICT: DictOfTensors,
         DT: float, 
-        SBM_SDE_CLASS, 
-        INIT_PRIOR,
-        LEARN_CO2
+        SBM_SDE_CLASS: type,
+        INIT_PRIOR: torch.distributions.distribution.Distribution,
+        LEARN_CO2: bool
         ):
     if LEARN_CO2:
         drift, diffusion_sqrt, x_add_CO2 = SBM_SDE_CLASS.drift_diffusion_add_CO2(C_PATH, PARAMS_DICT) #Appropriate indexing of tensors corresponding to data generating process now handled in `drift_diffusion` class method. Recall that drift diffusion will use C_PATH[:, :-1, :], I_S_TENSOR[:, 1:, :], I_D_TENSOR[:, 1:, :], TEMP_TENSOR[:, 1:, :]. 
@@ -211,10 +211,10 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                         theta_dict = {**theta_dict, **FIX_THETA_DICT}
 
                 if LEARN_CO2:
-                    log_lik, drift, diffusion_sqrt, x_add_CO2 = calc_log_lik2(C_PATH, theta_dict, DT, SBM_SDE, INIT_PRIOR, LEARN_CO2)
+                    log_lik, drift, diffusion_sqrt, x_add_CO2 = calc_log_lik(C_PATH, theta_dict, DT, SBM_SDE, INIT_PRIOR, LEARN_CO2)
                     ELBO = -log_p_theta.mean() + log_q_theta.mean() + log_prob.mean() - log_lik.mean() - obs_model(x_add_CO2, theta_dict)
                 else:
-                    log_lik, drift, diffusion_sqrt = calc_log_lik2(C_PATH, theta_dict, DT, SBM_SDE, INIT_PRIOR, LEARN_CO2)
+                    log_lik, drift, diffusion_sqrt = calc_log_lik(C_PATH, theta_dict, DT, SBM_SDE, INIT_PRIOR, LEARN_CO2)
                     ELBO = -log_p_theta.mean() + log_q_theta.mean() + log_prob.mean() - log_lik.mean() - obs_model(C_PATH, theta_dict)
 
                 #Negative ELBO: -log p(theta) + log q(theta) - log p(y_0|x_0, theta) [already accounted for in obs_model output when learning x_0] + log q(x|theta) - log p(x|theta) - log p(y|x, theta)
@@ -373,10 +373,10 @@ def train_nn(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                 # Compute likelihood and ELBO
                 # Negative ELBO: -log p(theta) + log q(theta) - log p(y_0|x_0, theta) [already accounted for in obs_model output when learning x_0] + log q(x|theta) - log p(x|theta) - log p(y|x, theta)
                 if LEARN_CO2:
-                    log_lik, drift, diffusion_sqrt, x_add_CO2 = calc_log_lik2(C_PATH, theta_dict, DT, SBM_SDE, INIT_PRIOR, LEARN_CO2)
+                    log_lik, drift, diffusion_sqrt, x_add_CO2 = calc_log_lik(C_PATH, theta_dict, DT, SBM_SDE, INIT_PRIOR, LEARN_CO2)
                     ELBO = log_prob.mean() - log_lik.mean() - obs_model(x_add_CO2, theta_dict)
                 else:
-                    log_lik, drift, diffusion_sqrt = calc_log_lik2(C_PATH, theta_dict, DT, SBM_SDE, INIT_PRIOR, LEARN_CO2)
+                    log_lik, drift, diffusion_sqrt = calc_log_lik(C_PATH, theta_dict, DT, SBM_SDE, INIT_PRIOR, LEARN_CO2)
                     ELBO = log_prob.mean() - log_lik.mean() - obs_model(C_PATH, theta_dict)
 
                 # Record ELBO history and best ELBO so far
