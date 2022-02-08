@@ -33,6 +33,7 @@ else:
 
 torch.set_printoptions(precision = 8)
 torch.manual_seed(0)
+torch.cuda.manual_seed(0)
 
 #IAF SSM time parameters
 dt_flow = 1.0 #Increased from 0.1 to reduce memory.
