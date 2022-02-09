@@ -14,7 +14,7 @@ import torch.optim as optim
 
 #Module imports
 from mean_field import *
-from obs_and_flow_intmd_minibatch import *
+from obs_and_flow import *
 from SBM_SDE_classes_minibatch import *
 from TruncatedNormal import *
 from LogitNormal import *
@@ -33,61 +33,34 @@ BoolAndString = Union[bool, str]
 ##ELBO OPTIMIZATION FUNCTIONS##
 ###############################
 
-def calc_log_lik_minibatch_CO2(C_PATH: torch.Tensor, # (batch_size, minibatch_size + 1, state_dim)
+def calc_log_lik_SBM_SDE_mini(C_PATH: torch.Tensor,
         PARAMS_DICT: DictOfTensors,
         DT: float, 
         SBM_SDE_CLASS: type, 
         INIT_PRIOR: torch.distributions.distribution.Distribution,
-        LIDX: int, RIDX: int,
-        LIK_DIST = 'Normal'
+        LIDX: int, RIDX: int,        
+        LEARN_CO2: bool
         ):
-    if LIK_DIST == 'Normal':
-        drift, diffusion_sqrt, x_add_CO2 = SBM_SDE_CLASS.drift_diffusion_add_CO2(C_PATH, PARAMS_DICT, LIDX, RIDX) #Appropriate indexing of tensors corresponding to data generating process now handled in `drift_diffusion` class method. Recall that drift diffusion will use C_PATH[:, :-1, :], I_S_TENSOR[:, 1:, :], I_D_TENSOR[:, 1:, :], TEMP_TENSOR[:, 1:, :]. 
+    if LEARN_CO2:
+        drift, diffusion_sqrt, x_add_CO2 = SBM_SDE_CLASS.drift_diffusion_add_CO2(C_PATH, PARAMS_DICT) #Appropriate indexing of tensors corresponding to data generating process now handled in `drift_diffusion` class method. Recall that drift diffusion will use C_PATH[:, :-1, :], I_S_TENSOR[:, 1:, :], I_D_TENSOR[:, 1:, :], TEMP_TENSOR[:, 1:, :]. 
         euler_maruyama_state_sample_object = D.multivariate_normal.MultivariateNormal(loc = C_PATH[:, :-1, :] + drift * DT, scale_tril = diffusion_sqrt * math.sqrt(DT)) #C_PATH[:, :-1, :] + drift * DT will diverge from C_PATH if C_PATH values not compatible with x0 and theta. Algorithm aims to minimize gap between computed drift and actual gradient between x_n and x_{n+1}. 
-    
+
         # Compute log p(x|theta) = log p(x|x0, theta) + log p(x0|theta)
         ll = euler_maruyama_state_sample_object.log_prob(C_PATH[:, 1:, :]).sum(-1) # log p(x|x0, theta)
-        if LIDX == 0:
-            ll += INIT_PRIOR.log_prob(C_PATH[:, 0, :]) # log p(x0|theta)
-    elif LIK_DIST == 'TruncatedNormal':
-        drift, diffusion_sqrt, x_add_CO2 = SBM_SDE_CLASS.drift_diffusion_add_CO2(C_PATH, PARAMS_DICT, LIDX, RIDX, diffusion_matrix=False)
-        euler_maruyama_state_sample_object = TruncatedNormal(loc = C_PATH[:, :-1, :] + drift * DT, scale = diffusion_sqrt * math.sqrt(DT), a = 0, b = float('inf'))
+        ll += INIT_PRIOR.log_prob(C_PATH[:, 0, :]) # log p(x0|theta)
 
-        # Compute log p(x|theta) = log p(x|x0, theta) + log p(x0|theta)
-        ll = euler_maruyama_state_sample_object.log_prob(C_PATH[:, 1:, :]).sum((-2, -1)) # log p(x|x0, theta)
-        if LIDX == 0:
-            ll += INIT_PRIOR.log_prob(C_PATH[:, 0, :]).sum(-1) # log p(x0|theta)        
-
-    return ll, drift, diffusion_sqrt, x_add_CO2
-
-def calc_log_lik_minibatch(C_PATH: torch.Tensor, # (batch_size, minibatch_size + 1, state_dim)
-        PARAMS_DICT: DictOfTensors,
-        DT: float, 
-        SBM_SDE_CLASS: type, 
-        INIT_PRIOR: torch.distributions.distribution.Distribution,
-        LIDX: int, RIDX: int,
-        LIK_DIST = 'Normal'
-        ):
-    if LIK_DIST == 'Normal':
-        drift, diffusion_sqrt = SBM_SDE_CLASS.drift_diffusion(C_PATH, PARAMS_DICT, LIDX, RIDX) #Appropriate indexing of tensors corresponding to data generating process now handled in `drift_diffusion` class method. Recall that drift diffusion will use C_PATH[:, :-1, :], I_S_TENSOR[:, 1:, :], I_D_TENSOR[:, 1:, :], TEMP_TENSOR[:, 1:, :]. 
+        return ll, drift, diffusion_sqrt, x_add_CO2
+    else:
+        drift, diffusion_sqrt = SBM_SDE_CLASS.drift_diffusion(C_PATH, PARAMS_DICT) #Appropriate indexing of tensors corresponding to data generating process now handled in `drift_diffusion` class method. Recall that drift diffusion will use C_PATH[:, :-1, :], I_S_TENSOR[:, 1:, :], I_D_TENSOR[:, 1:, :], TEMP_TENSOR[:, 1:, :]. 
         euler_maruyama_state_sample_object = D.multivariate_normal.MultivariateNormal(loc = C_PATH[:, :-1, :] + drift * DT, scale_tril = diffusion_sqrt * math.sqrt(DT)) #C_PATH[:, :-1, :] + drift * DT will diverge from C_PATH if C_PATH values not compatible with x0 and theta. Algorithm aims to minimize gap between computed drift and actual gradient between x_n and x_{n+1}. 
-        
+
         # Compute log p(x|theta) = log p(x|x0, theta) + log p(x0|theta)
         ll = euler_maruyama_state_sample_object.log_prob(C_PATH[:, 1:, :]).sum(-1) # log p(x|x0, theta)
-        if LIDX == 0:
-            ll += INIT_PRIOR.log_prob(C_PATH[:, 0, :]) # log p(x0|theta)
-    elif LIK_DIST == 'TruncatedNormal':
-        drift, diffusion_sqrt = SBM_SDE_CLASS.drift_diffusion(C_PATH, PARAMS_DICT, LIDX, RIDX, diffusion_matrix=False)
-        euler_maruyama_state_sample_object = TruncatedNormal(loc = C_PATH[:, :-1, :] + drift * DT, scale = diffusion_sqrt * math.sqrt(DT), a = 0, b = float('inf'))
+        ll += INIT_PRIOR.log_prob(C_PATH[:, 0, :]) # log p(x0|theta)
 
-        # Compute log p(x|theta) = log p(x|x0, theta) + log p(x0|theta)
-        ll = euler_maruyama_state_sample_object.log_prob(C_PATH[:, 1:, :]).sum((-2, -1)) # log p(x|x0, theta)
-        if LIDX == 0:
-            ll += INIT_PRIOR.log_prob(C_PATH[:, 0, :]).sum(-1) # log p(x0|theta)
+        return ll, drift, diffusion_sqrt
 
-    return ll, drift, diffusion_sqrt # ll.shape == (state_dim, )
-
-def train_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
+def train_SBM_SDE_mini(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
         OBS_CSV_STR: str, OBS_ERROR_SCALE: float, T: float, DT: float, N: int,
         T_SPAN_TENSOR: torch.Tensor, I_S_TENSOR: torch.Tensor, I_D_TENSOR: torch.Tensor, TEMP_TENSOR: torch.Tensor, TEMP_REF: float,
         SBM_SDE_CLASS: str, DIFFUSION_TYPE: str, INIT_PRIOR : torch.distributions.distribution.Distribution, 
@@ -95,8 +68,7 @@ def train_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
         THETA_DIST = None, THETA_POST_DIST = None, THETA_POST_INIT = None,
         ELBO_WARMUP_ITER = 1000, ELBO_WARMUP_INIT_LR = 1e-6, ELBO_LR_DECAY: float = 0.8, ELBO_LR_DECAY_STEP_SIZE: int = 1000,
         PRINT_EVERY: int = 100, DEBUG_SAVE_DIR: str = None, PTRAIN_ITER: int = 0, PTRAIN_LR: float = 1e-3, PTRAIN_ALG: BoolAndString = False,
-        NUM_LAYERS: int = 5, REVERSE: bool = False, BASE_STATE: bool = False,
-        MINIBATCH_T: int = 0, LIK_DIST = 'Normal'):
+        NUM_LAYERS: int = 5, REVERSE: bool = False, BASE_STATE: bool = False):
 
     #Sum to get total training iterations.
     T_ITER = PTRAIN_ITER + ELBO_WARMUP_ITER + ELBO_ITER
@@ -118,34 +90,15 @@ def train_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
     else:
         obs_dim = SBM_SDE.state_dim
     obs_times, obs_means, obs_error = csv_to_obs_df(OBS_CSV_STR, obs_dim, T, OBS_ERROR_SCALE) #csv_to_obs_df function in obs_and_flow module
-    obs_model_minibatch = ObsModelMinibatch(TIMES = obs_times, DT = DT, MU = obs_means, SCALE = obs_error).to(DEVICE)
+    obs_model = ObsModel(DEVICE = DEVICE, TIMES = obs_times, DT = DT, MU = obs_means, SCALE = obs_error).to(DEVICE)
 
     if LEARN_CO2 and PTRAIN_ITER != 0 and PTRAIN_ALG:
-        mean_state_obs = torch.mean(obs_model_minibatch.mu[:-1, :], -1)[None, None, :]
+        mean_state_obs = torch.mean(obs_model.mu[:-1, :], -1)[None, None, :]
     elif not LEARN_CO2 and PTRAIN_ITER != 0 and PTRAIN_ALG:
-        mean_state_obs = torch.mean(obs_model_minibatch.mu, -1)[None, None, :]
-
-    # Sample minibatch indices
-    minibatch_size = int(MINIBATCH_T / DT)
-    if 0 < minibatch_size < N and T % MINIBATCH_T == 0:
-        minibatch_indices = torch.arange(0, N - minibatch_size, minibatch_size) + 1
-        rand = torch.randint(len(minibatch_indices), (T_ITER, ))
-        batch_indices = minibatch_indices[rand]
-        print(f'Time series being chunked into {len(minibatch_indices)} minibatches at time step indices {minibatch_indices}. Check that this is the intended minibatch size.')
-
-        # Print warning unless each minibatch is used at least once
-        if torch.min(torch.bincount(rand)) == 0:
-            print('Warning: Not all minibatches are used at least once.')
-    else:
-        # If minibatch_size is outside of acceptable range, then use full batch by default
-        print('Proceeding with uni-batching, because either minibatch_size >= N, or T % MINIBATCH_T != 0.')
-        batch_indices = None
+        mean_state_obs = torch.mean(obs_model.mu, -1)[None, None, :]
 
     #Establish neural network.
-    if batch_indices is not None:
-        net = SDEFlowMinibatch(DEVICE, obs_model_minibatch, SBM_SDE.state_dim, T, DT, N, NUM_LAYERS = NUM_LAYERS, REVERSE = REVERSE, BASE_STATE = BASE_STATE, UNIBATCH_MODE = False).to(DEVICE)
-    else:
-        net = SDEFlowMinibatch(DEVICE, obs_model_minibatch, SBM_SDE.state_dim, T, DT, N, NUM_LAYERS = NUM_LAYERS, REVERSE = REVERSE, BASE_STATE = BASE_STATE, UNIBATCH_MODE = True).to(DEVICE)        
+    net = SDEFlow(DEVICE, obs_model, SBM_SDE.state_dim, T, DT, N, NUM_LAYERS = NUM_LAYERS, REVERSE = REVERSE, BASE_STATE = BASE_STATE).to(DEVICE)
 
     #Initiate model debugging saver.
     if DEBUG_SAVE_DIR:
@@ -185,9 +138,9 @@ def train_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
     if PTRAIN_ALG and PTRAIN_ITER != 0:
         ptrain_opt = optim.Adam(net.parameters(), lr = PTRAIN_LR)
         if LEARN_CO2:
-            mean_state_obs = torch.mean(obs_model_minibatch.mu[:-1, :], -1)[None, None, :]
+            mean_state_obs = torch.mean(obs_model.mu[:-1, :], -1)[None, None, :]
         else:
-            mean_state_obs = torch.mean(obs_model_minibatch.mu, -1)[None, None, :]
+            mean_state_obs = torch.mean(obs_model.mu, -1)[None, None, :]
     elif not PTRAIN_ALG and PTRAIN_ITER != 0:
         raise Error('Pre-training iterations specified without PTRAIN_ALG input. Must request PTRAIN_ALG = "L1" or "L2".')
 
@@ -212,15 +165,7 @@ def train_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
     net.train()        
     with tqdm(total = T_ITER, desc = f'Learning SDE and hidden parameters.', position = -1) as tq:
         for iteration in range(T_ITER):
-
-            # Sample x_{u-1:v}|y, theta (unless u = 0, then sample x_{u:v})
-            if batch_indices is not None:
-                lidx = max(0, batch_indices[iteration] - 1)              # u-1 if u > 0, else 0
-                ridx = min(N, batch_indices[iteration] + minibatch_size) # v
-            else:
-                lidx, ridx = 0, N
-            
-            C_PATH, log_prob = net(BATCH_SIZE, lidx, ridx) #Obtain paths with solutions to times including t0.
+            C_PATH, log_prob = net(BATCH_SIZE) #Obtain paths with solutions to times including t0.
             
             #NaN handling            
             nan_count = 0
@@ -266,14 +211,12 @@ def train_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                     else:
                         theta_dict = {**theta_dict, **FIX_THETA_DICT}
 
-                # Compute likelihood and ELBO
-                # Negative ELBO: -log p(theta) + log q(theta) - log p(y_0|x_0, theta) [already accounted for in obs_model output when learning x_0] + log q(x|theta) - log p(x|theta) - log p(y|x, theta)
                 if LEARN_CO2:
-                    log_lik, drift, diffusion_sqrt, x_add_CO2 = calc_log_lik_minibatch_CO2(C_PATH, theta_dict, DT, SBM_SDE, INIT_PRIOR, lidx, ridx, LIK_DIST)
-                    ELBO = -log_p_theta.mean() + log_q_theta.mean() + N/minibatch_size * (log_prob.sum(-1).mean() - log_lik.mean() - obs_model_minibatch(x_add_CO2, theta_dict, lidx, ridx))
+                    log_lik, drift, diffusion_sqrt, x_add_CO2 = calc_log_lik_SBM_SDE_mini(C_PATH, theta_dict, DT, SBM_SDE, INIT_PRIOR, LEARN_CO2, 0, N)
+                    ELBO = -log_p_theta.mean() + log_q_theta.mean() + log_prob.mean() - log_lik.mean() - obs_model(x_add_CO2, theta_dict)
                 else:
-                    log_lik, drift, diffusion_sqrt = calc_log_lik_minibatch(C_PATH, theta_dict, DT, SBM_SDE, INIT_PRIOR, lidx, ridx, LIK_DIST)
-                    ELBO = -log_p_theta.mean() + log_q_theta.mean() + N/minibatch_size * (log_prob.sum(-1).mean() - log_lik.mean() - obs_model_minibatch(C_PATH, theta_dict, lidx, ridx))
+                    log_lik, drift, diffusion_sqrt = calc_log_lik_SBM_SDE_mini(C_PATH, theta_dict, DT, SBM_SDE, INIT_PRIOR, LEARN_CO2, 0, N)
+                    ELBO = -log_p_theta.mean() + log_q_theta.mean() + log_prob.mean() - log_lik.mean() - obs_model(C_PATH, theta_dict)
 
                 #Negative ELBO: -log p(theta) + log q(theta) - log p(y_0|x_0, theta) [already accounted for in obs_model output when learning x_0] + log q(x|theta) - log p(x|theta) - log p(y|x, theta)
                 best_loss_ELBO = ELBO if ELBO < best_loss_ELBO else best_loss_ELBO
@@ -308,17 +251,16 @@ def train_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
 
     print('\nAll finished! Now, we need to check outputs to see if things worked...')            
     
-    return net, q_theta, priors, obs_model_minibatch, norm_losses, ELBO_losses, SBM_SDE, batch_indices
+    return net, q_theta, priors, obs_model, norm_losses, ELBO_losses, SBM_SDE
 
-def train_nn_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
+def train_nn_SBM_SDE_mini(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
         OBS_CSV_STR: str, OBS_ERROR_SCALE: float, T: float, DT: float, N: int,
         T_SPAN_TENSOR: torch.Tensor, I_S_TENSOR: torch.Tensor, I_D_TENSOR: torch.Tensor, TEMP_TENSOR: torch.Tensor, TEMP_REF: float,
         SBM_SDE_CLASS: str, DIFFUSION_TYPE: str, INIT_PRIOR: torch.distributions.distribution.Distribution,
         PARAMS_DICT: DictOfNpArrays, LEARN_CO2: bool = False,
         ELBO_WARMUP_ITER = 1000, ELBO_WARMUP_INIT_LR = 1e-6, ELBO_LR_DECAY: float = 0.8, ELBO_LR_DECAY_STEP_SIZE: int = 1000,
         PRINT_EVERY: int = 100, DEBUG_SAVE_DIR: str = None, PTRAIN_ITER: int = 0, PTRAIN_LR: float = 1e-3, PTRAIN_ALG: BoolAndString = False,
-        NUM_LAYERS: int = 5, REVERSE: bool = False, BASE_STATE: bool = False,
-        MINIBATCH_T: int = 0, LIK_DIST = 'Normal'):
+        NUM_LAYERS: int = 5, REVERSE: bool = False, BASE_STATE: bool = False):
 
     #Sum to get total training iterations.
     T_ITER = PTRAIN_ITER + ELBO_WARMUP_ITER + ELBO_ITER
@@ -340,30 +282,11 @@ def train_nn_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
     else:
         obs_dim = SBM_SDE.state_dim
     obs_times, obs_means, obs_error = csv_to_obs_df(OBS_CSV_STR, obs_dim, T, OBS_ERROR_SCALE) #csv_to_obs_df function in obs_and_flow module
-    obs_model_minibatch = ObsModelMinibatch(TIMES = obs_times, DT = DT, MU = obs_means, SCALE = obs_error).to(DEVICE)
-
-    # Sample minibatch indices
-    minibatch_size = int(MINIBATCH_T / DT)
-    if 0 < minibatch_size < N and T % MINIBATCH_T == 0:
-        minibatch_indices = torch.arange(0, N - minibatch_size, minibatch_size) + 1
-        rand = torch.randint(len(minibatch_indices), (T_ITER, ))
-        batch_indices = minibatch_indices[rand]
-        print(f'Time series being chunked into {len(minibatch_indices)} minibatches at time step indices {minibatch_indices}. Check that this is the intended minibatch size.')
-
-        # Print warning unless each minibatch is used at least once
-        if torch.min(torch.bincount(rand)) == 0:
-            print('Warning: Not all minibatches are used at least once.')
-    else:
-        # If minibatch_size is outside of acceptable range, then use full batch by default
-        print('Proceeding with uni-batching, because either minibatch_size >= N, or T % MINIBATCH_T != 0.')
-        batch_indices = None
+    obs_model = ObsModel(DEVICE = DEVICE, TIMES = obs_times, DT = DT, MU = obs_means, SCALE = obs_error).to(DEVICE)
 
     #Establish neural network.
-    if batch_indices is not None:
-        net = SDEFlowMinibatch(DEVICE, obs_model_minibatch, SBM_SDE.state_dim, T, DT, N, NUM_LAYERS = NUM_LAYERS, REVERSE = REVERSE, BASE_STATE = BASE_STATE, UNIBATCH_MODE = False).to(DEVICE)
-    else:
-        net = SDEFlowMinibatch(DEVICE, obs_model_minibatch, SBM_SDE.state_dim, T, DT, N, NUM_LAYERS = NUM_LAYERS, REVERSE = REVERSE, BASE_STATE = BASE_STATE, UNIBATCH_MODE = True).to(DEVICE)
-
+    net = SDEFlow(DEVICE, obs_model, SBM_SDE.state_dim, T, DT, N, NUM_LAYERS = NUM_LAYERS, REVERSE = REVERSE, BASE_STATE = BASE_STATE).to(DEVICE)
+    
     #Initiate model debugging saver.
     if DEBUG_SAVE_DIR:
         debug_saver = ModelSaver(save_dir = DEBUG_SAVE_DIR)
@@ -412,15 +335,8 @@ def train_nn_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
     net.train()
     with tqdm(total = T_ITER, desc = f'Learning SDE and hidden parameters.', position = -1) as tq:
         for iteration in range(T_ITER):
-
-            # Sample x_{u-1:v}|y, theta (unless u = 0, then sample x_{u:v})
-            if batch_indices is not None:
-                lidx = max(0, batch_indices[iteration] - 1)              # u-1 if u > 0, else 0
-                ridx = min(N, batch_indices[iteration] + minibatch_size) # v
-            else:
-                lidx, ridx = 0, N
             
-            C_PATH, log_prob = net(BATCH_SIZE, lidx, ridx) #Obtain paths with solutions to times including t0.
+            C_PATH, log_prob = net(BATCH_SIZE) #Obtain paths with solutions to times including t0.
             
             #NaN handling            
             nan_count = 0
@@ -458,11 +374,11 @@ def train_nn_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                 # Compute likelihood and ELBO
                 # Negative ELBO: -log p(theta) + log q(theta) - log p(y_0|x_0, theta) [already accounted for in obs_model output when learning x_0] + log q(x|theta) - log p(x|theta) - log p(y|x, theta)
                 if LEARN_CO2:
-                    log_lik, drift, diffusion_sqrt, x_add_CO2 = calc_log_lik_minibatch_CO2(C_PATH, theta_dict, DT, SBM_SDE, INIT_PRIOR, lidx, ridx, LIK_DIST)
-                    ELBO = N/minibatch_size * (log_prob.sum(-1).mean() - log_lik.mean() - obs_model_minibatch(x_add_CO2, theta_dict, lidx, ridx))
+                    log_lik, drift, diffusion_sqrt, x_add_CO2 = calc_log_lik_SBM_SDE_mini(C_PATH, theta_dict, DT, SBM_SDE, INIT_PRIOR, LEARN_CO2, 0, N)
+                    ELBO = log_prob.mean() - log_lik.mean() - obs_model(x_add_CO2, theta_dict)
                 else:
-                    log_lik, drift, diffusion_sqrt = calc_log_lik_minibatch(C_PATH, theta_dict, DT, SBM_SDE, INIT_PRIOR, lidx, ridx, LIK_DIST)
-                    ELBO = N/minibatch_size * (log_prob.sum(-1).mean() - log_lik.mean() - obs_model_minibatch(C_PATH, theta_dict, lidx, ridx))
+                    log_lik, drift, diffusion_sqrt = calc_log_lik_SBM_SDE_mini(C_PATH, theta_dict, DT, SBM_SDE, INIT_PRIOR, LEARN_CO2, 0, N)
+                    ELBO = log_prob.mean() - log_lik.mean() - obs_model(C_PATH, theta_dict)
 
                 # Record ELBO history and best ELBO so far
                 best_loss_ELBO = ELBO if ELBO < best_loss_ELBO else best_loss_ELBO
@@ -497,4 +413,4 @@ def train_nn_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
 
     print('\nAll finished! Now, we need to check outputs to see if things worked...')
     
-    return net, obs_model_minibatch, norm_losses, ELBO_losses, SBM_SDE, batch_indices
+    return net, obs_model, norm_losses, ELBO_losses, SBM_SDE
