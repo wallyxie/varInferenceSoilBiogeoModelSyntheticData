@@ -126,9 +126,9 @@ def train_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
         mean_state_obs = torch.mean(obs_model_minibatch.mu, -1)[None, None, :]
 
     # Sample minibatch indices
-    minibatch_size = int(MINIBATCH_T / DT)
+    minibatch_size = int(MINIBATCH_T / DT) + 1
     if 0 < minibatch_size < N and T % MINIBATCH_T == 0:
-        minibatch_indices = torch.arange(0, N - minibatch_size, minibatch_size) + 1
+        minibatch_indices = torch.arange(0, N - (minibatch_size - 1), (minibatch_size - 1))
         rand = torch.randint(len(minibatch_indices), (T_ITER, ))
         batch_indices = minibatch_indices[rand]
         print(f'Time series being chunked into {len(minibatch_indices)} minibatches at time step indices {minibatch_indices}. Check that this is the intended minibatch size.')
@@ -343,9 +343,9 @@ def train_nn_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
     obs_model_minibatch = ObsModelMinibatch(TIMES = obs_times, DT = DT, MU = obs_means, SCALE = obs_error).to(DEVICE)
 
     # Sample minibatch indices
-    minibatch_size = int(MINIBATCH_T / DT)
+    minibatch_size = int(MINIBATCH_T / DT) + 1
     if 0 < minibatch_size < N and T % MINIBATCH_T == 0:
-        minibatch_indices = torch.arange(0, N - minibatch_size, minibatch_size) + 1
+        minibatch_indices = torch.arange(0, N - (minibatch_size - 1), (minibatch_size - 1))
         rand = torch.randint(len(minibatch_indices), (T_ITER, ))
         batch_indices = minibatch_indices[rand]
         print(f'Time series being chunked into {len(minibatch_indices)} minibatches at time step indices {minibatch_indices}. Check that this is the intended minibatch size.')
