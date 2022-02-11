@@ -24,6 +24,51 @@ def plot_elbo(elbo_hist, niter, warmup_iter, t, dt, batch_size, eval_batch_size,
     plt.xlabel('Iteration')
     plt.title(f'ELBO history after {xmin} iterations')
     plt.savefig(os.path.join(plots_folder, f'ELBO_iter_{niter}_warmup_{warmup_iter}_t_{t}_dt_{dt}_batch_{batch_size}_samples_{eval_batch_size}_layers_{num_layers}_lr_{train_lr}_decay_step_{decay_step}_warmup_lr_{warmup_lr}_sd_scale_{sd_scale}_{now_string}.png'), dpi = 300)
+
+def plot_states_post_minibatch_uni_mode(x, q_theta, obs_model_minibatch, SBM_SDE_CLASS, niter, warmup_iter, t, dt, n, batch_size, eval_batch_size, num_layers, train_lr, decay_step, warmup_lr, sd_scale, plots_folder, now_string, FIX_THETA_DICT = None, LEARN_CO2 = False, ymin_list = None, ymax_list = None):
+
+    state_list = []
+
+    if x.size(-1) == 3 and not LEARN_CO2:
+        state_list = ['SOC', 'DOC', 'MBC']
+    elif x.size(-1) == 3 and LEARN_CO2:
+        state_list = ['SOC', 'DOC', 'MBC', 'CO2']
+    elif x.size(-1) == 4 and not LEARN_CO2:
+        state_list = ['SOC', 'DOC', 'MBC', 'EEC']
+    elif x.size(-1) == 4 and LEARN_CO2:
+        state_list = ['SOC', 'DOC', 'MBC', 'EEC', 'CO2']
+    else:
+        raise Exception('Matching condition does not exist with x.size() and LEARN_CO2 status.')
+
+    if LEARN_CO2:
+        q_theta_sample_dict, _, _, _ = q_theta(x.size(0))
+        if FIX_THETA_DICT:
+            q_theta_sample_dict = {**q_theta_sample_dict, **FIX_THETA_DICT}
+        x = SBM_SDE_CLASS.add_CO2(x, q_theta_sample_dict, 0, n) #Add CO2 to x tensor if CO2 is being fit.
+
+    fig, axs = plt.subplots(x.size(-1))
+
+    obs_model_minibatch.mu = obs_model_minibatch.mu.detach().cpu().numpy()
+    obs_model_minibatch.scale = obs_model_minibatch.scale.detach().cpu().numpy()
+
+    for i in range(x.size(-1)):
+        q_mean, q_std = x[:, :, i].mean(0).detach().cpu().numpy(), x[:, :, i].std(0).detach().cpu().numpy()
+        hours = torch.arange(0, t + dt, dt).detach().cpu().numpy()
+        axs[i].plot(obs_model_minibatch.times, obs_model_minibatch.mu[i, :], linestyle = 'None', marker = '.', label = 'Observed')
+        axs[i].fill_between(obs_model_minibatch.times, obs_model_minibatch.mu[i, :] - 2 * obs_model_minibatch.scale[:, i], obs_model_minibatch.mu[i, :] + 2 * obs_model_minibatch.scale[:, i], alpha = 0.4, label = 'Observation $\\mu \pm 2\sigma_y$')
+        axs[i].plot(hours, q_mean, label = 'Posterior mean')
+        axs[i].fill_between(hours, q_mean - 2 * q_std, q_mean + 2 * q_std, alpha = 0.4, label = 'Posterior $\\mu \pm 2\sigma_x$')
+        state = state_list[i]
+        #axs[i].legend()
+        plt.setp(axs[i], ylabel = state)
+        ymin = ymin_list[i] if ymin_list else None
+        ymax = ymax_list[i] if ymax_list else None
+        axs[i].set_ylim([ymin, ymax])
+        #plt.title(f'Approximate posterior $q(x|\\theta, y)$\nNumber of samples = {eval_batch_size}\nTimestep = {dt}\nIterations = {niter}')
+    plt.xlabel('Hour')
+    plt.tight_layout()
+    fig.set_size_inches(20, 15)
+    fig.savefig(os.path.join(plots_folder, f'net_iter_{niter}_warmup_{warmup_iter}_t_{t}_dt_{dt}_batch_{batch_size}_samples_{eval_batch_size}_layers_{num_layers}_lr_{train_lr}_decay_step_{decay_step}_warmup_lr_{warmup_lr}_sd_scale_{sd_scale}_{now_string}.png'), dpi = 300)
     
 def plot_states_NN_minibatch_uni_mode(x, params_dict, obs_model_minibatch, SBM_SDE_CLASS, niter, warmup_iter, t, dt, n, batch_size, eval_batch_size, num_layers, train_lr, decay_step, warmup_lr, sd_scale, plots_folder, now_string, LEARN_CO2 = False, ymin_list = None, ymax_list = None):
 
