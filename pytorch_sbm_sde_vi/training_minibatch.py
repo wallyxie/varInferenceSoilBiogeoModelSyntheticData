@@ -183,9 +183,9 @@ def train_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
     ELBO_opt = optim.Adamax(ELBO_params, lr = ELBO_LR)
 
     # Sample minibatch indices
-    minibatch_size = int(MINIBATCH_T / DT)
+    minibatch_size = int(MINIBATCH_T / DT) + 1
     if 0 < minibatch_size < N and T % MINIBATCH_T == 0:
-        minibatch_indices = torch.arange(0, N - minibatch_size, minibatch_size) + 1
+        minibatch_indices = torch.arange(0, N - (minibatch_size - 1), (minibatch_size - 1))
         rand = torch.randint(len(minibatch_indices), (T_ITER, ))
         batch_indices = minibatch_indices[rand]
         print(f'Time series being chunked into {len(minibatch_indices)} minibatches at time step indices {minibatch_indices}. Check that this is the intended minibatch size.')
@@ -376,9 +376,9 @@ def train_NN_minibatch(DEVICE, NN_ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: in
     nn_ELBO_opt = optim.Adamax(nn_ELBO_params, lr = NN_ELBO_LR)
 
     # Sample minibatch indices
-    minibatch_size = int(MINIBATCH_T / DT)
+    minibatch_size = int(MINIBATCH_T / DT) + 1
     if 0 < minibatch_size < N and T % MINIBATCH_T == 0:
-        minibatch_indices = torch.arange(0, N - minibatch_size, minibatch_size) + 1
+        minibatch_indices = torch.arange(0, N - (minibatch_size - 1), (minibatch_size - 1))
         rand = torch.randint(len(minibatch_indices), (T_ITER, ))
         batch_indices = minibatch_indices[rand]
         print(f'Time series being chunked into {len(minibatch_indices)} minibatches at time step indices {minibatch_indices}. Check that this is the intended minibatch size.')
