@@ -131,14 +131,14 @@ def train_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
         minibatch_indices = torch.arange(0, N - (minibatch_size - 1), (minibatch_size - 1))
         rand = torch.randint(len(minibatch_indices), (T_ITER, ))
         batch_indices = minibatch_indices[rand]
-        print(f'Time series being chunked into {len(minibatch_indices)} minibatches at time step indices {minibatch_indices}. Check that this is the intended minibatch size.')
+        print(f'\nTime series being chunked into {len(minibatch_indices)} minibatches at time step indices {minibatch_indices}. Check that this is the intended minibatch size.')
 
         # Print warning unless each minibatch is used at least once
         if torch.min(torch.bincount(rand)) == 0:
             print('Warning: Not all minibatches are used at least once.')
     else:
         # If minibatch_size is outside of acceptable range, then use full batch by default
-        print('Proceeding with uni-batching, because either minibatch_size >= N, or T % MINIBATCH_T != 0.')
+        print('\nProceeding with uni-batching, because either minibatch_size >= N, or T % MINIBATCH_T != 0.')
         batch_indices = None
 
     #Establish neural network.
@@ -348,14 +348,14 @@ def train_nn_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
         minibatch_indices = torch.arange(0, N - (minibatch_size - 1), (minibatch_size - 1))
         rand = torch.randint(len(minibatch_indices), (T_ITER, ))
         batch_indices = minibatch_indices[rand]
-        print(f'Time series being chunked into {len(minibatch_indices)} minibatches at time step indices {minibatch_indices}. Check that this is the intended minibatch size.')
+        print(f'\nTime series being chunked into {len(minibatch_indices)} minibatches at time step indices {minibatch_indices}. Check that this is the intended minibatch size.')
 
         # Print warning unless each minibatch is used at least once
         if torch.min(torch.bincount(rand)) == 0:
             print('Warning: Not all minibatches are used at least once.')
     else:
         # If minibatch_size is outside of acceptable range, then use full batch by default
-        print('Proceeding with uni-batching, because either minibatch_size >= N, or T % MINIBATCH_T != 0.')
+        print('\nProceeding with uni-batching, because either minibatch_size >= N, or T % MINIBATCH_T != 0.')
         batch_indices = None
 
     #Establish neural network.
