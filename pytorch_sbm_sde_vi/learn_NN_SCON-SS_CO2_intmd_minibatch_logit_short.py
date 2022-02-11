@@ -19,7 +19,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 #Module imports
-from training import *
+from training_intmd_minibatch import *
 from plotting import *
 
 #PyTorch settings
@@ -38,6 +38,7 @@ np.random.seed(0)
 #IAF SSM time parameters
 dt_flow = 1.0 #Increased from 0.1 to reduce memory.
 t = 5000 #In hours.
+minibatch_t = 5000
 n = int(t / dt_flow) + 1
 t_span = np.linspace(0, t, n)
 t_span_tensor = torch.reshape(torch.Tensor(t_span), [1, n, 1]).to(active_device) #T_span needs to be converted to tensor object. Additionally, facilitates conversion of I_S and I_D to tensor objects.
@@ -91,19 +92,20 @@ i_d_tensor = i_d(t_span_tensor).to(active_device) #Exogenous DOC input function
 csv_data_path = os.path.join('generated_data/', 'SCON-SS_CO2_logit_short_2021_11_17_20_16_sample_y_t_5000_dt_0-01_sd_scale_0-25.csv')
 
 #Call training loop function for SCON-SS.
-net, obs_model, norm_hist, ELBO_hist, SBM_SDE_instance = train_nn(active_device, elbo_lr, elbo_iter, batch_size,
+net, obs_model, norm_hist, ELBO_hist, SBM_SDE_instance, batch_indices = train_nn_minibatch(active_device, elbo_lr, elbo_iter, batch_size,
         csv_data_path, obs_error_scale, t, dt_flow, n,
         t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
         SBM_SDE_class, diffusion_type, x0_prior_SCON,
         params_dict, learn_CO2,
         ELBO_WARMUP_ITER = elbo_warmup_iter, ELBO_WARMUP_INIT_LR = elbo_warmup_lr, ELBO_LR_DECAY = elbo_lr_decay, ELBO_LR_DECAY_STEP_SIZE = elbo_lr_decay_step_size,
         PRINT_EVERY = 1, DEBUG_SAVE_DIR = None, PTRAIN_ITER = ptrain_iter, PTRAIN_ALG = ptrain_alg,
-        NUM_LAYERS = num_layers, REVERSE = reverse, BASE_STATE = base_state)
+        NUM_LAYERS = num_layers, REVERSE = reverse, BASE_STATE = base_state,
+        MINIBATCH_T = minibatch_t)
 print('Training finished. Moving to saving of output files.')
 
 #Save net and ELBO files.
 now = datetime.now()
-now_string = 'SCON-SS_CO2_NN_print' + now.strftime('_%Y_%m_%d_%H_%M_%S')
+now_string = 'SCON-SS_CO2_NN_intmd_minibatch' + now.strftime('_%Y_%m_%d_%H_%M_%S')
 save_string = f'_iter_{elbo_iter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_lr_{elbo_lr}_decay_step_{elbo_lr_decay_step_size}_sd_scale_{prior_scale_factor}_{now_string}.pt'
 outputs_folder = 'training_pt_outputs/'
 train_args_save_string = os.path.join(outputs_folder, 'train_args' + save_string)
@@ -112,20 +114,12 @@ net_state_dict_save_string = os.path.join(outputs_folder,'net_state_dict' + save
 obs_model_save_string = os.path.join(outputs_folder, 'obs_model' + save_string)
 ELBO_save_string = os.path.join(outputs_folder, 'ELBO' + save_string)
 SBM_SDE_instance_save_string = os.path.join(outputs_folder, 'SBM_SDE_instance' + save_string)
+batch_indices_save_string = os.path.join(outputs_folder, 'batch_indices' + save_string)
 torch.save(train_args, train_args_save_string)
 torch.save(net, net_save_string)
 torch.save(net.state_dict(), net_state_dict_save_string) #For loading net on CPU.
 torch.save(obs_model, obs_model_save_string)
 torch.save(ELBO_hist, ELBO_save_string)
 torch.save(SBM_SDE_instance, SBM_SDE_instance_save_string)
+torch.save(batch_indices, batch_indices_save_string)
 print('Output files saving finished. Moving to plotting.')
-
-#Plot training posterior results and ELBO history.
-net.eval()
-x, _ = net(eval_batch_size)
-plots_folder = 'training_plots/'
-plot_elbo(ELBO_hist, elbo_iter, elbo_warmup_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, elbo_lr_decay_step_size, elbo_warmup_lr, prior_scale_factor, plots_folder, now_string, xmin = elbo_warmup_iter + int(elbo_iter / 2))
-print('ELBO plotting finished.')
-params_dict_tensor = {k: torch.tensor(v).unsqueeze(0) for k, v in params_dict.items()}
-plot_states_NN(x, params_dict_tensor, obs_model, SBM_SDE_instance, elbo_iter, elbo_warmup_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, elbo_lr_decay_step_size, elbo_warmup_lr, prior_scale_factor, plots_folder, now_string, learn_CO2, ymin_list = [0, 0, 0, 0], ymax_list = [70., 5., 8., 0.025])
-print('States fit plotting finished.')
