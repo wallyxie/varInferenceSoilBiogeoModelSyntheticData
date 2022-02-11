@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 
 #Module imports
 from training_intmd_minibatch import *
-from plotting import *
+from plotting_minibatch import *
 
 #PyTorch settings
 if torch.cuda.is_available():
@@ -123,3 +123,13 @@ torch.save(ELBO_hist, ELBO_save_string)
 torch.save(SBM_SDE_instance, SBM_SDE_instance_save_string)
 torch.save(batch_indices, batch_indices_save_string)
 print('Output files saving finished. Moving to plotting.')
+
+#Plot training posterior results and ELBO history.
+net.eval()
+x, _ = net(eval_batch_size, 0, n)
+plots_folder = 'training_plots/'
+plot_elbo(ELBO_hist, elbo_iter, elbo_warmup_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, elbo_lr_decay_step_size, elbo_warmup_lr, prior_scale_factor, plots_folder, now_string, xmin = elbo_warmup_iter + int(elbo_iter / 2))
+print('ELBO plotting finished.')
+params_dict_tensor = {k: torch.tensor(v).unsqueeze(0) for k, v in params_dict.items()}
+plot_states_NN_minibatch_uni_mode(x, params_dict_tensor, obs_model, SBM_SDE_instance, elbo_iter, elbo_warmup_iter, t, dt_flow, n, batch_size, eval_batch_size, num_layers, elbo_lr, elbo_lr_decay_step_size, elbo_warmup_lr, prior_scale_factor, plots_folder, now_string, learn_CO2, ymin_list = [0, 0, 0, 0], ymax_list = [70., 5., 8., 0.025])
+print('States fit plotting finished.')
