@@ -330,10 +330,10 @@ class SDEFlowMinibatch(nn.Module):
         self.affine = nn.ModuleList([AffineLayer(COND_INPUTS + self.obs_model.obs_dim, 1) for _ in range(NUM_LAYERS)])
         self.permutation = [PermutationLayer(STATE_DIM, REVERSE = self.reverse) for _ in range(NUM_LAYERS)]
         if self.unibatch_mode:
-            print('Using conventional batch norm')
+            print('\nUsing conventional batch norm')
             self.batch_norm = nn.ModuleList([BatchNormLayer(STATE_DIM * N) for _ in range(NUM_LAYERS - 1)])
         else:
-            print('Using global batch norm')
+            print('\nUsing global batch norm')
             self.batch_norm = nn.ModuleList([BatchNormLayerMinibatch(1) for _ in range(NUM_LAYERS - 1)])
         self.positive = POSITIVE
         if self.positive:
