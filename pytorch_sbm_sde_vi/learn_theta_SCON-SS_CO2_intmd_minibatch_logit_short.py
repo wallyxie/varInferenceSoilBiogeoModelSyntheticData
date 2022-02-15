@@ -36,7 +36,7 @@ torch.manual_seed(0)
 
 #IAF SSM time parameters
 dt_flow = 1.0 #Increased from 0.1 to reduce memory.
-t = 1000 #In hours.
+t = 5000 #In hours.
 minibatch_t = 1000
 n = int(t / dt_flow) + 1
 t_span = np.linspace(0, t, n)
