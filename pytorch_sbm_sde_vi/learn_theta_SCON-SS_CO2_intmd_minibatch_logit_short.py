@@ -20,6 +20,7 @@ import matplotlib.pyplot as plt
 
 #Module imports
 from training_intmd_minibatch import *
+from plotting_minibatch import *
 
 #PyTorch settings
 if torch.cuda.is_available():
@@ -36,7 +37,7 @@ torch.manual_seed(0)
 #IAF SSM time parameters
 dt_flow = 1.0 #Increased from 0.1 to reduce memory.
 t = 1000 #In hours.
-minibatch_t = 500
+minibatch_t = 1000
 n = int(t / dt_flow) + 1
 t_span = np.linspace(0, t, n)
 t_span_tensor = torch.reshape(torch.Tensor(t_span), [1, n, 1]).to(active_device) #T_span needs to be converted to tensor object. Additionally, facilitates conversion of I_S and I_D to tensor objects.
@@ -50,7 +51,7 @@ elbo_iter = 50000
 elbo_lr = 1e-2
 elbo_lr_decay = 0.7
 elbo_lr_decay_step_size = 5000
-elbo_warmup_iter = 5000
+elbo_warmup_iter = 1000
 elbo_warmup_lr = 1e-6
 ptrain_iter = 0
 ptrain_alg = 'L1'
@@ -130,3 +131,15 @@ torch.save(ELBO_hist, ELBO_save_string)
 torch.save(SBM_SDE_instance, SBM_SDE_instance_save_string)
 torch.save(batch_indices, batch_indices_save_string)
 print('Output files saving finished. Moving to plotting.')
+
+#Plot training posterior results and ELBO history.
+net.eval()
+x, _ = net(eval_batch_size, 0, n)
+plots_folder = 'training_plots/'
+plot_elbo(ELBO_hist, elbo_iter, elbo_warmup_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, elbo_lr_decay_step_size, elbo_warmup_lr, prior_scale_factor, plots_folder, now_string, xmin = elbo_warmup_iter + int(elbo_iter / 2))
+print('ELBO plotting finished.')
+plot_states_post_minibatch_uni_mode(x, q_theta, obs_model, SBM_SDE_instance, elbo_iter, elbo_warmup_iter, t, dt_flow, n, batch_size, eval_batch_size, num_layers, elbo_lr, elbo_lr_decay_step_size, elbo_warmup_lr, prior_scale_factor, plots_folder, now_string, fix_theta_dict, learn_CO2, ymin_list = [0, 0, 0, 0], ymax_list = [70., 8., 11., 0.025])
+print('States fit plotting finished.')
+true_theta = torch.load(os.path.join('generated_data/', 'SCON-SS_CO2_logit_short_2021_11_17_20_16_sample_y_t_5000_dt_0-01_sd_scale_0-25_rsample.pt'), map_location = active_device)
+plot_theta(p_theta, q_theta, true_theta, elbo_iter, elbo_warmup_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, elbo_lr_decay_step_size, elbo_warmup_lr, prior_scale_factor, plots_folder, now_string)
+print('Prior-posterior pair plotting finished.')
