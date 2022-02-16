@@ -329,6 +329,7 @@ class SDEFlowMinibatch(nn.Module):
 
         self.affine = nn.ModuleList([AffineLayer(COND_INPUTS + self.obs_model.obs_dim, 1) for _ in range(NUM_LAYERS)])
         self.permutation = [PermutationLayer(STATE_DIM, REVERSE = self.reverse) for _ in range(NUM_LAYERS)]
+        self.batch_norm = nn.ModuleList([BatchNormLayer(STATE_DIM * N) for _ in range(NUM_LAYERS - 1)])
         self.positive = POSITIVE
         if self.positive:
             self.SP = SoftplusLayer()
