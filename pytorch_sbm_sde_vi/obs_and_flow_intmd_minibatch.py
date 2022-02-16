@@ -329,12 +329,6 @@ class SDEFlowMinibatch(nn.Module):
 
         self.affine = nn.ModuleList([AffineLayer(COND_INPUTS + self.obs_model.obs_dim, 1) for _ in range(NUM_LAYERS)])
         self.permutation = [PermutationLayer(STATE_DIM, REVERSE = self.reverse) for _ in range(NUM_LAYERS)]
-        if self.unibatch_mode:
-            print('\nUsing conventional batch norm')
-            self.batch_norm = nn.ModuleList([BatchNormLayer(STATE_DIM * N) for _ in range(NUM_LAYERS - 1)])
-        else:
-            print('\nUsing global batch norm')
-            self.batch_norm = nn.ModuleList([BatchNormLayerMinibatch(1) for _ in range(NUM_LAYERS - 1)])
         self.positive = POSITIVE
         if self.positive:
             self.SP = SoftplusLayer()
@@ -343,9 +337,6 @@ class SDEFlowMinibatch(nn.Module):
         # lidx - left index
         # ridx - right index
 
-        if self.unibatch_mode:
-            assert LIDX == 0 and RIDX == self.n
-        
         buffer_size = self.state_dim*(RIDX - LIDX)
         left_win, right_win = self.window
         active_lidx = max((LIDX*self.state_dim) - left_win, 0)
