@@ -142,7 +142,10 @@ def train_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
         batch_indices = None
 
     #Establish neural network.
-    net = SDEFlowMinibatch(DEVICE, obs_model_minibatch, SBM_SDE.state_dim, T, DT, N, NUM_LAYERS = NUM_LAYERS, REVERSE = REVERSE, BASE_STATE = BASE_STATE, UNIBATCH_MODE = True).to(DEVICE)        
+    if batch_indices is not None:
+        net = SDEFlowMinibatch(DEVICE, obs_model_minibatch, SBM_SDE.state_dim, T, DT, N, NUM_LAYERS = NUM_LAYERS, REVERSE = REVERSE, BASE_STATE = BASE_STATE, UNIBATCH_MODE = False).to(DEVICE)
+    else:
+        net = SDEFlowMinibatch(DEVICE, obs_model_minibatch, SBM_SDE.state_dim, T, DT, N, NUM_LAYERS = NUM_LAYERS, REVERSE = REVERSE, BASE_STATE = BASE_STATE, UNIBATCH_MODE = True).to(DEVICE)        
 
     #Initiate model debugging saver.
     if DEBUG_SAVE_DIR:
@@ -356,7 +359,10 @@ def train_nn_minibatch(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
         batch_indices = None
 
     #Establish neural network.
-    net = SDEFlowMinibatch(DEVICE, obs_model_minibatch, SBM_SDE.state_dim, T, DT, N, NUM_LAYERS = NUM_LAYERS, REVERSE = REVERSE, BASE_STATE = BASE_STATE, UNIBATCH_MODE = True).to(DEVICE)
+    if batch_indices is not None:
+        net = SDEFlowMinibatch(DEVICE, obs_model_minibatch, SBM_SDE.state_dim, T, DT, N, NUM_LAYERS = NUM_LAYERS, REVERSE = REVERSE, BASE_STATE = BASE_STATE, UNIBATCH_MODE = False).to(DEVICE)
+    else:
+        net = SDEFlowMinibatch(DEVICE, obs_model_minibatch, SBM_SDE.state_dim, T, DT, N, NUM_LAYERS = NUM_LAYERS, REVERSE = REVERSE, BASE_STATE = BASE_STATE, UNIBATCH_MODE = True).to(DEVICE)
 
     #Initiate model debugging saver.
     if DEBUG_SAVE_DIR:
