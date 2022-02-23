@@ -3,7 +3,6 @@ import math
 import sys
 from datetime import datetime
 import os.path
-from collections import namedtuple
 
 #Torch imports
 import torch
@@ -63,8 +62,7 @@ num_layers = 5
 reverse = False
 base_state = False
 
-TrainArgs = namedtuple('TrainArgs', 'elbo_iter elbo_lr elbo_lr_decay elbo_lr_decay_step_size elbo_warmup_iter elbo_warmup_lr ptrain_iter ptrain_alg batch_size obs_error_scale prior_scale_factor num_layers reverse base_state')
-train_args = TrainArgs(elbo_iter, elbo_lr, elbo_lr_decay, elbo_lr_decay_step_size, elbo_warmup_iter, elbo_warmup_lr, ptrain_iter, ptrain_alg, batch_size, obs_error_scale, prior_scale_factor, num_layers, reverse, base_state)
+train_args = {'t': t, 'dt_flow': dt_flow, 'elbo_iter': elbo_iter, 'elbo_lr': elbo_lr, 'elbo_lr_decay': elbo_lr_decay, 'elbo_lr_decay_step_size': elbo_lr_decay_step_size, 'elbo_warmup_iter': elbo_warmup_iter, 'elbo_warmup_lr': elbo_warmup_lr, 'ptrain_iter': ptrain_iter, 'ptrain_alg': ptrain_alg, 'batch_size': batch_size, 'obs_error_scale': obs_error_scale, 'prior_scale_factor': prior_scale_factor, 'num_layers': num_layers, 'reverse': reverse, 'base_state': base_state}
 
 #Specify desired SBM SDE model type and details.
 state_dim_SCON = 3
