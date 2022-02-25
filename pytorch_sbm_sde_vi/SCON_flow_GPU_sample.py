@@ -64,7 +64,7 @@ elbo_warmup_lr = train_args['elbo_warmup_lr']
 ptrain_iter = train_args['ptrain_iter']
 ptrain_alg = train_args['ptrain_alg']
 batch_size = train_args['batch_size']
-eval_batch_size = 31
+eval_batch_size = 30
 obs_error_scale = train_args['obs_error_scale']
 prior_scale_factor = train_args['prior_scale_factor']
 num_layers = train_args['num_layers']
@@ -86,7 +86,7 @@ SBM_SDE = torch.load(SBM_SDE_instance_save_string, map_location = active_device)
 
 #Save evaluation samples from trained net object.
 net.eval()
-batch_multiples = 10
+batch_multiples = 100
 with torch.no_grad():
     for i in range(batch_multiples):
         print(i)
