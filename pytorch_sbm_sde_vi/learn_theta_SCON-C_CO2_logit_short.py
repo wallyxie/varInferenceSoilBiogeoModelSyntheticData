@@ -89,7 +89,7 @@ i_d_tensor = i_d(t_span_tensor).to(active_device) #Exogenous DOC input function
 #Assign path to observations .csv file.
 csv_data_path = os.path.join('generated_data/', 'SCON-C_CO2_logit_short_2022_01_20_08_53_sample_y_t_5000_dt_0-01_sd_scale_0-25.csv')
 
-#Call training loop function for SCON-SS.
+#Call training loop function.
 net, q_theta, p_theta, obs_model, norm_hist, ELBO_hist, SBM_SDE_instance = train(
         active_device, elbo_lr, elbo_iter, batch_size,
         csv_data_path, obs_error_scale, t, dt_flow, n, 
@@ -97,7 +97,8 @@ net, q_theta, p_theta, obs_model, norm_hist, ELBO_hist, SBM_SDE_instance = train
         SBM_SDE_class, diffusion_type, x0_prior_SCON,
         SCON_C_priors_details, fix_theta_dict, learn_CO2, theta_dist, 
         ELBO_WARMUP_ITER = elbo_warmup_iter, ELBO_WARMUP_INIT_LR = elbo_warmup_lr, ELBO_LR_DECAY = elbo_lr_decay, ELBO_LR_DECAY_STEP_SIZE = elbo_lr_decay_step_size,
-        PRINT_EVERY = 10, DEBUG_SAVE_DIR = None, PTRAIN_ITER = ptrain_iter, PTRAIN_ALG = ptrain_alg,
+        PRINT_EVERY = 10, VERBOSE = True,
+        DEBUG_SAVE_DIR = None, PTRAIN_ITER = ptrain_iter, PTRAIN_ALG = ptrain_alg,
         NUM_LAYERS = num_layers, REVERSE = reverse, BASE_STATE = base_state)
 print('Training finished. Moving to saving of output files.')
 

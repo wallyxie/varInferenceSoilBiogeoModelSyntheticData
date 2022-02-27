@@ -88,7 +88,7 @@ i_d_tensor = i_d(t_span_tensor).to(active_device) #Exogenous DOC input function
 #Assign path to observations .csv file.
 csv_data_path = os.path.join('generated_data/', 'SCON-SS_CO2_logit_short_2021_11_17_20_16_sample_y_t_5000_dt_0-01_sd_scale_0-25.csv')
 
-#Call training loop function for SCON-SS.
+#Call training loop function.
 t_total = 0
 for batch_size in range(20, 200): 
     print('Trying batch_size = ', batch_size)
