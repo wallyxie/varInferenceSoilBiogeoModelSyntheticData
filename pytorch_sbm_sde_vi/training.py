@@ -66,7 +66,8 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
         PRIOR_DIST_DETAILS_DICT: DictOfTensors, FIX_THETA_DICT = None, LEARN_CO2: bool = False,
         THETA_DIST = None, THETA_POST_DIST = None, THETA_POST_INIT = None,
         ELBO_WARMUP_ITER = 1000, ELBO_WARMUP_INIT_LR = 1e-6, ELBO_LR_DECAY: float = 0.8, ELBO_LR_DECAY_STEP_SIZE: int = 1000,
-        PRINT_EVERY: int = 100, DEBUG_SAVE_DIR: str = None, PTRAIN_ITER: int = 0, PTRAIN_LR: float = 1e-3, PTRAIN_ALG: BoolAndString = False,
+        PRINT_EVERY: int = 100, VERBOSE = False,
+        DEBUG_SAVE_DIR: str = None, PTRAIN_ITER: int = 0, PTRAIN_LR: float = 1e-3, PTRAIN_ALG: BoolAndString = False,
         NUM_LAYERS: int = 5, REVERSE: bool = False, BASE_STATE: bool = False):
 
     #Sum to get total training iterations.
@@ -234,6 +235,12 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                     print(f'\ndiffusion_sqrt at {iteration + 1} iterations = \n{diffusion_sqrt}')
                     print('\ntheta_dict means = \n', {key: theta_dict[key].mean() for key in param_names})
                     print(f'\nparent_loc_scale_dict at {iteration + 1} iterations = \n{parent_loc_scale_dict}')
+                    if VERBOSE:
+                        print('\nlog_p_theta.mean()', log_p_theta.mean())
+                        print('\nlog_q_theta.mean()', log_p_theta.mean())                        
+                        print('\nlog_prob.mean()', log_prob.mean())
+                        print('\nlog_lik.mean()', log_lik.mean())
+                        print('\nobs_model', obs_model(x_add_CO2, theta_dict))
 
                 ELBO.backward()
                 torch.nn.utils.clip_grad_norm_(ELBO_params, 5.0)
@@ -258,7 +265,8 @@ def train_nn(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
         SBM_SDE_CLASS: str, DIFFUSION_TYPE: str, INIT_PRIOR: torch.distributions.distribution.Distribution,
         PARAMS_DICT: DictOfNpArrays, LEARN_CO2: bool = False,
         ELBO_WARMUP_ITER = 1000, ELBO_WARMUP_INIT_LR = 1e-6, ELBO_LR_DECAY: float = 0.8, ELBO_LR_DECAY_STEP_SIZE: int = 1000,
-        PRINT_EVERY: int = 100, DEBUG_SAVE_DIR: str = None, PTRAIN_ITER: int = 0, PTRAIN_LR: float = 1e-3, PTRAIN_ALG: BoolAndString = False,
+        PRINT_EVERY: int = 100, VERBOSE: bool = False,
+        DEBUG_SAVE_DIR: str = None, PTRAIN_ITER: int = 0, PTRAIN_LR: float = 1e-3, PTRAIN_ALG: BoolAndString = False,
         NUM_LAYERS: int = 5, REVERSE: bool = False, BASE_STATE: bool = False):
 
     #Sum to get total training iterations.
@@ -395,6 +403,10 @@ def train_nn(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                         print(f'\nC_PATH = \n{C_PATH}')
                     print(f'\ndrift at {iteration + 1} iterations = \n{drift}')
                     print(f'\ndiffusion_sqrt at {iteration + 1} iterations = \n{diffusion_sqrt}')
+                    if VERBOSE:
+                        print('\nlog_prob.mean()', log_prob.mean())
+                        print('\nlog_lik.mean()', log_lik.mean())
+                        print('\nobs_model', obs_model(x_add_CO2, theta_dict))
 
                 # Take gradient step
                 ELBO.backward()
