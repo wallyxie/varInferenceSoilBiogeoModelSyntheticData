@@ -64,7 +64,7 @@ elbo_warmup_lr = train_args['elbo_warmup_lr']
 ptrain_iter = train_args['ptrain_iter']
 ptrain_alg = train_args['ptrain_alg']
 batch_size = train_args['batch_size']
-eval_batch_size = 10
+eval_batch_size = 250
 obs_error_scale = train_args['obs_error_scale']
 prior_scale_factor = train_args['prior_scale_factor']
 num_layers = train_args['num_layers']
@@ -85,8 +85,32 @@ q_theta = torch.load(q_theta_save_string, map_location = active_device)
 SBM_SDE = torch.load(SBM_SDE_instance_save_string, map_location = active_device)
 
 #Save evaluation samples from trained net object.
+batch_multiples = 1
+with torch.no_grad():
+    for i in range(batch_multiples):
+        print(i)
+        _x, _ = net(eval_batch_size)
+        _x.detach().cpu()
+        if learn_CO2:
+            q_theta_sample_dict, _, _, _ = q_theta(_x.size(0))
+            if fix_theta_dict:
+                q_theta_sample_dict = {**q_theta_sample_dict, **FIX_THETA_DICT}
+            _x = SBM_SDE.add_CO2(_x, q_theta_sample_dict) #Add CO2 to x tensor if CO2 is being fit.
+        if i == 0:
+            x = _x
+        else:
+            x = torch.cat([x, _x], 0)
+        del _x
+        torch.cuda.empty_cache()
+        print(torch.cuda.memory_allocated())
+        print(torch.cuda.memory_reserved())
+        print(x.size())
+print(x)
+x_save_string = os.path.join(outputs_folder, 'x_train' + save_string)
+torch.save(x, x_save_string)
+
+#Save evaluation samples from trained net object.
 net.eval()
-batch_multiples = 100
 with torch.no_grad():
     for i in range(batch_multiples):
         print(i)
