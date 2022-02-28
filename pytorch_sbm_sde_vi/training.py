@@ -237,7 +237,7 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                     print(f'\nparent_loc_scale_dict at {iteration + 1} iterations = \n{parent_loc_scale_dict}')
                     if VERBOSE:
                         print('\nlog_p_theta.mean()', log_p_theta.mean())
-                        print('\nlog_q_theta.mean()', log_p_theta.mean())                        
+                        print('\nlog_q_theta.mean()', log_q_theta.mean())                        
                         print('\nlog_prob.mean()', log_prob.mean())
                         print('\nlog_lik.mean()', log_lik.mean())
                         print('\nobs_model', obs_model(x_add_CO2, theta_dict))
