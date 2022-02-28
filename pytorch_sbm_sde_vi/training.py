@@ -241,6 +241,12 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                         print('\nlog_prob.mean()', log_prob.mean())
                         print('\nlog_lik.mean()', log_lik.mean())
                         print('\nobs_model', obs_model(x_add_CO2, theta_dict))
+                        print('\nlog_p_theta.mean() size', log_p_theta.mean().size())
+                        print('\nlog_q_theta.mean() size', log_q_theta.mean().size())                        
+                        print('\nlog_prob.mean() size', log_prob.mean().size())
+                        print('\nlog_lik.mean() size', log_lik.mean().size())
+                        print('\nobs_model size', obs_model(x_add_CO2, theta_dict).size())
+                        print('\nELBO size', ELBO.size())
 
                 ELBO.backward()
                 torch.nn.utils.clip_grad_norm_(ELBO_params, 5.0)

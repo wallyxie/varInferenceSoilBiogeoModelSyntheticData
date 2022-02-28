@@ -51,7 +51,7 @@ temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
 elbo_iter = 10
-elbo_lr = 1e-2
+elbo_lr = 1e-3
 elbo_lr_decay = 0.7
 elbo_lr_decay_step_size = 5000
 elbo_warmup_iter = 10
@@ -62,8 +62,8 @@ batch_size = 31
 eval_batch_size = 31
 obs_error_scale = 0.1
 prior_scale_factor = 0.25
-num_layers = 5
-reverse = False
+num_layers = 4
+reverse = True
 base_state = False
 
 train_args = {'t': t, 'dt_flow': dt_flow, 'elbo_iter': elbo_iter, 'elbo_lr': elbo_lr, 'elbo_lr_decay': elbo_lr_decay, 'elbo_lr_decay_step_size': elbo_lr_decay_step_size, 'elbo_warmup_iter': elbo_warmup_iter, 'elbo_warmup_lr': elbo_warmup_lr, 'ptrain_iter': ptrain_iter, 'ptrain_alg': ptrain_alg, 'batch_size': batch_size, 'obs_error_scale': obs_error_scale, 'prior_scale_factor': prior_scale_factor, 'num_layers': num_layers, 'reverse': reverse, 'base_state': base_state}

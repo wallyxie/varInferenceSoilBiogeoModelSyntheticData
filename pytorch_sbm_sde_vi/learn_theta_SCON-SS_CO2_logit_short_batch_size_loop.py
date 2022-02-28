@@ -37,7 +37,7 @@ torch.cuda.manual_seed(0)
 torch.cuda.manual_seed_all(0)
 np.random.seed(0)
 torch.backends.cudnn.deterministic = True
-torch.backends.cudnn.benchmark = False
+torch.backends.cudnn.benchmark = True
 
 #IAF SSM time parameters
 dt_flow = 1.0 #Increased from 0.1 to reduce memory.
@@ -52,17 +52,17 @@ temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
 elbo_iter = 5
-elbo_lr = 1e-2
+elbo_lr = 5e-3
 elbo_lr_decay = 0.7
-elbo_lr_decay_step_size = 5000
+elbo_lr_decay_step_size = 10000
 elbo_warmup_iter = 5
 elbo_warmup_lr = 1e-6
 ptrain_iter = 0
 ptrain_alg = 'L1'
 obs_error_scale = 0.1
 prior_scale_factor = 0.25
-num_layers = 5
-reverse = False
+num_layers = 4
+reverse = True
 base_state = False
 
 #Specify desired SBM SDE model type and details.
@@ -103,7 +103,8 @@ for batch_size in range(20, 200):
         SBM_SDE_class, diffusion_type, x0_prior_SCON,
         SCON_SS_priors_details, fix_theta_dict, learn_CO2, theta_dist, 
         ELBO_WARMUP_ITER = elbo_warmup_iter, ELBO_WARMUP_INIT_LR = elbo_warmup_lr, ELBO_LR_DECAY = elbo_lr_decay, ELBO_LR_DECAY_STEP_SIZE = elbo_lr_decay_step_size,
-        PRINT_EVERY = 10, DEBUG_SAVE_DIR = None, PTRAIN_ITER = ptrain_iter, PTRAIN_ALG = ptrain_alg,
+        PRINT_EVERY = 10, VERBOSE = True,
+        DEBUG_SAVE_DIR = None, PTRAIN_ITER = ptrain_iter, PTRAIN_ALG = ptrain_alg,
         NUM_LAYERS = num_layers, REVERSE = reverse, BASE_STATE = base_state)
     t_end = time.process_time()
     t_total += t_end - t_start
