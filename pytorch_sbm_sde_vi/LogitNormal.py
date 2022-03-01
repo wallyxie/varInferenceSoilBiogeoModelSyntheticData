@@ -81,8 +81,8 @@ class RescaledLogitNormal(Distribution):
         return logit(x, lower, upper)
 
     def rsample(self, sample_shape=torch.Size()):
-        logit_x = self.base.rsample(sample_shape)
-        x = self.sigmoid(logit_x)
+        logit_x = self.base.rsample(sample_shape).to(self.a.device)
+        x = self.sigmoid(logit_x).to(self.a.device)
         return x
 
     def log_prob(self, x):
@@ -168,8 +168,8 @@ class MultivariateLogitNormal(Distribution):
         return logit(x, lower, upper)
 
     def rsample(self, sample_shape=torch.Size()):
-        logit_x = self.base.rsample(sample_shape)
-        x = self.sigmoid(logit_x)
+        logit_x = self.base.rsample(sample_shape).to(self.a.device)
+        x = self.sigmoid(logit_x).to(self.a.device)
         return x
 
     def log_prob(self, x):
@@ -186,7 +186,7 @@ class RescaledSigmoid(nn.Module):
 
     def forward(self, x, eps=1e-8):
         y = 1/(1+torch.exp(-x))
-        y = (self.upper-self.lower)*y+self.lower
-        y = LowerBound.apply(y, self.lower+eps)
-        y = -LowerBound.apply(-y, -self.upper+eps)
+        y = ((self.upper-self.lower)*y+self.lower).to(self.lower.device)
+        y = LowerBound.apply(y.to(self.lower.device), (self.lower+eps).to(self.lower.device))
+        y = -LowerBound.apply(-y.to(self.lower.device), (-self.upper+eps).to(self.lower.device))
         return y

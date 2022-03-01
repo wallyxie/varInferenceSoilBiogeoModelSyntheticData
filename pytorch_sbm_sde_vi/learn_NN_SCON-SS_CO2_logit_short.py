@@ -25,7 +25,6 @@ from plotting import *
 if torch.cuda.is_available():
     print('CUDA device detected.')
     active_device = torch.device('cuda')
-    torch.set_default_tensor_type('torch.cuda.FloatTensor')
 else:
     print('No CUDA device detected.')
     raise EnvironmentError

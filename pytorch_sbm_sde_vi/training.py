@@ -120,7 +120,7 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
     THETA_POST_CLASS = dist_class_dict[THETA_POST_DIST] if THETA_POST_DIST else dist_class_dict[THETA_DIST]
     
     #Define prior
-    priors = THETA_PRIOR_CLASS(loc = prior_means_tensor, scale = prior_sds_tensor, a = prior_lowers_tensor, b = prior_uppers_tensor)
+    priors = THETA_PRIOR_CLASS(loc = prior_means_tensor.to(DEVICE), scale = prior_sds_tensor.to(DEVICE), a = prior_lowers_tensor.to(DEVICE), b = prior_uppers_tensor.to(DEVICE))
 
     # Initialize posterior q(theta) using its prior p(theta)
     learn_cov = (THETA_POST_DIST == 'MultivariateLogitNormal')
@@ -241,12 +241,6 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                         print('\nlog_prob.mean()', log_prob.mean())
                         print('\nlog_lik.mean()', log_lik.mean())
                         print('\nobs_model', obs_model(x_add_CO2, theta_dict))
-                        print('\nlog_p_theta.mean() size', log_p_theta.mean().size())
-                        print('\nlog_q_theta.mean() size', log_q_theta.mean().size())                        
-                        print('\nlog_prob.mean() size', log_prob.mean().size())
-                        print('\nlog_lik.mean() size', log_lik.mean().size())
-                        print('\nobs_model size', obs_model(x_add_CO2, theta_dict).size())
-                        print('\nELBO size', ELBO.size())
 
                 ELBO.backward()
                 torch.nn.utils.clip_grad_norm_(ELBO_params, 5.0)
