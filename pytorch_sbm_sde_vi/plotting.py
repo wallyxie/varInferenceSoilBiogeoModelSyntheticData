@@ -114,39 +114,38 @@ def plot_states_NN(x, params_dict, obs_model, SBM_SDE_CLASS, niter, warmup_iter,
 
 def plot_theta(p_theta, q_theta, true_theta, niter, warmup_iter, t, dt, batch_size, eval_batch_size, num_layers, train_lr, decay_step, warmup_lr, sd_scale, plots_folder, now_string, ncols=4):
     # Prior distribution object
-    p_dist = p_theta
+    p_dist = q_theta.dist(p_theta.loc.detach().cpu(), torch.max(p_theta.scale, torch.tensor(1e-8)).detach().cpu(), p_theta.a.detach().cpu(), p_theta.b.detach().cpu()) 
 
     # Posterior distribution object
     if q_theta.learn_cov:
-        loc = q_theta.means
-        scale_tril = D.transform_to(q_theta.dist.arg_constraints['scale_tril'])(q_theta.sds)
-        lower = q_theta.lowers
-        upper = q_theta.uppers
+        loc = q_theta.means.detach().cpu()
+        scale_tril = D.transform_to(q_theta.dist.arg_constraints['scale_tril'])(q_theta.sds.detach().cpu())
+        lower = q_theta.lowers.detach().cpu()
+        upper = q_theta.uppers.detach().cpu()
         q_joint = q_theta.dist(loc, scale_tril=scale_tril, a=lower, b=upper)
         scale = torch.diag(q_joint.covariance_matrix).sqrt()
         q_dist = RescaledLogitNormal(loc, scale, a = lower, b = upper) # marginal
     else:
-        loc = q_theta.means
-        scale = torch.max(q_theta.sds, torch.tensor(1e-6))
-        lower = q_theta.lowers
-        upper = q_theta.uppers
+        loc = q_theta.means.detach().cpu()
+        scale = torch.max(q_theta.sds, torch.tensor(1e-8)).detach().cpu()
+        lower = q_theta.lowers.detach().cpu()
+        upper = q_theta.uppers.detach().cpu()
         q_dist = q_theta.dist(loc, scale, a = lower, b = upper)
     
     # Compute prior and posterior densities at points x
     num_pts = 10000
-    x = torch.zeros([num_pts, loc.size(0)]) #Examining densities as we move through distribution supports. So torch.Size([bins, parameters]) is desired size of x.
-    x0 = torch.min(q_dist.mean - 4 * q_dist.stddev, p_dist.mean - 4 * p_dist.stddev)
-    x0 = torch.max(x0, lower).detach()
+    x = torch.zeros([num_pts, loc.size(0)]).detach().cpu() #Examining densities as we move through distribution supports. So torch.Size([bins, parameters]) is desired size of x.
+    x0 = torch.min(q_dist.mean - 4 * q_dist.stddev, p_dist.mean.detach().cpu() - 4 * p_dist.stddev.detach().cpu())
+    x0 = torch.max(x0, lower).detach().cpu()
 
-    x1 = torch.max(q_dist.mean + 4 * q_dist.stddev, p_dist.mean + 4 * p_dist.stddev)
-    x1 = torch.min(x1, upper).detach()
+    x1 = torch.max(q_dist.mean + 4 * q_dist.stddev, p_dist.mean.detach().cpu() + 4 * p_dist.stddev.detach().cpu())
+    x1 = torch.min(x1, upper).detach().cpu()
 
     for param_index in range(0, loc.size(0)):
-        x[:, param_index] = torch.linspace(x0[param_index], x1[param_index], num_pts)
+        x[:, param_index] = torch.linspace(x0[param_index], x1[param_index], num_pts).detach().cpu()
 
     pdf_prior = torch.exp(p_dist.log_prob(x)).detach().cpu()
     pdf_post = torch.exp(q_dist.log_prob(x)).detach().cpu()
-    x = x.detach().cpu()
 
     # #Find appropriate plotting range of x based on pdf density concentration (where pdf > 1 for prior and post).    
     # prior_first_one_indices = torch.zeros(loc.size(0))
