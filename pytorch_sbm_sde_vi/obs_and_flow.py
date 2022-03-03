@@ -329,7 +329,7 @@ class ObsModel(nn.Module):
         self.scale = torch.Tensor(SCALE).to(DEVICE) # (1, obs_dim)
         self.obs_dim = self.mu.shape[0]
         
-    def forward(self, x, theta):
+    def forward(self, x):
         obs_ll = D.normal.Normal(self.mu.permute(1, 0), self.scale).log_prob(x[:, self.idx, :])
         return torch.sum(obs_ll, [-1, -2]).mean()
 

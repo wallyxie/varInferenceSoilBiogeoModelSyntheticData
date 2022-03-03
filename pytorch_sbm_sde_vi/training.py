@@ -213,10 +213,10 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
 
                 if LEARN_CO2:
                     log_lik, drift, diffusion_sqrt, x_add_CO2 = calc_log_lik(C_PATH, theta_dict, DT, SBM_SDE, INIT_PRIOR, LEARN_CO2)
-                    ELBO = -log_p_theta.mean() + log_q_theta.mean() + log_prob.mean() - log_lik.mean() - obs_model(x_add_CO2, theta_dict)
+                    ELBO = -log_p_theta.mean() + log_q_theta.mean() + log_prob.mean() - log_lik.mean() - obs_model(x_add_CO2)
                 else:
                     log_lik, drift, diffusion_sqrt = calc_log_lik(C_PATH, theta_dict, DT, SBM_SDE, INIT_PRIOR, LEARN_CO2)
-                    ELBO = -log_p_theta.mean() + log_q_theta.mean() + log_prob.mean() - log_lik.mean() - obs_model(C_PATH, theta_dict)
+                    ELBO = -log_p_theta.mean() + log_q_theta.mean() + log_prob.mean() - log_lik.mean() - obs_model(C_PATH)
 
                 #Negative ELBO: -log p(theta) + log q(theta) - log p(y_0|x_0, theta) [already accounted for in obs_model output when learning x_0] + log q(x|theta) - log p(x|theta) - log p(y|x, theta)
                 best_loss_ELBO = ELBO if ELBO < best_loss_ELBO else best_loss_ELBO
@@ -382,10 +382,10 @@ def train_nn(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                 # Negative ELBO: -log p(theta) + log q(theta) - log p(y_0|x_0, theta) [already accounted for in obs_model output when learning x_0] + log q(x|theta) - log p(x|theta) - log p(y|x, theta)
                 if LEARN_CO2:
                     log_lik, drift, diffusion_sqrt, x_add_CO2 = calc_log_lik(C_PATH, theta_dict, DT, SBM_SDE, INIT_PRIOR, LEARN_CO2)
-                    ELBO = log_prob.mean() - log_lik.mean() - obs_model(x_add_CO2, theta_dict)
+                    ELBO = log_prob.mean() - log_lik.mean() - obs_model(x_add_CO2)
                 else:
                     log_lik, drift, diffusion_sqrt = calc_log_lik(C_PATH, theta_dict, DT, SBM_SDE, INIT_PRIOR, LEARN_CO2)
-                    ELBO = log_prob.mean() - log_lik.mean() - obs_model(C_PATH, theta_dict)
+                    ELBO = log_prob.mean() - log_lik.mean() - obs_model(C_PATH)
 
                 # Record ELBO history and best ELBO so far
                 best_loss_ELBO = ELBO if ELBO < best_loss_ELBO else best_loss_ELBO
