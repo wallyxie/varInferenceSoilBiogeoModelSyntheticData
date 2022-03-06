@@ -19,8 +19,8 @@ import matplotlib.pyplot as plt
 
 #Module imports
 from SBM_SDE_classes import *
-from obs_and_flow import *
-from training import *
+from obs_and_flow_no_bn import *
+from training_no_bn import *
 from plotting import *
 from mean_field import *
 
@@ -36,10 +36,10 @@ else:
 torch.set_printoptions(precision = 8)
 torch.manual_seed(0)
 
-now_string = 'SCON-C_CO2_logit_short_2022_02_24_15_27_58'
+now_string = 'SCON-C_CO2_logit_short_no_bn_2022_03_05_08_21_05'
 outputs_folder = 'training_pt_outputs/'
 plots_folder = 'training_plots/'
-save_string = '_iter_120000_warmup_5000_t_5000_dt_1.0_batch_31_layers_5_lr_0.01_decay_step_5000_warmup_lr_1e-06_sd_scale_0.25_SCON-C_CO2_logit_short_2022_02_24_15_27_58.pt'
+save_string = '_iter_100000_warmup_2000_t_5000_dt_1.0_batch_50_samples_50_layers_3_lr_0.002_decay_step_8000_warmup_lr_1e-06_sd_scale_0.25_SCON-C_CO2_logit_short_no_bn_2022_03_05_08_21_05.pt'
 
 obs_model_save_string = os.path.join(outputs_folder, 'obs_model' + save_string)
 net_save_string = os.path.join(outputs_folder, 'net' + save_string)
