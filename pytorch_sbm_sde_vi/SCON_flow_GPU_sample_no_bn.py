@@ -28,7 +28,6 @@ from mean_field import *
 if torch.cuda.is_available():
     print('CUDA device detected.')
     active_device = torch.device('cuda')
-    torch.set_default_tensor_type('torch.cuda.FloatTensor')
 else:
     print('No CUDA device detected.')
     raise EnvironmentError
@@ -39,7 +38,7 @@ torch.manual_seed(0)
 now_string = 'SCON-C_CO2_logit_short_no_bn_2022_03_05_08_21_05'
 outputs_folder = 'training_pt_outputs/'
 plots_folder = 'training_plots/'
-save_string = '_iter_100000_warmup_2000_t_5000_dt_1.0_batch_50_samples_50_layers_3_lr_0.002_decay_step_8000_warmup_lr_1e-06_sd_scale_0.25_SCON-C_CO2_logit_short_no_bn_2022_03_05_08_21_05.pt'
+save_string = '_iter_100000_warmup_2000_t_5000_dt_1.0_batch_50_layers_3_lr_0.002_decay_step_8000_warmup_lr_1e-06_sd_scale_0.25_SCON-C_CO2_logit_short_no_bn_2022_03_05_08_21_05.pt'
 
 obs_model_save_string = os.path.join(outputs_folder, 'obs_model' + save_string)
 net_save_string = os.path.join(outputs_folder, 'net' + save_string)
@@ -79,8 +78,9 @@ fix_theta_dict = None
 
 #Load .pt files.
 obs_model = torch.load(obs_model_save_string, map_location = active_device)
-net = SDEFlow(active_device, obs_model, state_dim_SCON, t, dt_flow, n, NUM_LAYERS = num_layers, REVERSE = reverse, BASE_STATE = base_state)
-net.load_state_dict(torch.load(net_state_dict_save_string, map_location = active_device))
+#net = SDEFlow(active_device, obs_model, state_dim_SCON, t, dt_flow, n, NUM_LAYERS = num_layers, REVERSE = reverse, BASE_STATE = base_state)
+#net.load_state_dict(torch.load(net_state_dict_save_string, map_location = active_device))
+net = torch.load(net_save_string, map_location = active_device)
 q_theta = torch.load(q_theta_save_string, map_location = active_device)
 SBM_SDE = torch.load(SBM_SDE_instance_save_string, map_location = active_device)
 

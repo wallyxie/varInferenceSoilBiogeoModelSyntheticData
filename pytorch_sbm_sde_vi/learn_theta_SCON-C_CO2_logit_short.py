@@ -57,11 +57,11 @@ elbo_warmup_iter = 2000
 elbo_warmup_lr = 1e-6
 ptrain_iter = 0
 ptrain_alg = 'L1'
-batch_size = 38
-eval_batch_size = 38
+batch_size = 50
+eval_batch_size = 50
 obs_error_scale = 0.1
 prior_scale_factor = 0.25
-num_layers = 4
+num_layers = 3
 reverse = True
 base_state = False
 
