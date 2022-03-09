@@ -243,7 +243,7 @@ class SDEFlow(nn.Module):
             BATCH_SIZE, self.state_dim, 1).transpose(-2, -1).reshape(BATCH_SIZE, 1, -1).to(self.device)
         
         if self.cond_inputs == 3:
-            i_tensor = self.i_tensor.repeat(BATCH_SIZE, 1, 1)
+            i_tensor = self.i_tensor.repeat(BATCH_SIZE, 1, 1).to(self.device)
             features = (obs_tile, times, i_tensor)
         else:
             features = (obs_tile, times)

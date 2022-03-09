@@ -147,14 +147,11 @@ class AffineLayer(nn.Module):
     def forward(self, x, COND_INPUTS): # x.shape == (batch_size, 1, n * state_dim)
         if self.unpack:
             COND_INPUTS = torch.cat([*COND_INPUTS], 1) # (batch_size, obs_dim + 1, n * state_dim)
-        #print(COND_INPUTS[0, :, 0], COND_INPUTS[0, :, 60], COND_INPUTS[0, :, 65])
         COND_INPUTS = self.feature_net(COND_INPUTS) # (batch_size, obs_dim + 1, n * state_dim)
         first_block = self.first_block(x) # (batch_size, h_cha, n * state_dim)
-        #print(first_block.shape, COND_INPUTS.shape)
         feature_vec = torch.cat([first_block, COND_INPUTS], 1) # (batch_size, h_cha + obs_dim + 1, n * state_dim)
         output = self.second_block(feature_vec) # (batch_size, 2, n * state_dim)
         mu, sigma = torch.chunk(output, 2, 1) # (batch_size, 1, n * state_dim)
-        #print('mu and sigma shapes:', mu.shape, sigma.shape)
         sigma = LowerBound.apply(sigma, 1e-8)
         x = mu + sigma * x # (batch_size, 1, n * state_dim)
         return x, -torch.log(sigma) # each of shape (batch_size, 1, n * state_dim)
@@ -203,7 +200,6 @@ class BatchNormLayer(nn.Module):
 
     def forward(self, inputs):
         inputs = inputs.squeeze(1) # (batch_size, n * state_dim)
-        #print(self.training)
         if self.training:
             # Compute mean and var across batch
             self.batch_mean = inputs.mean(0)
@@ -223,8 +219,6 @@ class BatchNormLayer(nn.Module):
         # mean.shape == var.shape == (n * state_dim, )
 
         x_hat = (inputs - mean) / var.sqrt() # (batch_size, n * state_dim)
-        #print(mean, var)
-        #print('x_hat', x_hat)
         y = torch.exp(self.log_gamma) * x_hat + self.beta # (batch_size, n * state_dim)
         ildj = -self.log_gamma + 0.5 * torch.log(var) # (n * state_dim, )
 
@@ -285,27 +279,23 @@ class SDEFlow(nn.Module):
             BATCH_SIZE, self.state_dim, 1).transpose(-2, -1).reshape(BATCH_SIZE, 1, -1).to(self.device)
         
         if self.cond_inputs == 3:
-            i_tensor = self.i_tensor.repeat(BATCH_SIZE, 1, 1)
+            i_tensor = self.i_tensor.repeat(BATCH_SIZE, 1, 1).to(self.device)
             features = (obs_tile, times, i_tensor)
         else:
             features = (obs_tile, times)
-        #print(obs_tile)
 
         ildjs = []
         
         for i in range(self.num_layers):
             eps, cl_ildj = self.affine[i](self.permutation[i](eps), features) # (batch_size, 1, n * state_dim)
-            #print('Coupling layer {}'.format(i), eps, cl_ildj)
             if i < (self.num_layers - 1):
                 eps, bn_ildj = self.batch_norm[i](eps) # (batch_size, 1, n * state_dim), (1, 1, n * state_dim)
                 ildjs.append(bn_ildj)
-                #print('BatchNorm layer {}'.format(i), eps, bn_ildj)
             ildjs.append(cl_ildj)
                 
         if self.positive:
             eps, sp_ildj = self.SP(eps) # (batch_size, 1, n * state_dim)
             ildjs.append(sp_ildj)
-            #print('Softplus layer', eps, sp_ildj)
         
         eps = eps.reshape(BATCH_SIZE, -1, self.state_dim) + 1e-6 # (batch_size, n, state_dim)
         for ildj in ildjs:
