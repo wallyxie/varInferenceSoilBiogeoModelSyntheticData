@@ -18,7 +18,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 #Module imports
-from training import *
+from training_res_bn import *
 from plotting import *
 
 #PyTorch settings
@@ -50,18 +50,18 @@ temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
 elbo_iter = 110000
-elbo_lr = 1e-2
-elbo_lr_decay = 0.5
+elbo_lr = 1e-3
+elbo_lr_decay = 0.8
 elbo_lr_decay_step_size = 15000
 elbo_warmup_iter = 5000
 elbo_warmup_lr = 1e-6
 ptrain_iter = 0
 ptrain_alg = 'L1'
-batch_size = 28
-eval_batch_size = 28
+batch_size = 31
+eval_batch_size = 31
 obs_error_scale = 0.1
 prior_scale_factor = 0.25
-num_layers = 5
+num_layers = 2
 reverse = True
 base_state = False
 
@@ -108,7 +108,7 @@ print('Training finished. Moving to saving of output files.')
 
 #Save net and ELBO files.
 now = datetime.now()
-now_string = 'SCON-C_CO2_logit_short' + now.strftime('_%Y_%m_%d_%H_%M_%S')
+now_string = 'SCON-C_CO2_logit_short_res_bn' + now.strftime('_%Y_%m_%d_%H_%M_%S')
 save_string = f'_iter_{elbo_iter}_warmup_{elbo_warmup_iter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_lr_{elbo_lr}_decay_step_{elbo_lr_decay_step_size}_warmup_lr_{elbo_warmup_lr}_sd_scale_{prior_scale_factor}_{now_string}.pt'
 outputs_folder = 'training_pt_outputs/'
 train_args_save_string = os.path.join(outputs_folder, 'train_args' + save_string)
