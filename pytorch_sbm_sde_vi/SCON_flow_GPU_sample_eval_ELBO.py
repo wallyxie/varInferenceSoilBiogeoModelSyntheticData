@@ -35,10 +35,10 @@ else:
 torch.set_printoptions(precision = 8)
 torch.manual_seed(0)
 
-now_string = 'SCON-C_CO2_logit_short_2022_03_08_08_43_06'
+now_string = 'SCON-C_CO2_logit_short_2022_03_08_12_39_02'
 outputs_folder = 'training_pt_outputs/'
 plots_folder = 'training_plots/'
-save_string = '_iter_110000_warmup_5000_t_5000_dt_1.0_batch_138_layers_1_lr_0.01_decay_step_15000_warmup_lr_1e-06_sd_scale_0.25_SCON-C_CO2_logit_short_2022_03_08_08_43_06.pt'
+save_string = '_iter_110000_warmup_5000_t_5000_dt_1.0_batch_31_layers_5_lr_0.01_decay_step_15000_warmup_lr_1e-06_sd_scale_0.25_SCON-C_CO2_logit_short_2022_03_08_12_39_02.pt'
 
 obs_model_save_string = os.path.join(outputs_folder, 'obs_model' + save_string)
 net_save_string = os.path.join(outputs_folder, 'net' + save_string)

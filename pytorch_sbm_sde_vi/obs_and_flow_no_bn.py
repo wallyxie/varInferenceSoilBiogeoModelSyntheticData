@@ -218,14 +218,6 @@ class SDEFlow(nn.Module):
         if self.positive:
             self.SP = SoftplusLayer()
 
-    def _init_weights_(self): 
-        for m in self.modules(): 
-            if isinstance(m, nn.Conv1d): 
-                nn.init.kaiming_normal_(m.weight) 
-            for l in range(len(self.affine)): 
-                self.affine[l].second_block[-1].weight.data.zero_() 
-                self.affine[l].second_block[-1].bias.data.zero_()
-
     def forward(self, BATCH_SIZE, *args, **kwargs):
         if self.base_state:
             eps = self.base_dist.rsample([BATCH_SIZE]).to(self.device)
