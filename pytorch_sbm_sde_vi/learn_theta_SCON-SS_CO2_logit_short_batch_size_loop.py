@@ -93,7 +93,6 @@ csv_data_path = os.path.join('generated_data/', 'SCON-SS_CO2_logit_short_2021_11
 #Call training loop function.
 t_total = 0
 for batch_size in range(20, 50):
-    torch.cuda.empty_cache()
     print('Trying batch_size = ', batch_size)
     t_start = time.process_time()
     net, q_theta, p_theta, obs_model, norm_hist, ELBO_hist, SBM_SDE_instance = train(
