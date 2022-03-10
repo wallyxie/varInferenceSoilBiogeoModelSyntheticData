@@ -50,7 +50,7 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-elbo_iter = 5
+elbo_iter = 10
 elbo_lr = 5e-3
 elbo_lr_decay = 0.7
 elbo_lr_decay_step_size = 10000
@@ -60,7 +60,7 @@ ptrain_iter = 0
 ptrain_alg = 'L1'
 obs_error_scale = 0.1
 prior_scale_factor = 0.25
-num_layers = 2
+num_layers = 5
 reverse = True
 base_state = False
 
@@ -92,7 +92,7 @@ csv_data_path = os.path.join('generated_data/', 'SCON-SS_CO2_logit_short_2021_11
 
 #Call training loop function.
 t_total = 0
-for batch_size in range(50, 100):
+for batch_size in range(20, 50):
     torch.cuda.empty_cache()
     print('Trying batch_size = ', batch_size)
     t_start = time.process_time()
