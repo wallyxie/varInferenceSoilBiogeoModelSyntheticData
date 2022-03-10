@@ -51,7 +51,7 @@ temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
 elbo_iter = 10
-elbo_lr = 5e-3
+elbo_lr = 1e-3
 elbo_lr_decay = 0.7
 elbo_lr_decay_step_size = 10000
 elbo_warmup_iter = 5
@@ -108,3 +108,4 @@ for batch_size in range(20, 50):
     t_end = time.process_time()
     t_total += t_end - t_start
     print(f'Total function time by batch_size = {batch_size} is t_total = {t_total} seconds')
+    torch.cuda.empty_cache()
