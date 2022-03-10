@@ -60,7 +60,7 @@ ptrain_iter = 0
 ptrain_alg = 'L1'
 obs_error_scale = 0.1
 prior_scale_factor = 0.25
-num_layers = 5
+num_layers = 2
 reverse = True
 base_state = False
 
@@ -92,7 +92,8 @@ csv_data_path = os.path.join('generated_data/', 'SCON-SS_CO2_logit_short_2021_11
 
 #Call training loop function.
 t_total = 0
-for batch_size in range(20, 40): 
+for batch_size in range(50, 100):
+    torch.cuda.empty_cache()
     print('Trying batch_size = ', batch_size)
     t_start = time.process_time()
     net, q_theta, p_theta, obs_model, norm_hist, ELBO_hist, SBM_SDE_instance = train(
