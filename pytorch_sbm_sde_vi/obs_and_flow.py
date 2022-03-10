@@ -105,7 +105,7 @@ class ResNetBlock(nn.Module):
 
 class ResNetBlockUnMasked(nn.Module):
     
-    def __init__(self, inp_cha, out_cha, stride = 1, batch_norm = False):
+    def __init__(self, inp_cha, out_cha, stride = 1, batch_norm = True):
         super().__init__()
         self.conv1 = nn.Conv1d(inp_cha, out_cha, 3, stride, 1)
         self.conv2 = nn.Conv1d(out_cha, out_cha, 3, 1, 1)
