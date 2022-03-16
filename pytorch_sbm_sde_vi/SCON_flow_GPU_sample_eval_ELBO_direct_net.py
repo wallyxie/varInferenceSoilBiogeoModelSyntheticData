@@ -92,8 +92,10 @@ SBM_SDE = torch.load(SBM_SDE_instance_save_string, map_location = active_device)
 
 #Compute test ELBO.
 net.eval()
+test_ELBO_list = []
+eval_batch_size_list = []
 with torch.no_grad():
-    for eval_batch_size in range(30, 150):
+    for eval_batch_size in range(31, 201):
         x, log_prob = net(eval_batch_size)
         print('x = ', x)
         theta_dict, theta, log_q_theta, parent_loc_scale_dict = q_theta(eval_batch_size)
@@ -107,4 +109,16 @@ with torch.no_grad():
         neg_ELBO = -log_p_theta.mean() + log_q_theta.mean() + log_prob.mean() - log_lik.mean() - obs_model(x_add_CO2)
         print('x.size() =', x.size())
         print(f'Net with {num_layers} layers and {eval_batch_size} evaluation samples has neg_ELBO = {neg_ELBO}')
+        test_ELBO_list.append(neg_ELBO)
+        eval_batch_size_list.append(eval_batch_size)
         torch.cuda.empty_cache()
+
+fig1 = plt.figure(figsize = (8, 5))
+ax = fig1.add_axes([0.05, 0.05, 0.6, 0.95])
+ax_histy = fig1.add_axes([0.65, 0.05, 0.25, 0.95], sharey = ax)
+ax.scatter(eval_batch_size_list, test_ELBO_list)
+ax.xlabel('eval batch size')
+ax.ylabel('neg test ELBO')
+ax_histy.tick_params(axis='y', labelleft=False)
+ax_histy.hist(test_ELBO_list) 
+fig1.savefig('other_plots/neg_ELBO_scatter.png', dpi = 300)
