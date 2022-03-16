@@ -95,7 +95,7 @@ net.eval()
 test_ELBO_list = []
 eval_batch_size_list = []
 with torch.no_grad():
-    for eval_batch_size in range(31, 201):
+    for eval_batch_size in range(40, 301):
         x, log_prob = net(eval_batch_size)
         print('x = ', x)
         theta_dict, theta, log_q_theta, parent_loc_scale_dict = q_theta(eval_batch_size)
@@ -113,12 +113,18 @@ with torch.no_grad():
         eval_batch_size_list.append(eval_batch_size)
         torch.cuda.empty_cache()
 
-fig1 = plt.figure(figsize = (8, 5))
-ax = fig1.add_axes([0.05, 0.05, 0.6, 0.95])
-ax_histy = fig1.add_axes([0.65, 0.05, 0.25, 0.95], sharey = ax)
-ax.scatter(eval_batch_size_list, test_ELBO_list)
+eval_batch_size_array = np.array(eval_batch_size_list)
+test_ELBO_array = np.array(test_ELBO_list)
+fig1 = plt.figure(figsize = (10, 8))
+ax = fig1.add_axes([0.1, 0.05, 0.6, 0.9])
+ax_histy = fig1.add_axes([0.705, 0.05, 0.25, 0.9], sharey = ax)
+ax.scatter(eval_batch_size_array, test_ELBO_array)
 ax_histy.tick_params(axis='y', labelleft=False)
-ax_histy.hist(test_ELBO_list)
+binwidth = 20
+bins = np.arange(80, 320 + binwidth, binwidth)
+ax_histy.hist(test_ELBO_array, bins = bins, histtype='bar', orientation='horizontal')
+ax.set_yticks(bins)
+ax.set_ylim(80, 320 + binwidth)
 ax.set_xlabel('eval batch size')
 ax.set_ylabel('neg test ELBO')
 fig1.savefig('other_plots/neg_ELBO_scatter.png', dpi = 300)
