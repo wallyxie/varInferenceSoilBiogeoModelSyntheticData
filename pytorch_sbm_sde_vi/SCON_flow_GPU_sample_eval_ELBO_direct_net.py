@@ -109,7 +109,7 @@ with torch.no_grad():
         neg_ELBO = -log_p_theta.mean() + log_q_theta.mean() + log_prob.mean() - log_lik.mean() - obs_model(x_add_CO2)
         print('x.size() =', x.size())
         print(f'Net with {num_layers} layers and {eval_batch_size} evaluation samples has neg_ELBO = {neg_ELBO}')
-        test_ELBO_list.append(neg_ELBO)
+        test_ELBO_list.append(neg_ELBO.cpu())
         eval_batch_size_list.append(eval_batch_size)
         torch.cuda.empty_cache()
 
