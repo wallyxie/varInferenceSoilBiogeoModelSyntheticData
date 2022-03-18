@@ -76,7 +76,7 @@ class MaskedConv1d(nn.Conv1d):
 
 class ResNetBlock(nn.Module):
     
-    def __init__(self, inp_cha, out_cha, stride = 1, first = True, batch_norm = True):
+    def __init__(self, inp_cha, out_cha, stride = 1, first = True, batch_norm = False):
         super().__init__()
         self.conv1 = MaskedConv1d('A' if first else 'B', inp_cha,  out_cha, 3, stride, 1, bias = False)
         self.conv2 = MaskedConv1d('B', out_cha,  out_cha, 3, 1, 1, bias = False)
