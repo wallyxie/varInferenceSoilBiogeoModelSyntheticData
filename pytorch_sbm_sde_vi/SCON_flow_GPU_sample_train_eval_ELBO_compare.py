@@ -89,7 +89,7 @@ q_theta = torch.load(q_theta_save_string, map_location = active_device)
 SBM_SDE = torch.load(SBM_SDE_instance_save_string, map_location = active_device)
 
 net_train_batch_size = 31
-net_eval_batch_size = 155
+net_eval_batch_size = 31
 
 #Compute net.eval() test ELBO.
 net.eval()
