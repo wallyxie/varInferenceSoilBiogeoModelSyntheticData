@@ -208,21 +208,17 @@ class BatchRenormLayer(nn.Module):
         self.batch_renorm_warmup_iter = 5000
         self.training_iter = 0
 
-    @property
-    def r_max(self):
-        if self.training_iter < self.batch_renorm_warmup_iter:
-            return self.init_r_max
+    def get_r_max(self, training_iter, batch_renorm_warmup_iter, init_r_max, max_r_max, r_max_step_size):
+        if training_iter < batch_renorm_warmup_iter:
+            return init_r_max
         else:
-            r_max = (self.init_r_max + (self.training_iters - self.batch_renorm_warmup_iter) * self.r_max_step_size).clamp_(self.init_r_max, self.max_r_max)
-            return r_max
+            return (init_r_max + (training_iters - batch_renorm_warmup_iter) * r_max_step_size).clamp_(init_r_max, max_r_max)
 
-    @property
-    def d_max(self):
-        if self.training_iter < self.batch_renorm_warmup_iter:
-            return self.init_d_max
+    def get_d_max(self, training_iter, batch_renorm_warmup_iter, init_d_max, max_d_max, d_max_step_size):
+        if training_iter < batch_renorm_warmup_iter:
+            return init_d_max
         else:
-            d_max = (self.init_d_max + (self.training_iters - self.batch_renorm_warmup_iter) * self.d_max_step_size).clamp_(self.init_d_max, self.max_d_max)
-            return d_max
+            return (init_d_max + (training_iters - batch_renorm_warmup_iter) * d_max_step_size).clamp_(init_d_max, max_d_max)
 
     def forward(self, inputs):
 
@@ -237,6 +233,9 @@ class BatchRenormLayer(nn.Module):
 
             self.running_mean.add_(self.batch_mean.detach() * (1 - self.momentum))
             self.running_std.add_(self.batch_std.detach() * (1 - self.momentum))
+
+            self.r_max = self.get_r_max(self.training_iter, self.batch_renorm_warmup_iter, self.init_r_max, self.max_r_max, self.r_max_step_size)
+            self.d_max = self.get_d_max(self.training_iter, self.batch_renorm_warmup_iter, self.init_d_max, self.max_d_max, self.d_max_step_size)
 
             r = (self.batch_std.detach() / self.running_std).clamp_(1 / self.r_max, self.r_max)
             d = ((self.batch_mean.detach() - self.running_mean) / self.running_std).clamp_(-self.d_max, self.d_max)
