@@ -249,6 +249,7 @@ class BatchRenormLayer(nn.Module):
         else:
             # mean.shape == std.shape == (n * state_dim, )
             x_hat = (x - self.running_mean) / self.running_std # (batch_size, n * state_dim)
+
             std = self.running_std
 
         y = torch.exp(self.log_gamma) * x_hat + self.beta # (batch_size, n * state_dim)
