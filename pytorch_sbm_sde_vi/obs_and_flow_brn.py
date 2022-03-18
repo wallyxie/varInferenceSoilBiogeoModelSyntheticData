@@ -187,7 +187,7 @@ class SoftplusLayer(nn.Module):
 
 class BatchRenormLayer(nn.Module):
     
-    def __init__(self, num_inputs, momentum = 1e-2, eps = 1e-5, affine = True, init_r_max = 1., max_r_max = 3., r_max_step_size = 1e-4, init_d_max = 0, max_d_max = 5., d_max_step_size = 2e-4, batch_renorm_warmup_iter = 5000):
+    def __init__(self, num_inputs, momentum = 1e-2, eps = 1e-5, affine = True, init_r_max = 1., max_r_max = 3., r_max_step_size = 4e-5, init_d_max = 0, max_d_max = 5., d_max_step_size = 2e-4, batch_renorm_warmup_iter = 5000):
         super(BatchRenormLayer, self).__init__()
 
         self.momentum = momentum
@@ -241,15 +241,15 @@ class BatchRenormLayer(nn.Module):
             r = (self.batch_std.detach() / self.running_std).clamp_(1 / self.r_max, self.r_max)
             d = ((self.batch_mean - self.running_mean) / self.running_std).clamp_(-self.d_max, self.d_max)
 
-            x_hat = (x - self.batch_mean) / batch_std * r + d
+            x_hat = r * (x - self.batch_mean) / self.batch_std + d
+
+            std = self.batch_std
 
             self.training_iter += 1
         else:
-            mean = self.running_mean
-            std = self.running_std
             # mean.shape == std.shape == (n * state_dim, )
-
             x_hat = (x - self.running_mean) / self.running_std # (batch_size, n * state_dim)
+            std = self.running_std
 
         y = torch.exp(self.log_gamma) * x_hat + self.beta # (batch_size, n * state_dim)
         ildj = -self.log_gamma + 0.5 * torch.log(std.square()) # (n * state_dim, )
