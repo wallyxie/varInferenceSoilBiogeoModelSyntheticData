@@ -239,7 +239,7 @@ class BatchRenormLayer(nn.Module):
             self.running_std.add_(self.batch_std.detach() * (1 - self.momentum))
 
             r = (self.batch_std.detach() / self.running_std).clamp_(1 / self.r_max, self.r_max)
-            d = ((self.batch_mean - self.running_mean) / self.running_std).clamp_(-self.d_max, self.d_max)
+            d = ((self.batch_mean.detach() - self.running_mean) / self.running_std).clamp_(-self.d_max, self.d_max)
 
             x_hat = r * (x - self.batch_mean) / self.batch_std + d
 
