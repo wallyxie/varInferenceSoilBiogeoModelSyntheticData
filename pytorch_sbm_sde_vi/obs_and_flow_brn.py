@@ -187,7 +187,7 @@ class SoftplusLayer(nn.Module):
 
 class BatchRenormLayer(nn.Module):
     
-    def __init__(self, num_inputs, momentum = 1e-2, eps = 1e-5, affine = True, init_r_max = 1., max_r_max = 3., r_max_step_size = 4e-5, init_d_max = 0, max_d_max = 5., d_max_step_size = 2e-4, batch_renorm_warmup_iter = 5000):
+    def __init__(self, num_inputs, momentum = 1e-2, eps = 1e-5, affine = True, init_r_max = 1., max_r_max = 3., r_max_step_size = 1e-4, init_d_max = 0, max_d_max = 5., d_max_step_size = 2.5e-4, batch_renorm_warmup_iter = 5000):
         super(BatchRenormLayer, self).__init__()
 
         self.momentum = momentum
@@ -212,13 +212,13 @@ class BatchRenormLayer(nn.Module):
         if training_iter < batch_renorm_warmup_iter:
             return init_r_max
         else:
-            return (init_r_max + (training_iter - batch_renorm_warmup_iter) * r_max_step_size).clamp_(init_r_max, max_r_max)
+            return torch.tensor((init_r_max + (training_iter - batch_renorm_warmup_iter) * r_max_step_size)).clamp_(init_r_max, max_r_max)
 
     def get_d_max(self, training_iter, batch_renorm_warmup_iter, init_d_max, max_d_max, d_max_step_size):
         if training_iter < batch_renorm_warmup_iter:
             return init_d_max
         else:
-            return (init_d_max + (training_iter - batch_renorm_warmup_iter) * d_max_step_size).clamp_(init_d_max, max_d_max)
+            return torch.tensor((init_d_max + (training_iter - batch_renorm_warmup_iter) * d_max_step_size)).clamp_(init_d_max, max_d_max)
 
     def forward(self, inputs):
 
