@@ -76,7 +76,7 @@ class MaskedConv1d(nn.Conv1d):
 
 class ResNetBlock(nn.Module):
     
-    def __init__(self, inp_cha, out_cha, stride = 1, first = True, batch_norm = False):
+    def __init__(self, inp_cha, out_cha, stride = 1, first = True, batch_norm = True):
         super().__init__()
         self.conv1 = MaskedConv1d('A' if first else 'B', inp_cha,  out_cha, 3, stride, 1, bias = False)
         self.conv2 = MaskedConv1d('B', out_cha,  out_cha, 3, 1, 1, bias = False)
@@ -237,8 +237,14 @@ class BatchRenormLayer(nn.Module):
             self.r_max = self.get_r_max(self.training_iter, self.batch_renorm_warmup_iter, self.init_r_max, self.max_r_max, self.r_max_step_size)
             self.d_max = self.get_d_max(self.training_iter, self.batch_renorm_warmup_iter, self.init_d_max, self.max_d_max, self.d_max_step_size)
 
+            print('r_max = ', self.r_max)
+            print('d_max = ', self.d_max)            
+
             r = (self.batch_std.detach() / self.running_std).clamp_(1 / self.r_max, self.r_max)
             d = ((self.batch_mean.detach() - self.running_mean) / self.running_std).clamp_(-self.d_max, self.d_max)
+
+            print('r = ', r)
+            print('d = ', d)  
 
             x_hat = r * (x - self.batch_mean) / self.batch_std + d
 
