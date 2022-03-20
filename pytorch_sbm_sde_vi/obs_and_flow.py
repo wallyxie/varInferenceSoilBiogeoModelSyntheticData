@@ -205,11 +205,8 @@ class BatchNormLayer(nn.Module):
             self.batch_mean = inputs.mean(0)
             self.batch_var = (inputs - self.batch_mean).pow(2).mean(0) + self.eps
 
-            self.running_mean.mul_(self.momentum)
-            self.running_var.mul_(self.momentum)
-
-            self.running_mean.add_(self.batch_mean.data * (1 - self.momentum))
-            self.running_var.add_(self.batch_var.data * (1 - self.momentum))
+            self.running_mean += self.momentum * (self.batch_mean.detach() - self.running_mean)
+            self.running_var += self.momentum * (self.batch_var.detach() - self.running_var)
 
             mean = self.batch_mean
             var = self.batch_var
