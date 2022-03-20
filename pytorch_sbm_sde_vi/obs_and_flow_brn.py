@@ -228,11 +228,8 @@ class BatchRenormLayer(nn.Module):
             self.batch_mean = x.mean(0)
             self.batch_std = x.std(0, unbiased = False) + self.eps
 
-            self.running_mean.mul_(self.momentum)
-            self.running_std.mul_(self.momentum)
-
-            self.running_mean.add_(self.batch_mean.detach() * (1 - self.momentum))
-            self.running_std.add_(self.batch_std.detach() * (1 - self.momentum))
+            self.running_mean += self.momentum * (self.batch_mean.detach() - self.running_mean)
+            self.running_std += self.momentum * (self.batch_std.detach() - self.running_std)
 
             self.r_max = self.get_r_max(self.training_iter, self.batch_renorm_warmup_iter, self.init_r_max, self.max_r_max, self.r_max_step_size)
             self.d_max = self.get_d_max(self.training_iter, self.batch_renorm_warmup_iter, self.init_d_max, self.max_d_max, self.d_max_step_size)
@@ -258,7 +255,7 @@ class BatchRenormLayer(nn.Module):
             std = self.running_std
 
         y = torch.exp(self.log_gamma) * x_hat + self.beta # (batch_size, n * state_dim)
-        ildj = -self.log_gamma + 0.5 * torch.log(std.square()) # (n * state_dim, )
+        ildj = -self.log_gamma + torch.log(std) # (n * state_dim, )
 
         # y.shape == (batch_size, 1, n * state_dim), ildj.shape == (1, 1, n * state_dim)
         return y[:, None, :], ildj[None, None, :]

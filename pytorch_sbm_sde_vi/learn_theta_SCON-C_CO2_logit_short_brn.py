@@ -133,7 +133,21 @@ print('Output files saving finished. Moving to plotting.')
 
 #Plot training posterior results and ELBO history.
 net.eval()
-x, _ = net(eval_batch_size)
+with torch.no_grad():
+    x, log_prob = net(eval_batch_size)
+    print('x = ', x)
+    theta_dict, theta, log_q_theta, parent_loc_scale_dict = q_theta(eval_batch_size)
+    log_p_theta = p_theta.log_prob(theta).sum(-1)
+    if fix_theta_dict:
+        if platform.python_version() >= '3.9.0':
+            theta_dict = theta_dict | fix_theta_dict
+        else:
+            theta_dict = {**theta_dict, **fix_theta_dict}
+    log_lik, drift, diffusion_sqrt, x_add_CO2 = calc_log_lik(x, theta_dict, dt_flow, SBM_SDE, x0_prior_SCON, learn_CO2)
+    neg_ELBO = -log_p_theta.mean() + log_q_theta.mean() + log_prob.mean() - log_lik.mean() - obs_model(x_add_CO2)
+    print('x.size() =', x.size())
+    print(f'Net with {train_args} has neg_ELBO = {neg_ELBO}')
+
 plots_folder = 'training_plots/'
 plot_elbo(ELBO_hist, elbo_iter, elbo_warmup_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, elbo_lr_decay_step_size, elbo_warmup_lr, prior_scale_factor, plots_folder, now_string, xmin = elbo_warmup_iter + int(elbo_iter / 2))
 print('ELBO plotting finished.')
