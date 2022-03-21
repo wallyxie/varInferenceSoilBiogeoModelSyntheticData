@@ -228,24 +228,24 @@ class BatchRenormLayer(nn.Module):
             self.batch_mean = x.mean(0)
             self.batch_std = x.std(0, unbiased = False) + self.eps
 
-            self.running_mean += self.momentum * (self.batch_mean.detach() - self.running_mean)
-            self.running_std += self.momentum * (self.batch_std.detach() - self.running_std)
-
             self.r_max = self.get_r_max(self.training_iter, self.batch_renorm_warmup_iter, self.init_r_max, self.max_r_max, self.r_max_step_size)
             self.d_max = self.get_d_max(self.training_iter, self.batch_renorm_warmup_iter, self.init_d_max, self.max_d_max, self.d_max_step_size)
 
             print('r_max = ', self.r_max)
             print('d_max = ', self.d_max)            
 
-            r = (self.batch_std.detach() / self.running_std).clamp_(1 / self.r_max, self.r_max)
-            d = ((self.batch_mean.detach() - self.running_mean) / self.running_std).clamp_(-self.d_max, self.d_max)
+            self.r = (self.batch_std.detach() / self.running_std).clamp_(1 / self.r_max, self.r_max)
+            self.d = ((self.batch_mean.detach() - self.running_mean) / self.running_std).clamp_(-self.d_max, self.d_max)
 
-            print('r = ', r)
-            print('d = ', d)  
+            print('r = ', self.r)
+            print('d = ', self.d)  
 
-            x_hat = r * (x - self.batch_mean) / self.batch_std + d
+            x_hat = self.r * (x - self.batch_mean) / self.batch_std + self.d
 
-            std = self.batch_std
+            std = self.batch_std            
+
+            self.running_mean += self.momentum * (self.batch_mean.detach() - self.running_mean)
+            self.running_std += self.momentum * (self.batch_std.detach() - self.running_std)
 
             self.training_iter += 1
         else:
