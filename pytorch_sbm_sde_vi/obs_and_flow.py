@@ -185,39 +185,68 @@ class SoftplusLayer(nn.Module):
         y = self.softplus(x)
         return y, -torch.log(-torch.expm1(-y))
 
-class BatchNormLayer(nn.Module):
+class BatchRenormLayer(nn.Module):
     
-    def __init__(self, num_inputs, momentum = 1e-2, eps = 1e-5, affine = True):
-        super(BatchNormLayer, self).__init__()
+    def __init__(self, num_inputs, momentum = 1e-2, eps = 1e-5, affine = True, init_r_max = 1., max_r_max = 3., r_max_step_size = 1e-4, init_d_max = 0, max_d_max = 5., d_max_step_size = 2.5e-4, batch_renorm_warmup_iter = 5000):
+        super(BatchRenormLayer, self).__init__()
 
-        self.log_gamma = nn.Parameter(torch.rand(num_inputs)) if affine else torch.zeros(num_inputs)
-        self.beta = nn.Parameter(torch.rand(num_inputs)) if affine else torch.zeros(num_inputs)
         self.momentum = momentum
         self.eps = eps
 
+        self.log_gamma = nn.Parameter(torch.rand(num_inputs)) if affine else torch.zeros(num_inputs)
+        self.beta = nn.Parameter(torch.rand(num_inputs)) if affine else torch.zeros(num_inputs)
+
         self.register_buffer('running_mean', torch.zeros(num_inputs))
-        self.register_buffer('running_var', torch.ones(num_inputs))
+        self.register_buffer('running_std', torch.ones(num_inputs))
+
+        self.init_r_max = init_r_max
+        self.max_r_max = max_r_max
+        self.init_d_max = init_d_max
+        self.max_d_max = max_d_max
+        self.r_max_step_size = r_max_step_size
+        self.d_max_step_size = d_max_step_size        
+        self.batch_renorm_warmup_iter = 10000
+        self.training_iter = 0
+
+    def get_r_max(self, training_iter, batch_renorm_warmup_iter, init_r_max, max_r_max, r_max_step_size):
+        if training_iter < batch_renorm_warmup_iter:
+            return init_r_max
+        else:
+            return torch.tensor((init_r_max + (training_iter - batch_renorm_warmup_iter) * r_max_step_size)).clamp_(init_r_max, max_r_max)
+
+    def get_d_max(self, training_iter, batch_renorm_warmup_iter, init_d_max, max_d_max, d_max_step_size):
+        if training_iter < batch_renorm_warmup_iter:
+            return init_d_max
+        else:
+            return torch.tensor((init_d_max + (training_iter - batch_renorm_warmup_iter) * d_max_step_size)).clamp_(init_d_max, max_d_max)
 
     def forward(self, inputs):
-        inputs = inputs.squeeze(1) # (batch_size, n * state_dim)
+
+        x = inputs.squeeze(1) # (batch_size, n * state_dim)
+
         if self.training:
-            # Compute mean and var across batch
-            self.batch_mean = inputs.mean(0)
-            self.batch_var = (inputs - self.batch_mean).pow(2).mean(0) + self.eps
+            self.batch_mean = x.mean(0)
+            self.batch_std = x.std(0, unbiased = False) + self.eps
+
+            self.r_max = self.get_r_max(self.training_iter, self.batch_renorm_warmup_iter, self.init_r_max, self.max_r_max, self.r_max_step_size)
+            self.d_max = self.get_d_max(self.training_iter, self.batch_renorm_warmup_iter, self.init_d_max, self.max_d_max, self.d_max_step_size)
+
+            self.r = (self.batch_std.detach() / self.running_std).clamp_(1 / self.r_max, self.r_max)
+            self.d = ((self.batch_mean.detach() - self.running_mean) / self.running_std).clamp_(-self.d_max, self.d_max)
+            
+            x_hat = self.r * (x - self.batch_mean) / self.batch_std + self.d
+            y = torch.exp(self.log_gamma) * x_hat + self.beta
+            ildj = -torch.log(self.r) - self.log_gamma + torch.log(self.batch_std) # (n * state_dim, )
 
             self.running_mean += self.momentum * (self.batch_mean.detach() - self.running_mean)
-            self.running_var += self.momentum * (self.batch_var.detach() - self.running_var)
+            self.running_std += self.momentum * (self.batch_std.detach() - self.running_std)
 
-            mean = self.batch_mean
-            var = self.batch_var
+            self.training_iter += 1
         else:
-            mean = self.running_mean
-            var = self.running_var
-        # mean.shape == var.shape == (n * state_dim, )
-
-        x_hat = (inputs - mean) / var.sqrt() # (batch_size, n * state_dim)
-        y = torch.exp(self.log_gamma) * x_hat + self.beta # (batch_size, n * state_dim)
-        ildj = -self.log_gamma + 0.5 * torch.log(var) # (n * state_dim, )
+            # mean.shape == std.shape == (n * state_dim, )
+            x_hat = (x - self.running_mean) / self.running_std # (batch_size, n * state_dim)
+            y = torch.exp(self.log_gamma) * x_hat + self.beta # (batch_size, n * state_dim)
+            ildj = -self.log_gamma + torch.log(self.running_std) # (n * state_dim, )
 
         # y.shape == (batch_size, 1, n * state_dim), ildj.shape == (1, 1, n * state_dim)
         return y[:, None, :], ildj[None, None, :]
@@ -254,7 +283,7 @@ class SDEFlow(nn.Module):
 
         self.affine = nn.ModuleList([AffineLayer(COND_INPUTS + self.obs_model.obs_dim, 1) for _ in range(NUM_LAYERS)])
         self.permutation = [PermutationLayer(STATE_DIM, REVERSE = self.reverse) for _ in range(NUM_LAYERS)]
-        self.batch_norm = nn.ModuleList([BatchNormLayer(STATE_DIM * N) for _ in range(NUM_LAYERS - 1)])
+        self.batch_renorm = nn.ModuleList([BatchRenormLayer(STATE_DIM * N) for _ in range(NUM_LAYERS - 1)])
         self.positive = POSITIVE
         if self.positive:
             self.SP = SoftplusLayer()
@@ -286,7 +315,7 @@ class SDEFlow(nn.Module):
         for i in range(self.num_layers):
             eps, cl_ildj = self.affine[i](self.permutation[i](eps), features) # (batch_size, 1, n * state_dim)
             if i < (self.num_layers - 1):
-                eps, bn_ildj = self.batch_norm[i](eps) # (batch_size, 1, n * state_dim), (1, 1, n * state_dim)
+                eps, bn_ildj = self.batch_renorm[i](eps) # (batch_size, 1, n * state_dim), (1, 1, n * state_dim)
                 ildjs.append(bn_ildj)
             ildjs.append(cl_ildj)
                 
