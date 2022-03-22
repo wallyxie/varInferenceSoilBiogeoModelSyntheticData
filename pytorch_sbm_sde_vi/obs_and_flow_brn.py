@@ -193,7 +193,7 @@ class BatchRenormLayer(nn.Module):
         self.momentum = momentum
         self.eps = eps
 
-        self.log_gamma = nn.Parameter(torch.rand(num_inputs)) if affine else torch.zeros(num_inputs)
+        self.gamma = nn.Parameter(torch.rand(num_inputs)) if affine else torch.zeros(num_inputs)
         self.beta = nn.Parameter(torch.rand(num_inputs)) if affine else torch.zeros(num_inputs)
 
         self.register_buffer('running_mean', torch.zeros(num_inputs))
@@ -231,18 +231,12 @@ class BatchRenormLayer(nn.Module):
             self.r_max = self.get_r_max(self.training_iter, self.batch_renorm_warmup_iter, self.init_r_max, self.max_r_max, self.r_max_step_size)
             self.d_max = self.get_d_max(self.training_iter, self.batch_renorm_warmup_iter, self.init_d_max, self.max_d_max, self.d_max_step_size)
 
-            print('r_max = ', self.r_max)
-            print('d_max = ', self.d_max)            
-
             self.r = (self.batch_std.detach() / self.running_std).clamp_(1 / self.r_max, self.r_max)
             self.d = ((self.batch_mean.detach() - self.running_mean) / self.running_std).clamp_(-self.d_max, self.d_max)
 
-            print('r = ', self.r)
-            print('d = ', self.d)  
-
             x_hat = self.r * (x - self.batch_mean) / self.batch_std + self.d
-
-            std = self.batch_std            
+            y = self.gamma * x_hat + self.beta
+            ildj = -torch.log(self.r) - torch.log(self.gamma) + torch.log(self.batch_std) # (n * state_dim, )
 
             self.running_mean += self.momentum * (self.batch_mean.detach() - self.running_mean)
             self.running_std += self.momentum * (self.batch_std.detach() - self.running_std)
@@ -251,11 +245,8 @@ class BatchRenormLayer(nn.Module):
         else:
             # mean.shape == std.shape == (n * state_dim, )
             x_hat = (x - self.running_mean) / self.running_std # (batch_size, n * state_dim)
-
-            std = self.running_std
-
-        y = torch.exp(self.log_gamma) * x_hat + self.beta # (batch_size, n * state_dim)
-        ildj = -self.log_gamma + torch.log(std) # (n * state_dim, )
+            y = self.gamma * x_hat + self.beta # (batch_size, n * state_dim)
+            ildj = -torch.log(self.gamma) + torch.log(self.running_std) # (n * state_dim, )
 
         # y.shape == (batch_size, 1, n * state_dim), ildj.shape == (1, 1, n * state_dim)
         return y[:, None, :], ildj[None, None, :]
