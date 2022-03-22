@@ -49,7 +49,7 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-elbo_iter = 120000
+elbo_iter = 110000
 elbo_lr = 1e-2
 elbo_lr_decay = 0.7
 elbo_lr_decay_step_size = 15000
@@ -101,7 +101,7 @@ net, q_theta, p_theta, obs_model, norm_hist, ELBO_hist, SBM_SDE_instance = train
         SBM_SDE_class, diffusion_type, x0_prior_SCON,
         SCON_C_priors_details, fix_theta_dict, learn_CO2, theta_dist, 
         ELBO_WARMUP_ITER = elbo_warmup_iter, ELBO_WARMUP_INIT_LR = elbo_warmup_lr, ELBO_LR_DECAY = elbo_lr_decay, ELBO_LR_DECAY_STEP_SIZE = elbo_lr_decay_step_size,
-        PRINT_EVERY = 10, VERBOSE = True,
+        PRINT_EVERY = 20, VERBOSE = True,
         DEBUG_SAVE_DIR = None, PTRAIN_ITER = ptrain_iter, PTRAIN_ALG = ptrain_alg,
         NUM_LAYERS = num_layers, REVERSE = reverse, BASE_STATE = base_state)
 print('Training finished. Moving to saving of output files.')
@@ -143,7 +143,7 @@ with torch.no_grad():
             theta_dict = theta_dict | fix_theta_dict
         else:
             theta_dict = {**theta_dict, **fix_theta_dict}
-    log_lik, drift, diffusion_sqrt, x_add_CO2 = calc_log_lik(x, theta_dict, dt_flow, SBM_SDE, x0_prior_SCON, learn_CO2)
+    log_lik, drift, diffusion_sqrt, x_add_CO2 = calc_log_lik(x, theta_dict, dt_flow, SBM_SDE_instance, x0_prior_SCON, learn_CO2)
     neg_ELBO = -log_p_theta.mean() + log_q_theta.mean() + log_prob.mean() - log_lik.mean() - obs_model(x_add_CO2)
     print('x.size() =', x.size())
     print(f'Net with {train_args} has neg_ELBO = {neg_ELBO}')
