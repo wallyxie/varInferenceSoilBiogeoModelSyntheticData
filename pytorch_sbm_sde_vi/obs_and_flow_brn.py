@@ -234,15 +234,9 @@ class BatchRenormLayer(nn.Module):
             self.r = (self.batch_std.detach() / self.running_std).clamp_(1 / self.r_max, self.r_max)
             self.d = ((self.batch_mean.detach() - self.running_mean) / self.running_std).clamp_(-self.d_max, self.d_max)
             
-            print('r =', self.r)
-            print('d =', self.d)
-
             x_hat = self.r * (x - self.batch_mean) / self.batch_std + self.d
             y = torch.exp(self.log_gamma) * x_hat + self.beta
             ildj = -torch.log(self.r) - self.log_gamma + torch.log(self.batch_std) # (n * state_dim, )
-
-            print('log gamma = ', self.log_gamma)
-            print('beta = ', self.beta)
 
             self.running_mean += self.momentum * (self.batch_mean.detach() - self.running_mean)
             self.running_std += self.momentum * (self.batch_std.detach() - self.running_std)
