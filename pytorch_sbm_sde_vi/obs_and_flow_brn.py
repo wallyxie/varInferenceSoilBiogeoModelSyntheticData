@@ -193,7 +193,7 @@ class BatchRenormLayer(nn.Module):
         self.momentum = momentum
         self.eps = eps
 
-        self.gamma = nn.Parameter(torch.rand(num_inputs)) if affine else torch.zeros(num_inputs)
+        self.gamma = nn.Parameter(torch.rand(num_inputs)) if affine else torch.ones(num_inputs)
         self.beta = nn.Parameter(torch.rand(num_inputs)) if affine else torch.zeros(num_inputs)
 
         self.register_buffer('running_mean', torch.zeros(num_inputs))
@@ -233,10 +233,16 @@ class BatchRenormLayer(nn.Module):
 
             self.r = (self.batch_std.detach() / self.running_std).clamp_(1 / self.r_max, self.r_max)
             self.d = ((self.batch_mean.detach() - self.running_mean) / self.running_std).clamp_(-self.d_max, self.d_max)
+            
+            print('r =', self.r)
+            print('d =', self.d)
 
             x_hat = self.r * (x - self.batch_mean) / self.batch_std + self.d
             y = self.gamma * x_hat + self.beta
             ildj = -torch.log(self.r) - torch.log(self.gamma) + torch.log(self.batch_std) # (n * state_dim, )
+
+            print('gamma = ', self.gamma)
+            print('beta = ', self.beta)
 
             self.running_mean += self.momentum * (self.batch_mean.detach() - self.running_mean)
             self.running_std += self.momentum * (self.batch_std.detach() - self.running_std)
