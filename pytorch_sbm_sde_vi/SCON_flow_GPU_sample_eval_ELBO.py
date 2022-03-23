@@ -35,10 +35,10 @@ else:
 torch.set_printoptions(precision = 8)
 torch.manual_seed(0)
 
-now_string = 'SCON-C_CO2_logit_short_2022_03_12_02_21_55'
+now_string = 'SCON-C_CO2_logit_short_2022_03_22_14_04_24'
 outputs_folder = 'training_pt_outputs/'
 plots_folder = 'training_plots/'
-save_string = '_iter_180000_warmup_5000_t_5000_dt_1.0_batch_31_layers_5_lr_0.01_decay_step_15000_warmup_lr_1e-06_sd_scale_0.25_SCON-C_CO2_logit_short_2022_03_12_02_21_55.pt'
+save_string = '_iter_110000_warmup_5000_t_5000_dt_1.0_batch_31_layers_5_lr_0.01_decay_step_15000_warmup_lr_1e-06_sd_scale_0.25_SCON-C_CO2_logit_short_2022_03_22_14_04_24.pt'
 
 obs_model_save_string = os.path.join(outputs_folder, 'obs_model' + save_string)
 net_save_string = os.path.join(outputs_folder, 'net' + save_string)
@@ -64,7 +64,7 @@ elbo_warmup_lr = train_args['elbo_warmup_lr']
 ptrain_iter = train_args['ptrain_iter']
 ptrain_alg = train_args['ptrain_alg']
 batch_size = train_args['batch_size']
-eval_batch_size = 100
+eval_batch_size = 250
 obs_error_scale = train_args['obs_error_scale']
 prior_scale_factor = train_args['prior_scale_factor']
 num_layers = train_args['num_layers']
