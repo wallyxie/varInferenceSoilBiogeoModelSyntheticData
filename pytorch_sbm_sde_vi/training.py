@@ -240,7 +240,10 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                         print('\nlog_q_theta.mean()', log_q_theta.mean())                        
                         print('\nlog_prob.mean()', log_prob.mean())
                         print('\nlog_lik.mean()', log_lik.mean())
-                        print('\nobs_model', obs_model(x_add_CO2))
+                        if LEARN_CO2:
+                            print('\nobs_model', obs_model(x_add_CO2))
+                        else:
+                            print('\nobs_model', obs_model(x))
 
                 ELBO.backward()
                 torch.nn.utils.clip_grad_norm_(ELBO_params, 5.0)
@@ -406,7 +409,10 @@ def train_nn(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                     if VERBOSE:
                         print('\nlog_prob.mean()', log_prob.mean())
                         print('\nlog_lik.mean()', log_lik.mean())
-                        print('\nobs_model', obs_model(x_add_CO2))
+                        if LEARN_CO2:
+                            print('\nobs_model', obs_model(x_add_CO2))
+                        else:
+                            print('\nobs_model', obs_model(x))
 
                 # Take gradient step
                 ELBO.backward()
