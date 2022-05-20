@@ -23,6 +23,7 @@ def plot_elbo(elbo_hist, niter, warmup_iter, t, dt, batch_size, eval_batch_size,
     plt.ylabel('ELBO')
     plt.xlabel('Iteration')
     plt.title(f'ELBO history after {xmin} iterations')
+    plt.tight_layout()    
     plt.savefig(os.path.join(plots_folder, f'ELBO_iter_{niter}_warmup_{warmup_iter}_t_{t}_dt_{dt}_batch_{batch_size}_samples_{eval_batch_size}_layers_{num_layers}_lr_{train_lr}_decay_step_{decay_step}_warmup_lr_{warmup_lr}_sd_scale_{sd_scale}_{now_string}.png'), dpi = 300)
     
 def plot_states_post(x, q_theta, obs_model, SBM_SDE_CLASS, niter, warmup_iter, t, dt, batch_size, eval_batch_size, num_layers, train_lr, decay_step, warmup_lr, sd_scale, plots_folder, now_string, FIX_THETA_DICT = None, LEARN_CO2 = False, ymin_list = None, ymax_list = None):
@@ -67,7 +68,6 @@ def plot_states_post(x, q_theta, obs_model, SBM_SDE_CLASS, niter, warmup_iter, t
         #plt.title(f'Approximate posterior $q(x|\\theta, y)$\nNumber of samples = {eval_batch_size}\nTimestep = {dt}\nIterations = {niter}')
     plt.xlabel('Hour')
     plt.tight_layout()
-    fig.set_size_inches(20, 15)
     fig.savefig(os.path.join(plots_folder, f'net_iter_{niter}_warmup_{warmup_iter}_t_{t}_dt_{dt}_batch_{batch_size}_samples_{eval_batch_size}_layers_{num_layers}_lr_{train_lr}_decay_step_{decay_step}_warmup_lr_{warmup_lr}_sd_scale_{sd_scale}_{now_string}.png'), dpi = 300)
 
 def plot_states_NN(x, params_dict, obs_model, SBM_SDE_CLASS, niter, warmup_iter, t, dt, batch_size, eval_batch_size, num_layers, train_lr, decay_step, warmup_lr, sd_scale, plots_folder, now_string, LEARN_CO2 = False, ymin_list = None, ymax_list = None):
@@ -108,8 +108,7 @@ def plot_states_NN(x, params_dict, obs_model, SBM_SDE_CLASS, niter, warmup_iter,
         axs[i].set_ylim([ymin, ymax])
         #plt.title(f'Approximate posterior $q(x|\\theta, y)$\nNumber of samples = {eval_batch_size}\nTimestep = {dt}\nIterations = {niter}')
     plt.xlabel('Hour')
-    #plt.tight_layout()
-    fig.set_size_inches(20, 15)
+    plt.tight_layout()
     fig.savefig(os.path.join(plots_folder, f'net_iter_{niter}_warmup_{warmup_iter}_t_{t}_dt_{dt}_batch_{batch_size}_samples_{eval_batch_size}_layers_{num_layers}_lr_{train_lr}_decay_step_{decay_step}_warmup_lr_{warmup_lr}_sd_scale_{sd_scale}_{now_string}.png'), dpi = 300)
 
 def plot_theta(p_theta, q_theta, true_theta, niter, warmup_iter, t, dt, batch_size, eval_batch_size, num_layers, train_lr, decay_step, warmup_lr, sd_scale, plots_folder, now_string, ncols=4):
