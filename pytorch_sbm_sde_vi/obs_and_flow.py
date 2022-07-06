@@ -205,7 +205,7 @@ class BatchRenormLayer(nn.Module):
         self.max_d_max = max_d_max
         self.r_max_step_size = r_max_step_size
         self.d_max_step_size = d_max_step_size        
-        self.batch_renorm_warmup_iter = 10000
+        self.batch_renorm_warmup_iter = batch_renorm_warmup_iter
         self.training_iter = 0
 
     def get_r_max(self, training_iter, batch_renorm_warmup_iter, init_r_max, max_r_max, r_max_step_size):
