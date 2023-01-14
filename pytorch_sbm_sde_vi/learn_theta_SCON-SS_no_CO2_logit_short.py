@@ -157,6 +157,32 @@ with torch.no_grad():
     print('x.size() =', x.size())
     print(f'Net with {train_args} has test neg_ELBO = {neg_ELBO}')
 
+#Save net.eval() samples from trained net object for CPU plotting and processing.
+batch_multiples = 1
+eval_batch_size_save = 250 #testing batch size for saved x samples
+with torch.no_grad():
+    for i in range(batch_multiples):
+        print(i)
+        _x, _ = net(eval_batch_size_save)
+        _x.detach().cpu()
+        if learn_CO2:
+            q_theta_sample_dict, _, _, _ = q_theta(_x.size(0))
+            if fix_theta_dict:
+                q_theta_sample_dict = {**q_theta_sample_dict, **fix_theta_dict}
+            _x = SBM_SDE_instance.add_CO2(_x, q_theta_sample_dict) #Add CO2 to x tensor if CO2 is being fit.
+        if i == 0:
+            x = _x
+        else:
+            x = torch.cat([x, _x], 0)
+        del _x
+        torch.cuda.empty_cache()
+        print(torch.cuda.memory_allocated())
+        print(torch.cuda.memory_reserved())
+        print(x.size())
+print(x)
+x_save_string = os.path.join(outputs_folder, 'x_eval' + save_string)
+torch.save(x, x_save_string)
+
 plots_folder = 'training_plots/'
 plot_elbo(ELBO_hist, elbo_iter, elbo_warmup_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, elbo_lr_decay_step_size, elbo_warmup_lr, prior_scale_factor, plots_folder, now_string, xmin = elbo_warmup_iter + int(elbo_iter / 2))
 print('ELBO plotting finished.')
