@@ -98,12 +98,13 @@ start_time = time.process_time()
 #Call training loop function.
 net, q_theta, p_theta, obs_model, norm_hist, ELBO_hist, SBM_SDE_instance = train(
         active_device, elbo_lr, elbo_iter, batch_size,
-        csv_data_path, obs_error_scale, t, dt_flow, n, 
+        csv_data_path, obs_error_scale, t, dt_flow, n,
         t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
         SBM_SDE_class, diffusion_type, x0_prior_SCON,
-        SCON_SS_priors_details, fix_theta_dict, learn_CO2, theta_dist, 
+        SCON_SS_priors_details, fix_theta_dict, learn_CO2, theta_dist,
         ELBO_WARMUP_ITER = elbo_warmup_iter, ELBO_WARMUP_INIT_LR = elbo_warmup_lr, ELBO_LR_DECAY = elbo_lr_decay, ELBO_LR_DECAY_STEP_SIZE = elbo_lr_decay_step_size,
-        PRINT_EVERY = 10, DEBUG_SAVE_DIR = None, PTRAIN_ITER = ptrain_iter, PTRAIN_ALG = ptrain_alg,
+        PRINT_EVERY = 20, VERBOSE = True,
+        DEBUG_SAVE_DIR = None, PTRAIN_ITER = ptrain_iter, PTRAIN_ALG = ptrain_alg,
         NUM_LAYERS = num_layers, REVERSE = reverse, BASE_STATE = base_state)
 elapsed_time = time.process_time() - start_time
 print(f'Training finished after {elapsed_time} seconds. Moving to saving of output files.')
@@ -171,17 +172,17 @@ with torch.no_grad():
                 q_theta_sample_dict = {**q_theta_sample_dict, **fix_theta_dict}
             _x = SBM_SDE_instance.add_CO2(_x, q_theta_sample_dict) #Add CO2 to x tensor if CO2 is being fit.
         if i == 0:
-            x = _x
+            x_eval = _x
         else:
-            x = torch.cat([x, _x], 0)
+            x_eval = torch.cat([x_eval, _x], 0)
         del _x
         torch.cuda.empty_cache()
         print(torch.cuda.memory_allocated())
         print(torch.cuda.memory_reserved())
-        print(x.size())
-print(x)
-x_save_string = os.path.join(outputs_folder, 'x_eval' + save_string)
-torch.save(x, x_save_string)
+        print(x_eval.size())
+print(x_eval)
+x_eval_save_string = os.path.join(outputs_folder, 'x_eval' + save_string)
+torch.save(x_eval, x_eval_save_string)
 
 plots_folder = 'training_plots/'
 plot_elbo(ELBO_hist, elbo_iter, elbo_warmup_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, elbo_lr_decay_step_size, elbo_warmup_lr, prior_scale_factor, plots_folder, now_string, xmin = elbo_warmup_iter + int(elbo_iter / 2))
