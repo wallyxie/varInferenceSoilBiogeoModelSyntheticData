@@ -3,6 +3,7 @@ import math
 import sys
 from datetime import datetime
 import os.path
+import time
 
 #Torch imports
 import torch
@@ -49,11 +50,11 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-elbo_iter = 140000
+elbo_iter = 120000
 elbo_lr = 1e-2
-elbo_lr_decay = 0.7
-elbo_lr_decay_step_size = 8000
-elbo_warmup_iter = 0
+elbo_lr_decay = 0.6
+elbo_lr_decay_step_size = 10000
+elbo_warmup_iter = 5000
 elbo_warmup_lr = 1e-6
 ptrain_iter = 0
 ptrain_alg = 'L1'
@@ -93,6 +94,7 @@ i_d_tensor = i_d(t_span_tensor).to(active_device) #Exogenous DOC input function
 #Assign path to observations .csv file.
 csv_data_path = os.path.join('generated_data/', 'SCON-SS_CO2_logit_short_2021_11_17_20_16_sample_y_t_5000_dt_0-01_sd_scale_0-25.csv')
 
+start_time = time.process_time()
 #Call training loop function.
 net, q_theta, p_theta, obs_model, norm_hist, ELBO_hist, SBM_SDE_instance = train(
         active_device, elbo_lr, elbo_iter, batch_size,
@@ -103,7 +105,8 @@ net, q_theta, p_theta, obs_model, norm_hist, ELBO_hist, SBM_SDE_instance = train
         ELBO_WARMUP_ITER = elbo_warmup_iter, ELBO_WARMUP_INIT_LR = elbo_warmup_lr, ELBO_LR_DECAY = elbo_lr_decay, ELBO_LR_DECAY_STEP_SIZE = elbo_lr_decay_step_size,
         PRINT_EVERY = 10, DEBUG_SAVE_DIR = None, PTRAIN_ITER = ptrain_iter, PTRAIN_ALG = ptrain_alg,
         NUM_LAYERS = num_layers, REVERSE = reverse, BASE_STATE = base_state)
-print('Training finished. Moving to saving of output files.')
+elapsed_time = time.process_time() - start_time
+print(f'Training finished after {elapsed_time} seconds. Moving to saving of output files.')
 
 #Save net and ELBO files.
 now = datetime.now()
@@ -119,6 +122,7 @@ p_theta_save_string = os.path.join(outputs_folder, 'p_theta' + save_string)
 obs_model_save_string = os.path.join(outputs_folder, 'obs_model' + save_string)
 ELBO_save_string = os.path.join(outputs_folder, 'ELBO' + save_string)
 SBM_SDE_instance_save_string = os.path.join(outputs_folder, 'SBM_SDE_instance' + save_string)
+elapsed_time_save_string = os.path.join(outputs_folder, 'elapsed_time' +  f'_iter_{elbo_iter}_warmup_{elbo_warmup_iter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_lr_{elbo_lr}_decay_step_{elbo_lr_decay_step_size}_warmup_lr_{elbo_warmup_lr}_sd_scale_{prior_scale_factor}_{now_string}.txt')
 torch.save(train_args, train_args_save_string)
 torch.save(net, net_save_string)
 torch.save(net.state_dict(), net_state_dict_save_string) #For loading net on CPU.
@@ -128,6 +132,8 @@ torch.save(p_theta, p_theta_save_string)
 torch.save(obs_model, obs_model_save_string)
 torch.save(ELBO_hist, ELBO_save_string)
 torch.save(SBM_SDE_instance, SBM_SDE_instance_save_string)
+with open(elapsed_time_save_string, 'w') as f:
+    print(f'Elapsed time: {elapsed_time}', file = f)
 print('Output files saving finished. Moving to plotting.')
 
 #Plot training posterior results and ELBO history.
