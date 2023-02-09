@@ -1,4 +1,5 @@
 import argparse
+import os
 import time
 from pyro.infer import MCMC, NUTS, HMC
 from pyro.infer.autoguide.initialization import init_to_sample, init_to_uniform
@@ -21,7 +22,6 @@ def main(args):
     # Input files
     input_dir = 'generated_data'
     obs_file = os.path.join(input_dir, 'SCON-C_CO2_logit_short_2022_01_20_08_53_sample_y_t_5000_dt_0-01_sd_scale_0-25.csv')
-    params_file = '{}/theta.pt'.format(save_dir)
     p_theta_file = os.path.join(input_dir, 'SCON-C_CO2_logit_short_2022_01_20_08_53_sample_y_t_5000_dt_0-01_sd_scale_0-25_hyperparams.pt')
     x0_file = os.path.join(input_dir, 'SCON-C_CO2_logit_short_2022_01_20_08_53_sample_y_t_5000_dt_0-01_sd_scale_0-25_x0_SCON_tensor.pt')
 
