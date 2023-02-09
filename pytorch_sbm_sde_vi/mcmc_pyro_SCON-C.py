@@ -26,7 +26,10 @@ def main(args):
     x0_file = os.path.join(input_dir, 'SCON-C_CO2_logit_short_2022_01_20_08_53_sample_y_t_5000_dt_0-01_sd_scale_0-25_x0_SCON_tensor.pt')
 
     # Output file
-    out_filename = '../results/mcmc_SCON-C_very_short2.pt'
+    out_dir = 'training_pt_outputs'
+    samples_file = os.path.join(out_dir, 'mcmc_SCON-C_samples.pt')
+    diagnostics_file = os.path.join(out_dir, 'mcmc_SCON-C_diagnostics.pt')
+    time_file = os.path.join(out_dir, 'mcmc_SCON-C_time.txt')
     
     # Load data
     N = int(T / dt)
@@ -94,8 +97,12 @@ def main(args):
     print('Saving MCMC samples and diagnostics to', out_filename)
     samples = mcmc.get_samples(group_by_chain=True)
     diagnostics = mcmc.diagnostics()
-    torch.save((samples, diagnostics), out_filename)
-    with open(elapsed_time_save_string, 'w') as f:
+    
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
+    torch.save(samples, samples_file)
+    torch.save(diagnostics, diagnostics_file)
+    with open(time_file, 'w') as f:
         print(f'Elapsed time: {elapsed_time}', file = f)
 
     # Print MCMC diagnostics summary
