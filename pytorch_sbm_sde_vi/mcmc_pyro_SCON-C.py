@@ -78,7 +78,7 @@ def main(args):
     print('Using model', SBM_SDE.__class__.__name__, SBM_SDE.DIFFUSION_TYPE)
     
     kernel = NUTS(model, step_size=args.step_size, adapt_step_size=bool(args.adapt_step_size),
-                  init_strategy=init_to_sample)
+                  init_strategy=init_to_sample, jit_compile=bool(args.jit))
     mcmc = MCMC(kernel,
                 num_samples=args.num_samples,
                 warmup_steps=args.warmup_steps,
@@ -106,10 +106,11 @@ if __name__ == "__main__":
     # Parse args
     parser = argparse.ArgumentParser()
     parser.add_argument("-n", "--num-samples", nargs="?", default=200, type=int)
-    parser.add_argument("--num-chains", nargs="?", default=5, type=int)
     parser.add_argument("--warmup-steps", nargs="?", default=100, type=int)
+    parser.add_argument("--num-chains", nargs="?", default=5, type=int)
     parser.add_argument("--step-size", nargs="?", default=1, type=float)
     parser.add_argument("--adapt-step-size", nargs="?", default=1, type=int)
+    parser.add_argument("--jit", nargs="?", default=0, type=int)
     parser.add_argument("--seed", nargs="?", default=1, type=int)
     args = parser.parse_args()
 
