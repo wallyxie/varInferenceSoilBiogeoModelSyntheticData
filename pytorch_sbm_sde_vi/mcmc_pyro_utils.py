@@ -43,7 +43,7 @@ def model(SBM_SDE, T, dt, state_dim, param_names, I_S, I_D, temp, obs_idx,
     
     # Draw x_0
     with pyro.plate('x_0_plate', state_dim):
-        x = pyro.sample('x_0', Normal(loc_x0, scale_x0, a=0, b=1000))
+        x = pyro.sample('x_0', Normal(loc_x0, scale_x0))
     
     # Draw x_t
     x_obs = []
@@ -55,7 +55,7 @@ def model(SBM_SDE, T, dt, state_dim, param_names, I_S, I_D, temp, obs_idx,
             beta = SBM_SDE.calc_diffusion_sqrt(x, theta_dict, diffusion_matrix=False)
             with pyro.plate('x_{}_plate'.format(t), state_dim):
                 #x = pyro.sample('x_{}'.format(t), Normal(loc=x + alpha*dt, scale=beta*math.sqrt(dt)))
-                x = pyro.sample('x_{}'.format(t), Normal(loc=x + alpha*dt, scale=beta*math.sqrt(dt), a=0, b=1000))
+                x = pyro.sample('x_{}'.format(t), Normal(loc=x + alpha*dt, scale=beta*math.sqrt(dt)))
         if t in obs_idx_set:
             x_obs.append(x)
     
