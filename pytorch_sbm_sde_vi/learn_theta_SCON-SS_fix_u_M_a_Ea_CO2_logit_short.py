@@ -3,6 +3,7 @@ import math
 import sys
 from datetime import datetime
 import os.path
+import time
 
 #Torch imports
 import torch
@@ -93,17 +94,20 @@ i_d_tensor = i_d(t_span_tensor).to(active_device) #Exogenous DOC input function
 #Assign path to observations .csv file.
 csv_data_path = os.path.join('generated_data/', 'SCON-SS_CO2_logit_short_fix_u_M_a_Ea_2021_11_21_14_46_sample_y_t_5000_dt_0-01_sd_scale_0-25.csv')
 
+start_time = time.process_time()
 #Call training loop function.
 net, q_theta, p_theta, obs_model, norm_hist, ELBO_hist, SBM_SDE_instance = train(
         active_device, elbo_lr, elbo_iter, batch_size,
-        csv_data_path, obs_error_scale, t, dt_flow, n, 
+        csv_data_path, obs_error_scale, t, dt_flow, n,
         t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
         SBM_SDE_class, diffusion_type, x0_prior_SCON,
-        SCON_SS_priors_details, fix_theta_dict, learn_CO2, theta_dist, 
+        SCON_SS_priors_details, fix_theta_dict, learn_CO2, theta_dist,
         ELBO_WARMUP_ITER = elbo_warmup_iter, ELBO_WARMUP_INIT_LR = elbo_warmup_lr, ELBO_LR_DECAY = elbo_lr_decay, ELBO_LR_DECAY_STEP_SIZE = elbo_lr_decay_step_size,
-        PRINT_EVERY = 10, DEBUG_SAVE_DIR = None, PTRAIN_ITER = ptrain_iter, PTRAIN_ALG = ptrain_alg,
+        PRINT_EVERY = 20, VERBOSE = True,
+        DEBUG_SAVE_DIR = None, PTRAIN_ITER = ptrain_iter, PTRAIN_ALG = ptrain_alg,
         NUM_LAYERS = num_layers, REVERSE = reverse, BASE_STATE = base_state)
-print('Training finished. Moving to saving of output files.')
+elapsed_time = time.process_time() - start_time
+print(f'Training finished after {elapsed_time} seconds. Moving to saving of output files.')
 
 #Save net and ELBO files.
 now = datetime.now()
@@ -119,6 +123,7 @@ p_theta_save_string = os.path.join(outputs_folder, 'p_theta' + save_string)
 obs_model_save_string = os.path.join(outputs_folder, 'obs_model' + save_string)
 ELBO_save_string = os.path.join(outputs_folder, 'ELBO' + save_string)
 SBM_SDE_instance_save_string = os.path.join(outputs_folder, 'SBM_SDE_instance' + save_string)
+elapsed_time_save_string = os.path.join(outputs_folder, 'elapsed_time' + f'_iter_{elbo_iter}_warmup_{elbo_warmup_iter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_lr_{elbo_lr}_decay_step_{elbo_lr_decay_step_size}_warmup_lr_{elbo_warmup_lr}_sd_scale_{prior_scale_factor}_{now_string}.txt')
 torch.save(train_args, train_args_save_string)
 torch.save(net, net_save_string)
 torch.save(net.state_dict(), net_state_dict_save_string) #For loading net on CPU.
@@ -128,9 +133,11 @@ torch.save(p_theta, p_theta_save_string)
 torch.save(obs_model, obs_model_save_string)
 torch.save(ELBO_hist, ELBO_save_string)
 torch.save(SBM_SDE_instance, SBM_SDE_instance_save_string)
+with open(elapsed_time_save_string, 'w') as f:
+    print(f'Elapsed time: {elapsed_time}', file = f)
 print('Output files saving finished. Moving to plotting.')
 
-#Plot training posterior results and ELBO history.
+#Compute test ELBO.
 net.eval()
 with torch.no_grad():
     x, log_prob = net(eval_batch_size)
@@ -151,6 +158,33 @@ with torch.no_grad():
     print('x.size() =', x.size())
     print(f'Net with {train_args} has test neg_ELBO = {neg_ELBO}')
 
+#Save net.eval() samples from trained net object for CPU plotting and processing.
+batch_multiples = 1
+eval_batch_size_save = eval_batch_size #testing batch size for saved x samples
+with torch.no_grad():
+    for i in range(batch_multiples):
+        print(i)
+        _x, _ = net(eval_batch_size_save)
+        _x.detach().cpu()
+        if learn_CO2:
+            q_theta_sample_dict, _, _, _ = q_theta(_x.size(0))
+            if fix_theta_dict:
+                q_theta_sample_dict = {**q_theta_sample_dict, **fix_theta_dict}
+            _x = SBM_SDE_instance.add_CO2(_x, q_theta_sample_dict) #Add CO2 to x tensor if CO2 is being fit.
+        if i == 0:
+            x_eval = _x
+        else:
+            x_eval = torch.cat([x_eval, _x], 0)
+        del _x
+        torch.cuda.empty_cache()
+        print(torch.cuda.memory_allocated())
+        print(torch.cuda.memory_reserved())
+        print(x_eval.size())
+print(x_eval)
+x_eval_save_string = os.path.join(outputs_folder, 'x_eval' + save_string)
+torch.save(x_eval, x_eval_save_string)
+
+#Plot training posterior results and ELBO history.
 plots_folder = 'training_plots/'
 plot_elbo(ELBO_hist, elbo_iter, elbo_warmup_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, elbo_lr_decay_step_size, elbo_warmup_lr, prior_scale_factor, plots_folder, now_string, xmin = elbo_warmup_iter + int(elbo_iter / 2))
 print('ELBO plotting finished.')

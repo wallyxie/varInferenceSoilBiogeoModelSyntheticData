@@ -50,16 +50,16 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-elbo_iter = 120000
-elbo_lr = 1e-2
+elbo_iter = 60000
+elbo_lr = 5e-3
 elbo_lr_decay = 0.6
 elbo_lr_decay_step_size = 10000
-elbo_warmup_iter = 5000
+elbo_warmup_iter = 2000
 elbo_warmup_lr = 1e-6
 ptrain_iter = 0
 ptrain_alg = 'L1'
-batch_size = 31
-eval_batch_size = 31
+batch_size = 50
+eval_batch_size = 250
 obs_error_scale = 0.1
 prior_scale_factor = 0.25
 num_layers = 5
@@ -139,7 +139,7 @@ with open(elapsed_time_save_string, 'w') as f:
     print(f'Elapsed time: {elapsed_time}', file = f)
 print('Output files saving finished. Moving to plotting.')
 
-#Plot training posterior results and ELBO history.
+#Compute test ELBO.
 net.eval()
 with torch.no_grad():
     x, log_prob = net(eval_batch_size)
@@ -153,16 +153,16 @@ with torch.no_grad():
             theta_dict = {**theta_dict, **fix_theta_dict}
     if learn_CO2:
         log_lik, drift, diffusion_sqrt, x_add_CO2 = calc_log_lik(x, theta_dict, dt_flow, SBM_SDE_instance, x0_prior_SCON, learn_CO2)
-        neg_ELBO = -log_p_theta.mean() + log_q_theta.mean() + log_prob.mean() - log_lik.mean() - obs_model(x_add_CO2)        
+        neg_ELBO = -log_p_theta.mean() + log_q_theta.mean() + log_prob.mean() - log_lik.mean() - obs_model(x_add_CO2)
     else:
         log_lik, drift, diffusion_sqrt = calc_log_lik(x, theta_dict, dt_flow, SBM_SDE_instance, x0_prior_SCON, learn_CO2)
-        neg_ELBO = -log_p_theta.mean() + log_q_theta.mean() + log_prob.mean() - log_lik.mean() - obs_model(x) 
+        neg_ELBO = -log_p_theta.mean() + log_q_theta.mean() + log_prob.mean() - log_lik.mean() - obs_model(x)
     print('x.size() =', x.size())
     print(f'Net with {train_args} has test neg_ELBO = {neg_ELBO}')
 
 #Save net.eval() samples from trained net object for CPU plotting and processing.
 batch_multiples = 1
-eval_batch_size_save = 250 #testing batch size for saved x samples
+eval_batch_size_save = eval_batch_size #testing batch size for saved x samples
 with torch.no_grad():
     for i in range(batch_multiples):
         print(i)
@@ -186,6 +186,7 @@ print(x_eval)
 x_eval_save_string = os.path.join(outputs_folder, 'x_eval' + save_string)
 torch.save(x_eval, x_eval_save_string)
 
+#Plot training posterior results and ELBO history.
 plots_folder = 'training_plots/'
 plot_elbo(ELBO_hist, elbo_iter, elbo_warmup_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, elbo_lr_decay_step_size, elbo_warmup_lr, prior_scale_factor, plots_folder, now_string, xmin = elbo_warmup_iter + int(elbo_iter / 2))
 print('ELBO plotting finished.')
