@@ -136,7 +136,7 @@ torch.save(ELBO_hist, ELBO_save_string)
 torch.save(log_p_hist, log_p_save_string)
 torch.save(SBM_SDE_instance, SBM_SDE_instance_save_string)
 with open(elapsed_time_save_string, 'w') as f:
-    print(f'Elapsed time: {elapsed_time}', file = f)
+    print(f'Elapsed time: {elapsed_time} seconds', file = f)
 print('Output files saving finished. Moving to plotting.')
 
 #Compute test ELBO.
