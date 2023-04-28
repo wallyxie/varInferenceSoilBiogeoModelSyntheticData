@@ -220,7 +220,7 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                 else:
                     log_lik, drift, diffusion_sqrt = calc_log_lik(C_PATH, theta_dict, DT, SBM_SDE, INIT_PRIOR, LEARN_CO2)
                     ELBO = -log_p_theta.mean() + log_q_theta.mean() + log_prob.mean() - log_lik.mean() - obs_model(C_PATH)
-                    log_p_subset = -log_p_theta.mean() - log_lik.mean() - obs_model(x_add_CO2)
+                    log_p_subset = -log_p_theta.mean() - log_lik.mean() - obs_model(C_PATH)
 
                 best_loss_ELBO = ELBO if ELBO < best_loss_ELBO else best_loss_ELBO
                 ELBO_losses.append(ELBO.item())
