@@ -96,7 +96,7 @@ csv_data_path = os.path.join('generated_data/', 'SCON-SS_CO2_logit_short_2021_11
 
 start_time = time.process_time()
 #Call training loop function.
-net, q_theta, p_theta, obs_model, norm_hist, ELBO_hist, log_p_hist, SBM_SDE_instance = train(
+net, q_theta, p_theta, obs_model, norm_hist, ELBO_hist, log_p_hist, times_per_iter, SBM_SDE_instance = train(
         active_device, elbo_lr, elbo_iter, batch_size,
         csv_data_path, obs_error_scale, t, dt_flow, n,
         t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
@@ -123,6 +123,7 @@ p_theta_save_string = os.path.join(outputs_folder, 'p_theta' + save_string)
 obs_model_save_string = os.path.join(outputs_folder, 'obs_model' + save_string)
 ELBO_save_string = os.path.join(outputs_folder, 'ELBO' + save_string)
 log_p_save_string = os.path.join(outputs_folder, 'log_p' + save_string)
+times_per_iter_save_string = os.path.join(outputs_folder, 'times_per_iter' + save_string)
 SBM_SDE_instance_save_string = os.path.join(outputs_folder, 'SBM_SDE_instance' + save_string)
 elapsed_time_save_string = os.path.join(outputs_folder, 'elapsed_time' + f'_iter_{elbo_iter}_warmup_{elbo_warmup_iter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_lr_{elbo_lr}_decay_step_{elbo_lr_decay_step_size}_warmup_lr_{elbo_warmup_lr}_sd_scale_{prior_scale_factor}_{now_string}.txt')
 torch.save(train_args, train_args_save_string)
@@ -134,6 +135,7 @@ torch.save(p_theta, p_theta_save_string)
 torch.save(obs_model, obs_model_save_string)
 torch.save(ELBO_hist, ELBO_save_string)
 torch.save(log_p_hist, log_p_save_string)
+torch.save(times_per_iter, times_per_iter_save_string)
 torch.save(SBM_SDE_instance, SBM_SDE_instance_save_string)
 with open(elapsed_time_save_string, 'w') as f:
     print(f'Elapsed time: {elapsed_time} seconds', file = f)

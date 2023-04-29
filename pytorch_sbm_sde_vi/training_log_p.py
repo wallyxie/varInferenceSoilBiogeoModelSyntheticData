@@ -3,6 +3,7 @@ import math
 from tqdm import tqdm
 from typing import Dict, Tuple, Union
 import platform
+import time
 
 #Torch-related imports
 import torch
@@ -134,6 +135,8 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
     norm_losses = []
     ELBO_losses = []
     log_p_losses = []
+    times_per_iter = []
+
 
     #Initiate optimizers.
     if PTRAIN_ALG and PTRAIN_ITER != 0:
@@ -166,6 +169,7 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
     net.train()
     with tqdm(total = T_ITER, desc = f'Learning SDE and hidden parameters.', position = -1) as tq:
         for iteration in range(T_ITER):
+            iter_start = time.process_time() #Start iteration timer.
             C_PATH, log_prob = net(BATCH_SIZE) #Obtain paths with solutions to times including t0.
 
             #NaN handling            
@@ -254,6 +258,8 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                 ELBO_opt.step()
 
             ELBO_sched.step()
+            iter_elapsed = time.process_time() - iter_start #Stop iteration timer.
+            times_per_iter.append(iter_elapsed)
 
             if DEBUG_SAVE_DIR:
                 to_save = {'model': net, 'model_state_dict': net.state_dict(), 'ELBO_opt_state_dict': ELBO_opt.state_dict(), 
@@ -264,4 +270,4 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
 
     print('\nAll finished! Now, we need to check outputs to see if things worked...')
 
-    return net, q_theta, priors, obs_model, norm_losses, ELBO_losses, log_p_losses, SBM_SDE
+    return net, q_theta, priors, obs_model, norm_losses, ELBO_losses, log_p_losses, times_per_iter, SBM_SDE
