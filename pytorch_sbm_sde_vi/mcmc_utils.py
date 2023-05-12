@@ -176,7 +176,7 @@ def run(args, model_params, in_filenames, out_filenames):
     print('Total time:', times[-1], 'seconds')
     
     # Save results
-    print('Saving MCMC samples and diagnostics to', out_filename)
+    print('Saving MCMC samples and diagnostics to', out_dir)
     samples = mcmc.get_samples(group_by_chain=True)
     diagnostics = mcmc.diagnostics()
     
