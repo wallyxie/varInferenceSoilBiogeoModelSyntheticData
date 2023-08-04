@@ -320,7 +320,7 @@ def train_nn(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
         raise Error('Pre-training iterations specified without PTRAIN_ALG input. Must request PTRAIN_ALG = "L1" or "L2".')
 
     #Separate neural network optimizer.
-    ELBO_params = net.parameters()
+    ELBO_params = list(net.parameters())
     ELBO_opt = optim.Adamax(ELBO_params, lr = ELBO_LR)
 
     #Set optimizer LR scheduler.
@@ -381,7 +381,6 @@ def train_nn(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
             else:
                 ELBO_opt.zero_grad()
 
-                # Compute likelihood and ELBO
                 # Negative ELBO: -log p(theta) + log q(theta) - log p(y_0|x_0, theta) [already accounted for in obs_model output when learning x_0] + log q(x|theta) - log p(x|theta) - log p(y|x, theta)
                 if LEARN_CO2:
                     log_lik, drift, diffusion_sqrt, x_add_CO2 = calc_log_lik(C_PATH, theta_dict, DT, SBM_SDE, INIT_PRIOR, LEARN_CO2)
