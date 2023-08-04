@@ -35,7 +35,7 @@ torch.cuda.manual_seed(0)
 torch.cuda.manual_seed_all(0)
 np.random.seed(0)
 torch.backends.cudnn.deterministic = True
-torch.backends.cudnn.benchmark = True
+torch.backends.cudnn.benchmark = False
 
 #IAF SSM time parameters
 dt_flow = 1.0 #Increased from 0.1 to reduce memory.
@@ -74,7 +74,7 @@ diffusion_type = 'C'
 learn_CO2 = True
 
 #Load sampled true theta.
-params_dict = torch.load(os.path.join('generated_data/', 'SCON-C_CO2_logit_short_2022_01_20_08_53_sample_y_t_5000_dt_0-01_sd_scale_0-25_rsample.pt'), map_location = active_device)
+params_dict = torch.load(os.path.join('generated_data/', 'SCON-C_CO2_logit_short_2022_01_20_08_53_sample_y_t_5000_dt_0-01_sd_scale_0-25_rsample.pt'))
 
 #Initial condition prior means
 x0_SCON_tensor = torch.load(os.path.join('generated_data/', 'SCON-C_CO2_logit_short_2022_01_20_08_53_sample_y_t_5000_dt_0-01_sd_scale_0-25_x0_SCON_tensor.pt')).to(active_device)
