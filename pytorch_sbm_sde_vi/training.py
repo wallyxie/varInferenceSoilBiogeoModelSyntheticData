@@ -337,8 +337,8 @@ def train_nn(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
     ELBO_sched = optim.lr_scheduler.LambdaLR(ELBO_opt, lr_lambda = calc_lr_factor)
 
     #Convert dictionary of fixed parameter Numpy arrays to [1, num_params] tensor and dictionary of size [1] tensors.
-    theta = torch.tensor([v.item() for v in list(PARAMS_DICT.values())])[None, :] # torch.Size([1, num_params])
-    theta_dict = {k: torch.tensor(v).unsqueeze(0) for k, v in PARAMS_DICT.items()}.to(DEVICE)
+    theta = torch.tensor([v.item() for v in list(PARAMS_DICT.values())])[None, :].to(DEVICE) # torch.Size([1, num_params])
+    theta_dict = {k: torch.tensor(v).unsqueeze(0).to(DEVICE) for k, v in PARAMS_DICT.items()}
     
     #Training loop
     print(f'\nStarting autoencoder training. {PTRAIN_ITER} pre-training iterations, {ELBO_WARMUP_ITER} ELBO warmup iterations, and {ELBO_ITER} ELBO training iterations for {T_ITER} total iterations specified.')
