@@ -338,7 +338,7 @@ def train_nn(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
 
     #Convert dictionary of fixed parameter Numpy arrays to [1, num_params] tensor and dictionary of size [1] tensors.
     theta = torch.tensor([v.item() for v in list(PARAMS_DICT.values())])[None, :] # torch.Size([1, num_params])
-    theta_dict = {k: torch.tensor(v).unsqueeze(0) for k, v in PARAMS_DICT.items()}
+    theta_dict = {k: torch.tensor(v).unsqueeze(0) for k, v in PARAMS_DICT.items()}.to(DEVICE)
     
     #Training loop
     print(f'\nStarting autoencoder training. {PTRAIN_ITER} pre-training iterations, {ELBO_WARMUP_ITER} ELBO warmup iterations, and {ELBO_ITER} ELBO training iterations for {T_ITER} total iterations specified.')
