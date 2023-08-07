@@ -134,7 +134,7 @@ with torch.no_grad():
             #if fix_theta_dict:
             #    q_theta_sample_dict = {**q_theta_sample_dict, **fix_theta_dict}
             theta_dict_tensor = {k: torch.tensor(v).to(device) for k, v in params_dict.items()}
-            _x = SBM_SDE_instance.add_CO2(_x, params_dict) #Add CO2 to x tensor if CO2 is being fit.
+            _x = SBM_SDE_instance.add_CO2(_x, theta_dict_tensor) #Add CO2 to x tensor if CO2 is being fit.
         if i == 0:
             x_eval = _x
         else:
