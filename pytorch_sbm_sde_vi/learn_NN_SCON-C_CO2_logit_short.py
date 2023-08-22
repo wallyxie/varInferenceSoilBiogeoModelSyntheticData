@@ -49,16 +49,16 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-elbo_iter = 80000
-elbo_lr = 1e-3
+elbo_iter = 10
+elbo_lr = 2e-4
 elbo_lr_decay = 0.8
 elbo_lr_decay_step_size = 5000
-elbo_warmup_iter = 5000
+elbo_warmup_iter = 10
 elbo_warmup_lr = 1e-6
 ptrain_iter = 0
 ptrain_alg = 'L1'
 batch_size = 31
-eval_batch_size = 31
+eval_batch_size = 50
 obs_error_scale = 0.1
 prior_scale_factor = 0.25
 num_layers = 5
@@ -122,6 +122,7 @@ torch.save(SBM_SDE_instance, SBM_SDE_instance_save_string)
 print('Output files saving finished. Moving to plotting.')
 
 #Save net.eval() samples from trained net object for CPU plotting and processing.
+net.eval()
 batch_multiples = 1
 eval_batch_size_save = eval_batch_size #testing batch size for saved x samples
 with torch.no_grad():
@@ -149,7 +150,6 @@ x_eval_save_string = os.path.join(outputs_folder, 'x_eval' + save_string)
 torch.save(x_eval, x_eval_save_string)
 
 #Plot training posterior results and ELBO history.
-net.eval()
 x, _ = net(eval_batch_size)
 plots_folder = 'training_plots/'
 plot_elbo(ELBO_hist, elbo_iter, elbo_warmup_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, elbo_lr_decay_step_size, elbo_warmup_lr, prior_scale_factor, plots_folder, now_string, xmin = elbo_warmup_iter + int(elbo_iter / 2))
