@@ -62,7 +62,7 @@ batch_size = 31
 eval_batch_size = 300
 obs_error_scale = 0.1
 prior_scale_factor = 0.25
-num_layers = 5
+num_layers = 4
 reverse = True
 base_state = False
 
