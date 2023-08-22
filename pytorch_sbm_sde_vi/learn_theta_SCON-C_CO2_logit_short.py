@@ -184,7 +184,7 @@ print(x_eval)
 x_eval_save_string = os.path.join(outputs_folder, 'x_eval' + save_string)
 torch.save(x_eval, x_eval_save_string)
 
-#Plot training posterior results and ELBO history.
+#Plot training posterior results and ELBO history (with lower training batch_size due to memory limitations).
 plots_folder = 'training_plots/'
 plot_elbo(ELBO_hist, elbo_iter, elbo_warmup_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, elbo_lr_decay_step_size, elbo_warmup_lr, prior_scale_factor, plots_folder, now_string, xmin = elbo_warmup_iter + int(elbo_iter / 2))
 print('ELBO plotting finished.')
