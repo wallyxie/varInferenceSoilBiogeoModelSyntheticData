@@ -50,11 +50,11 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-elbo_iter = 120000
-elbo_lr = 1e-2
-elbo_lr_decay = 0.6
-elbo_lr_decay_step_size = 10000
-elbo_warmup_iter = 5000
+elbo_iter = 115000
+elbo_lr = 5e-3
+elbo_lr_decay = 0.7
+elbo_lr_decay_step_size = 5000
+elbo_warmup_iter = 10000
 elbo_warmup_lr = 1e-6
 ptrain_iter = 0
 ptrain_alg = 'L1'
@@ -191,5 +191,5 @@ print('ELBO plotting finished.')
 plot_states_post(x, q_theta, obs_model, SBM_SDE_instance, elbo_iter, elbo_warmup_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, elbo_lr_decay_step_size, elbo_warmup_lr, prior_scale_factor, plots_folder, now_string, fix_theta_dict, learn_CO2, ymin_list = [0, 0, 0, 0], ymax_list = [70., 5., 8., 0.03])
 print('States fit plotting finished.')
 #true_theta = torch.load(os.path.join('generated_data/', 'SCON-C_CO2_logit_short_2022_01_20_08_53_sample_y_t_5000_dt_0-01_sd_scale_0-25_rsample.pt'), map_location = active_device)
-#plot_theta(p_theta, q_theta, true_theta, elbo_iter, elbo_warmup_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, elbo_lr_decay_step_size, elbo_warmup_lr, prior_scale_factor, plots_folder, now_string)
+#plot_theta(p_theta, q_theta, true_theta, elbo_iter, elbo_warmup_iter, t, dt_flow, batch_size, batch_size, num_layers, elbo_lr, elbo_lr_decay_step_size, elbo_warmup_lr, prior_scale_factor, plots_folder, now_string) #Plotting posteriors at lower training batch_size due to memory limitations.
 #print('Prior-posterior pair plotting finished.')
