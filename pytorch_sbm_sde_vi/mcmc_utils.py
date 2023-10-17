@@ -84,51 +84,67 @@ def parse_args():
     parser.add_argument("--adapt-step-size", nargs="?", default=1, type=int)
     parser.add_argument("--jit-compile", nargs="?", default=1, type=int)
     parser.add_argument("--seed", nargs="?", default=1, type=int)
+    parser.add_argument("--save-every", nargs="?", default=10, type=int)
     args = parser.parse_args()
     return args
 
-class Timer:
-    def __init__(self):
+class Logger:
+    def __init__(self, log_dir, num_samples, save_every=10):
         self.t0 = time.process_time()
+        self.total_time = 0
         self.times = []
+        self.save_every = save_every
+        self.num_samples = num_samples
+        self.log_dir = log_dir
         
-    def add(self, kernel, samples, stage, i):
-        self.times.append(time.process_time() - self.t0)
-        
-    def get(self):
-        return self.times
+    def log(self, kernel, samples, stage, i):
+        if stage == 'sample':
+            self.times.append(time.process_time() - self.t0)
+            self.total_time = self.times[-1]
+            self.samples.append(samples)
+
+            if i % self.save_every == 0 or i == self.num_samples:
+                # Save log
+                progress_dict = {'kernel': kernel,
+                                 'samples': torch.stack(self.samples),
+                                 'times': self.times}
+                torch.save(progress_dict, '{}/iter{}.pt'.format(self.log_dir, i))
+    
+                # Clear log
+                self.times = []
+                self.samples = []
 
 def run(args, model_params, in_filenames, out_filenames):
     T, dt, obs_CO2, state_dim, obs_error_scale, \
-        temp_ref, temp_rise, model_type, diffusion_type = model_params
+        temp_ref, temp_rise, model_type, diffusion_type, device = model_params
     obs_file, p_theta_file, x0_file = in_filenames
-    out_dir, samples_file, diagnostics_file, times_file, args_file = out_filenames
+    out_dir, samples_file, diagnostics_file, args_file = out_filenames
 
     # Load data
     N = int(T / dt)
-    T_span = torch.linspace(0, T, N + 1)
+    T_span = torch.linspace(0, T, N + 1).to(device)
     obs_ndim = state_dim + 1
 
     print('Loading data from', obs_file)
     obs_times, obs_vals, obs_errors = csv_to_obs_df(obs_file, obs_ndim, T, obs_error_scale)
     obs_vals = obs_vals.T
-    y_dict = {int(t): v for t, v in zip(obs_times, obs_vals)}
+    y_dict = {int(t): v for t, v in zip(obs_times.to(device), obs_vals.to(device))}
     assert y_dict[0].shape == (state_dim + 1, )
     
     # Load hyperparameters of theta
     theta_hyperparams = torch.load(p_theta_file)
     param_names = list(theta_hyperparams.keys())
     theta_hyperparams_list = list(zip(*(theta_hyperparams[k] for k in param_names))) # unzip theta hyperparams from dictionary values into individual lists
-    loc_theta, scale_theta, a_theta, b_theta = torch.tensor(theta_hyperparams_list)
+    loc_theta, scale_theta, a_theta, b_theta = torch.tensor(theta_hyperparams_list).to(device)
     assert loc_theta.shape == scale_theta.shape == a_theta.shape == b_theta.shape == (len(param_names), )
 
     # Load parameters of x_0
-    loc_x0 = torch.load(x0_file)
-    scale_x0 = obs_error_scale * loc_x0
+    loc_x0 = torch.load(x0_file).to(device)
+    scale_x0 = obs_error_scale.to(device) * loc_x0
     assert loc_x0.shape == scale_x0.shape == (state_dim, )
 
     # Load parameters of y
-    scale_y = obs_errors
+    scale_y = obs_errors.to(device)
     assert obs_errors.shape == (1, state_dim + 1)
 
     hyperparams = {
@@ -142,11 +158,11 @@ def run(args, model_params, in_filenames, out_filenames):
     }
 
     # Obtain temperature forcing function.
-    temp = temp_gen(T_span, temp_ref, temp_rise)
+    temp = temp_gen(T_span, temp_ref, temp_rise).to(device)
     
     # Obtain SOC and DOC pool litter input vectors for use in flow SDE functions.
-    I_S = i_s(T_span) #Exogenous SOC input function
-    I_D = i_d(T_span) #Exogenous DOC input function
+    I_S = i_s(T_span).to(device) #Exogenous SOC input function
+    I_D = i_d(T_span).to(device) #Exogenous DOC input function
     
     # Instantiate SBM_SDE object
     SBM_SDE = model_type(T_span, I_S, I_D, temp, temp_ref, diffusion_type)
@@ -158,22 +174,21 @@ def run(args, model_params, in_filenames, out_filenames):
                   adapt_step_size=bool(args.adapt_step_size),
                   init_strategy=init_to_sample,
                   jit_compile=bool(args.jit_compile), ignore_jit_warnings=True)
-    timer = Timer()
+    logger = Logger(out_dir, args.num_samples, args.save_every)
     mcmc = MCMC(kernel,
                 num_samples=args.num_samples,
                 warmup_steps=args.warmup_steps,
                 num_chains=args.num_chains,
-                hook_fn=timer.add)
+                hook_fn=logger.log())
     
     # Run MCMC and record runtime per iteration
     torch.manual_seed(args.seed)
     model_args = (SBM_SDE, T, dt, state_dim, param_names, I_S, I_D, temp,
                   int(obs_times[1] - obs_times[0]))
-    model_kwargs = {'y': obs_vals}
+    model_kwargs = {'y': obs_vals.to(device)}
     model_kwargs.update(hyperparams)
     mcmc.run(*model_args, **model_kwargs)
-    times = timer.get()
-    print('Total time:', times[-1], 'seconds')
+    print('Total time:', logger.total_time, 'seconds')
     
     # Save results
     print('Saving MCMC samples and diagnostics to', out_dir)
@@ -184,7 +199,6 @@ def run(args, model_params, in_filenames, out_filenames):
         os.makedirs(out_dir)
     torch.save(samples, samples_file)
     torch.save(diagnostics, diagnostics_file)
-    torch.save(times, times_file)
     torch.save((model_args, model_kwargs), args_file)
     #torch.save((model_args, model_kwargs, times, samples, diagnostics), out_filename)
 

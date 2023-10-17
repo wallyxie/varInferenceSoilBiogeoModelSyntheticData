@@ -4,7 +4,7 @@ from mcmc_utils import parse_args, run
 from SBM_SDE_classes_minibatch import *
                 
 def main(args):
-    T = 5000
+    T = 1000
     dt = 1.0
     obs_CO2 = True    # whether or not to use CO2 obs (True to use CO2, False o/w)
     state_dim = 3     # assumes that obs_dim = state_dim + 1, with the last dim being CO2
@@ -15,6 +15,7 @@ def main(args):
     # Inference parameters
     model_type = SCON
     diffusion_type = 'C'
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Input files
     input_dir = 'generated_data'
@@ -23,16 +24,15 @@ def main(args):
     x0_file = os.path.join(input_dir, 'SCON-C_CO2_logit_short_2022_01_20_08_53_sample_y_t_5000_dt_0-01_sd_scale_0-25_x0_SCON_tensor.pt')
 
     # Output file
-    out_dir = 'training_pt_outputs'
-    samples_file = os.path.join(out_dir, 'mcmc_SCON-C_5k_samples.pt')
-    diagnostics_file = os.path.join(out_dir, 'mcmc_SCON-C_5k_diagnostics.pt')
-    times_file = os.path.join(out_dir, 'mcmc_SCON-C_5k_times.txt')
-    args_file = os.path.join(out_dir, 'mcmc_SCON-C_5k_args.txt')
+    out_dir = 'training_pt_outputs/mcmc_SCON-C_1k'
+    samples_file = os.path.join(out_dir, 'samples.pt')
+    diagnostics_file = os.path.join(out_dir, 'diagnostics.pt')
+    args_file = os.path.join(out_dir, 'args.txt')
 
     model_params = T, dt, obs_CO2, state_dim, obs_error_scale, \
-        temp_ref, temp_rise, model_type, diffusion_type
+        temp_ref, temp_rise, model_type, diffusion_type, device
     in_filenames = obs_file, p_theta_file, x0_file
-    out_filenames = out_dir, samples_file, diagnostics_file, times_file, args_file
+    out_filenames = out_dir, samples_file, diagnostics_file, args_file
 
     run(args, model_params, in_filenames, out_filenames)
 
