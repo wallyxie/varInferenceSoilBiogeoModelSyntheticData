@@ -1,5 +1,6 @@
 import argparse
 import time
+import sys
 import math
 import numpy as np
 import pandas as pd
@@ -108,7 +109,10 @@ class Logger:
                 progress_dict = {'kernel': kernel,
                                  'samples': torch.stack(self.samples),
                                  'times': self.times}
-                torch.save(progress_dict, '{}/iter{}.pt'.format(self.log_dir, i))
+                progress_file = '{}/iter{}.pt'.format(self.log_dir, i)
+                print('Saving progress to', progress_file)
+                sys.stdout.flush()
+                torch.save(progress_dict, progress_file)
     
                 # Clear log
                 self.times = []
@@ -187,6 +191,8 @@ def run(args, model_params, in_filenames, out_filenames):
                   int(obs_times[1] - obs_times[0]))
     model_kwargs = {'y': obs_vals.to(device)}
     model_kwargs.update(hyperparams)
+    print('Running MCMC on device', device)
+    sys.stdout.flush()
     mcmc.run(*model_args, **model_kwargs)
     print('Total time:', logger.total_time, 'seconds')
     
