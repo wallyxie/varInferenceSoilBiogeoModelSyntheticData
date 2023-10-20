@@ -1,6 +1,6 @@
 import argparse
 import time
-import sys
+import os, sys
 import math
 import numpy as np
 import pandas as pd
@@ -107,7 +107,7 @@ class Logger:
             if i % self.save_every == 0 or i == self.num_samples:
                 # Save log
                 progress_dict = {'kernel': kernel,
-                                 'samples': torch.stack(self.samples),
+                                 'samples': self.samples,
                                  'times': self.times}
                 progress_file = '{}/iter{}.pt'.format(self.log_dir, i)
                 print('Saving progress to', progress_file)
@@ -144,7 +144,7 @@ def run(args, model_params, in_filenames, out_filenames):
 
     # Load parameters of x_0
     loc_x0 = torch.load(x0_file).to(device)
-    scale_x0 = obs_error_scale.to(device) * loc_x0
+    scale_x0 = obs_error_scale * loc_x0
     assert loc_x0.shape == scale_x0.shape == (state_dim, )
 
     # Load parameters of y
@@ -183,7 +183,7 @@ def run(args, model_params, in_filenames, out_filenames):
                 num_samples=args.num_samples,
                 warmup_steps=args.warmup_steps,
                 num_chains=args.num_chains,
-                hook_fn=logger.log())
+                hook_fn=logger.log)
     
     # Run MCMC and record runtime per iteration
     torch.manual_seed(args.seed)
