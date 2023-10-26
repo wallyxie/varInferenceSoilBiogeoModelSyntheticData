@@ -3,23 +3,25 @@ import time
 import os
 import sys
 import torch
+torch.set_default_dtype(torch.float64)
 
 import pyro
 from pyro.infer import MCMC, NUTS, HMC
 from pyro.infer.autoguide.initialization import init_to_sample, init_to_uniform
-from SBM_SDE_classes_mcmc import *
 
 class Logger:
     def __init__(self, log_dir, num_samples, save_every=10):
-        self.t0 = time.process_time()
-        self.total_time = 0
-        self.times = []
         self.save_every = save_every
         self.num_samples = num_samples
         self.log_dir = log_dir
+
+        self.t0 = time.process_time()
+        self.total_time = 0
+        self.times = []
+        self.samples = []
         
     def log(self, kernel, samples, stage, i):
-        if stage == 'sample':
+        if stage == 'Sample':
             self.times.append(time.process_time() - self.t0)
             self.total_time = self.times[-1]
             self.samples.append(samples)
@@ -48,21 +50,24 @@ def parse_args():
     parser.add_argument("--jit-compile", nargs="?", default=1, type=int)
     parser.add_argument("--seed", nargs="?", default=1, type=int)
     parser.add_argument("--save-every", nargs="?", default=10, type=int)
+    parser.add_argument("--name", nargs="?", default='mcmc', type=str)
     args = parser.parse_args()
     return args
 
 def run(args, model_params, in_filenames, out_filenames):
     T, dt, obs_CO2, state_dim, obs_error_scale, \
         temp_ref, temp_rise, model_type, diffusion_type, device = model_params
-    out_dir, samples_file, diagnostics_file, args_file = out_filenames
-    
+    out_dir, samples_file, diagnostics_file, model_file = out_filenames
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
+
     # Instantiate SCON object
-    scon = SCON(T, dt, state_dim, temp_ref, diffusion_type).to(device)
-    y = scon.load_data(obs_error_scale, *in_filenames).to(device)
-    print('Using model', scon.__class__.__name__, scon.diffusion_type)
+    SBM_SDE = model_type(T, dt, state_dim, temp_ref, temp_rise, diffusion_type).to(device)
+    y = SBM_SDE.load_data(obs_error_scale, *in_filenames).to(device)
+    print('Using model', SBM_SDE.__class__.__name__, SBM_SDE.diffusion_type)
     
     # Instantiate MCMC object
-    kernel = NUTS(scon.model,
+    kernel = NUTS(SBM_SDE.model,
                   step_size=args.step_size,
                   adapt_step_size=bool(args.adapt_step_size),
                   init_strategy=init_to_sample,
@@ -86,11 +91,9 @@ def run(args, model_params, in_filenames, out_filenames):
     samples = mcmc.get_samples(group_by_chain=True)
     diagnostics = mcmc.diagnostics()
     
-    if not os.path.exists(out_dir):
-        os.makedirs(out_dir)
     torch.save(samples, samples_file)
     torch.save(diagnostics, diagnostics_file)
-    torch.save((model_args, model_kwargs), args_file)
+    torch.save(SBM_SDE, model_file)
 
     # Print MCMC diagnostics summary
-    mcmc.summary()
+    #mcmc.summary()

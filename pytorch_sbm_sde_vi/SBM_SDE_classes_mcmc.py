@@ -2,6 +2,7 @@ import math
 import numpy as np
 import pandas as pd
 import torch
+from torch import nn
 
 import pyro
 from pyro.distributions import Normal, TorchDistribution
@@ -42,13 +43,14 @@ class TruncatedNormal(TN.TruncatedNormal, TorchDistribution):
     pass
 
 class SCON(nn.Module):
-    def __init__(self, T, dt, state_dim, temp_ref, diffusion_type):
+    def __init__(self, T, dt, state_dim, temp_ref, temp_rise, diffusion_type):
         super().__init__()
         self.T = T
         self.dt = dt
         self.state_dim = state_dim
         self.obs_dim = state_dim + 1
-        self.temp_ref temp_ref
+        self.temp_ref = temp_ref
+        self.temp_rise = temp_rise
         self.diffusion_type = diffusion_type
         
         self.N = int(T / dt) + 1
@@ -89,23 +91,23 @@ class SCON(nn.Module):
 
         # Load parameters of y
         self.scale_y = obs_errors #.to(device)
-        assert obs_errors.shape == (1, state_dim + 1)
+        assert obs_errors.shape == (1, self.state_dim + 1)
         self.obs_every = int(obs_times[1] - obs_times[0])
         
         # Load hyperparameters of theta
         # (loc_theta, scale_theta, a_theta, b_theta) should only include ones that aren't fixed
         theta_hyperparams = torch.load(p_theta_file)
         self.param_names = list(theta_hyperparams.keys())
-        theta_hyperparams_list = list(zip(*(theta_hyperparams[k] for k in param_names))) # unzip theta hyperparams from dictionary values into individual lists
+        theta_hyperparams_list = list(zip(*(theta_hyperparams[k] for k in self.param_names))) # unzip theta hyperparams from dictionary values into individual lists
         loc_theta, scale_theta, a_theta, b_theta = torch.tensor(theta_hyperparams_list) #.to(device)
-        assert loc_theta.shape == scale_theta.shape == a_theta.shape == b_theta.shape == (len(param_names), )
-        self.p_theta = Normal(loc_theta, scale_theta, a_theta, b_theta)
+        assert loc_theta.shape == scale_theta.shape == a_theta.shape == b_theta.shape == (len(self.param_names), )
+        self.p_theta = RescaledLogitNormal(loc_theta, scale_theta, a_theta, b_theta)
     
         # Load parameters of x_0
         loc_x0 = torch.load(x0_file) #.to(device)
         scale_x0 = obs_error_scale * loc_x0
-        assert loc_x0.shape == scale_x0.shape == (state_dim, )
-        self.p_x0 = RescaledLogitNormal(loc_x0, scale_x0)
+        assert loc_x0.shape == scale_x0.shape == (self.state_dim, )
+        self.p_x0 = Normal(loc_x0, scale_x0)
     
         #hyperparams = {
         #    'loc_theta': loc_theta, 
@@ -123,7 +125,7 @@ class SCON(nn.Module):
         # Draw theta
         with pyro.plate('theta_plate', len(self.param_names)):
             theta = pyro.sample('theta', self.p_theta)
-            theta_dict = {param_names[i]: theta[i] for i in range(len(self.param_names))}
+            theta_dict = {self.param_names[i]: theta[i] for i in range(len(self.param_names))}
             if fix_theta_dict:
                 theta_dict = {**theta_dict, **fix_theta_dict}
             weight_alpha, bias_alpha, weight_beta, bias_beta, weight_obs = self.calc_params(theta_dict)
@@ -131,13 +133,13 @@ class SCON(nn.Module):
         # Draw x_0
         with pyro.plate('x_0_plate', self.state_dim):
             x = pyro.sample('x_0', self.p_x0)
-        
+
         # Draw x_t
         for t in pyro.markov(range(1, self.N)):
             alpha = self.calc_drift(x, weight_alpha[t], bias_alpha[t])
-            beta = self.calc_diffusion(x, weight_beta)
+            beta = self.calc_diffusion(x, weight_beta, bias_beta)
             with pyro.plate('x_{}_plate'.format(t), self.state_dim):
-                x = pyro.sample('x_{}'.format(t), Normal(loc=x + alpha*dt, scale=math.sqrt(beta*dt)))
+                x = pyro.sample('x_{}'.format(t), Normal(loc=x + alpha*self.dt, scale=torch.sqrt(beta*self.dt)))
         
         # Draw y
         num_obs = len(self.times[::self.obs_every])
@@ -155,38 +157,44 @@ class SCON(nn.Module):
         k_M = arrhenius_temp_dep(theta['k_M_ref'], self.temp, theta['Ea_M'], self.temp_ref) # (N, )
         
         # Drift params
-        A0 = torch.stack([-k_S, params['a_DS'] * k_D, params['a_M'] * params['a_MSC'] * k_M])
-        A1 = torch.stack([params['a_SD'] * k_S, -(params['u_M'] + k_D), params['a_M'] * (1 - params['a_MSC']) * k_M])
-        A2 = torch.stack([torch.zeros(N + 1), torch.ones(N + 1) * params['u_M'], -k_M])
+        A0 = torch.stack([-k_S, theta['a_DS'] * k_D, theta['a_M'] * theta['a_MSC'] * k_M])
+        A1 = torch.stack([theta['a_SD'] * k_S, -(theta['u_M'] + k_D), theta['a_M'] * (1 - theta['a_MSC']) * k_M])
+        A2 = torch.stack([torch.zeros(self.N), torch.ones(self.N) * theta['u_M'], -k_M])
         weight_alpha = torch.stack([A0, A1, A2]).permute((2, 0, 1)) # (N, 3, 3)
-        bias_alpha = torch.stack([self.I_S, self.I_D, torch.zeros(N + 1)]).T # (N, 3)
-        
+        bias_alpha = torch.stack([self.I_S, self.I_D, torch.zeros(self.N)]).T # (N, 3)
+        assert weight_alpha.shape == (self.N, self.state_dim, self.state_dim)
+        assert bias_alpha.shape == (self.N, self.state_dim)
+
         # Diffusion params
         if self.diffusion_type == 'C':
-            weight_beta = 0
+            weight_beta = torch.zeros(self.state_dim)
             bias_beta = torch.diag(torch.tensor([theta['c_SOC'],
                                                  theta['c_DOC'],
                                                  theta['c_MBC']])) # (3, 3)
+            assert bias_beta.shape == (self.state_dim, self.state_dim)
         elif self.diffusion_type == 'SS':
             weight_beta = torch.diag(torch.tensor([theta['s_SOC'],
                                                    theta['s_DOC'],
                                                    theta['s_MBC']])) # (3, 3)
-            bias_beta = 0
+            bias_beta = torch.zeros(self.state_dim)
+            assert weight_beta.shape == (self.state_dim, self.state_dim)
         else:
-            raise ValueError, "Unknown diffusion type"
+            raise ValueError("Unknown diffusion type")
     
         # Observation params
         num_obs = len(self.times[::self.obs_every]) #T//obs_every + 1
-        C0 = torch.eye(self.state_ndim).unsqueeze(0) * torch.ones((num_obs, 1, 1)) # (N, 3, 3)
-        C1 = torch.stack([(1 - params['a_SD']) * k_S[::self.obs_every],
-                          (1 - params['a_DS']) * k_D[::self.obs_every],
-                          (1 - params['a_M']) * k_M][::self.obs_every]).unsqueeze(0).permute((2, 0, 1)) # (N, 1, 3) 
+        C0 = torch.eye(self.state_dim).unsqueeze(0) * torch.ones((num_obs, 1, 1)) # (N, 3, 3)
+        C1 = torch.stack([(1 - theta['a_SD']) * k_S[::self.obs_every],
+                          (1 - theta['a_DS']) * k_D[::self.obs_every],
+                          (1 - theta['a_M']) * k_M[::self.obs_every]]).unsqueeze(0).permute((2, 0, 1)) # (N, 1, 3) 
         weight_obs = torch.cat((C0, C1), dim=1) # (num_obs, 4, 3)
-    
+        assert weight_obs.shape == (num_obs, self.obs_dim, self.state_dim)
+
         return weight_alpha, bias_alpha, weight_beta, bias_beta, weight_obs
     
     def calc_drift(self, x, weight_alpha, bias_alpha):
         return weight_alpha @ x + bias_alpha
     
     def calc_diffusion(self, x, weight_beta, bias_beta):
-        return torch.clamp(weight_beta @ x + bias_beta, min=1e-6, max=None)
+        beta = weight_beta @ x + bias_beta
+        return torch.clamp(beta, min=1e-6, max=None)

@@ -1,7 +1,7 @@
 import os
 from pyro.infer import MCMC
 from mcmc_utils import parse_args, run
-from SBM_SDE_classes_minibatch import *
+from SBM_SDE_classes_mcmc import *
                 
 def main(args):
     T = 1000
@@ -24,10 +24,10 @@ def main(args):
     x0_file = os.path.join(input_dir, 'SCON-C_CO2_logit_short_2022_01_20_08_53_sample_y_t_5000_dt_0-01_sd_scale_0-25_x0_SCON_tensor.pt')
 
     # Output file
-    out_dir = 'training_pt_outputs/mcmc_SCON-C_1k'
+    out_dir = os.path.join('training_pt_outputs', args.name)
     samples_file = os.path.join(out_dir, 'samples.pt')
     diagnostics_file = os.path.join(out_dir, 'diagnostics.pt')
-    args_file = os.path.join(out_dir, 'args.txt')
+    args_file = os.path.join(out_dir, 'model.pt')
 
     model_params = T, dt, obs_CO2, state_dim, obs_error_scale, \
         temp_ref, temp_rise, model_type, diffusion_type, device
