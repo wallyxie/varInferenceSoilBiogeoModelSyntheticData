@@ -62,9 +62,9 @@ def run(args, model_params, in_filenames, out_filenames):
         os.makedirs(out_dir)
 
     # Instantiate SCON object
-    SBM_SDE = model_type(T, dt, state_dim, temp_ref, temp_rise, diffusion_type) #.to(device)
-    y = SBM_SDE.load_data(obs_error_scale, *in_filenames).to(device)
-    SBM_SDE.to(device)
+    SBM_SDE = model_type(T, dt, state_dim, temp_ref, temp_rise, diffusion_type).to(device)
+    y = SBM_SDE.load_data(device, obs_error_scale, *in_filenames).to(device)
+    print(SBM_SDE.get_device(), y.get_device(), SBM_SDE.temp.get_device())
     print('Using model', SBM_SDE.__class__.__name__, SBM_SDE.diffusion_type)
     
     # Instantiate MCMC object
