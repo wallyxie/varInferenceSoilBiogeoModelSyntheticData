@@ -172,12 +172,12 @@ class SCON(nn.Module):
             weight_beta = torch.zeros(self.state_dim, device=self.device)
             bias_beta = torch.diag(torch.tensor([theta['c_SOC'],
                                                  theta['c_DOC'],
-                                                 theta['c_MBC']])) # (3, 3)
+                                                 theta['c_MBC']])).to(self.device) # (3, 3)
             assert bias_beta.shape == (self.state_dim, self.state_dim)
         elif self.diffusion_type == 'SS':
             weight_beta = torch.diag(torch.tensor([theta['s_SOC'],
                                                    theta['s_DOC'],
-                                                   theta['s_MBC']])) # (3, 3)
+                                                   theta['s_MBC']])).to(self.device) # (3, 3)
             bias_beta = torch.zeros(self.state_dim, device=self.device)
             assert weight_beta.shape == (self.state_dim, self.state_dim)
         else:
