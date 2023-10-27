@@ -185,7 +185,7 @@ class SCON(nn.Module):
     
         # Observation params
         num_obs = len(self.times[::self.obs_every]) #T//obs_every + 1
-        C0 = torch.eye(self.state_dim).unsqueeze(0) * torch.ones((num_obs, 1, 1), device=self.device) # (N, 3, 3)
+        C0 = torch.eye(self.state_dim, device=self.device).unsqueeze(0) * torch.ones((num_obs, 1, 1), device=self.device) # (N, 3, 3)
         C1 = torch.stack([(1 - theta['a_SD']) * k_S[::self.obs_every],
                           (1 - theta['a_DS']) * k_D[::self.obs_every],
                           (1 - theta['a_M']) * k_M[::self.obs_every]]).unsqueeze(0).permute((2, 0, 1)) # (N, 1, 3) 
