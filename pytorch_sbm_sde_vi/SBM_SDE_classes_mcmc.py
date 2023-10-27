@@ -43,7 +43,7 @@ class TruncatedNormal(TN.TruncatedNormal, TorchDistribution):
     pass
 
 class SCON(nn.Module):
-    def __init__(self, deivce, T, dt, state_dim, temp_ref, temp_rise, diffusion_type):
+    def __init__(self, T, dt, state_dim, temp_ref, temp_rise, diffusion_type):
         super().__init__()
         self.T = T
         self.dt = dt
@@ -53,11 +53,13 @@ class SCON(nn.Module):
         self.temp_rise = temp_rise
         self.diffusion_type = diffusion_type
         
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.N = int(T / dt) + 1
-        self.times = torch.linspace(0, T, self.N).to(device)
-        self.I_S = self.calc_i_S().to(device)
-        self.I_D = self.calc_i_D().to(device)
-        self.temp = self.calc_temps().to(device)
+        self.times = torch.linspace(0, T, self.N).to(self.device)
+        self.I_S = self.calc_i_S().to(self.device)
+        self.I_D = self.calc_i_D().to(self.device)
+        self.temp = self.calc_temps().to(self.device)
+        self.to(self.device)
 
     def calc_temps(self):
         '''
@@ -82,15 +84,15 @@ class SCON(nn.Module):
         '''
         return 0.0001 + 0.00005 * torch.sin((2 * np.pi / (24 * 365)) * self.times)
 
-    def load_data(self, device, obs_error_scale, obs_file, p_theta_file, x0_file):
+    def load_data(self, obs_error_scale, obs_file, p_theta_file, x0_file):
         print('Loading data from', obs_file)
         obs_times, obs_vals, obs_errors = csv_to_obs_df(obs_file, self.obs_dim, self.T, obs_error_scale)
-        obs_vals = obs_vals.T
-        y_dict = {int(t): v for t, v in zip(obs_times.to(device), obs_vals.to(device))}
+        obs_vals = obs_vals.T.to(self.device)
+        #y_dict = {int(t): v for t, v in zip(obs_times.to(self.device), obs_vals.to(self.device))}
         #assert y_dict[0].shape == (state_dim + 1, )
 
         # Load parameters of y
-        self.scale_y = obs_errors.to(device)
+        self.scale_y = obs_errors.to(self.device)
         assert obs_errors.shape == (1, self.state_dim + 1)
         self.obs_every = int(obs_times[1] - obs_times[0])
         
@@ -99,12 +101,12 @@ class SCON(nn.Module):
         theta_hyperparams = torch.load(p_theta_file)
         self.param_names = list(theta_hyperparams.keys())
         theta_hyperparams_list = list(zip(*(theta_hyperparams[k] for k in self.param_names))) # unzip theta hyperparams from dictionary values into individual lists
-        loc_theta, scale_theta, a_theta, b_theta = torch.tensor(theta_hyperparams_list).to(device)
+        loc_theta, scale_theta, a_theta, b_theta = torch.tensor(theta_hyperparams_list).to(self.device)
         assert loc_theta.shape == scale_theta.shape == a_theta.shape == b_theta.shape == (len(self.param_names), )
         self.p_theta = RescaledLogitNormal(loc_theta, scale_theta, a_theta, b_theta)
     
         # Load parameters of x_0
-        loc_x0 = torch.load(x0_file).to(device)
+        loc_x0 = torch.load(x0_file).to(self.device)
         scale_x0 = obs_error_scale * loc_x0
         assert loc_x0.shape == scale_x0.shape == (self.state_dim, )
         self.p_x0 = Normal(loc_x0, scale_x0)
@@ -159,15 +161,15 @@ class SCON(nn.Module):
         # Drift params
         A0 = torch.stack([-k_S, theta['a_DS'] * k_D, theta['a_M'] * theta['a_MSC'] * k_M])
         A1 = torch.stack([theta['a_SD'] * k_S, -(theta['u_M'] + k_D), theta['a_M'] * (1 - theta['a_MSC']) * k_M])
-        A2 = torch.stack([torch.zeros(self.N), torch.ones(self.N) * theta['u_M'], -k_M])
+        A2 = torch.stack([torch.zeros(self.N, device=self.device), torch.ones(self.N, device=self.device) * theta['u_M'], -k_M])
         weight_alpha = torch.stack([A0, A1, A2]).permute((2, 0, 1)) # (N, 3, 3)
-        bias_alpha = torch.stack([self.I_S, self.I_D, torch.zeros(self.N)]).T # (N, 3)
+        bias_alpha = torch.stack([self.I_S, self.I_D, torch.zeros(self.N, device=self.device)]).T # (N, 3)
         assert weight_alpha.shape == (self.N, self.state_dim, self.state_dim)
         assert bias_alpha.shape == (self.N, self.state_dim)
 
         # Diffusion params
         if self.diffusion_type == 'C':
-            weight_beta = torch.zeros(self.state_dim)
+            weight_beta = torch.zeros(self.state_dim, device=self.device)
             bias_beta = torch.diag(torch.tensor([theta['c_SOC'],
                                                  theta['c_DOC'],
                                                  theta['c_MBC']])) # (3, 3)
@@ -176,14 +178,14 @@ class SCON(nn.Module):
             weight_beta = torch.diag(torch.tensor([theta['s_SOC'],
                                                    theta['s_DOC'],
                                                    theta['s_MBC']])) # (3, 3)
-            bias_beta = torch.zeros(self.state_dim)
+            bias_beta = torch.zeros(self.state_dim, device=self.device)
             assert weight_beta.shape == (self.state_dim, self.state_dim)
         else:
             raise ValueError("Unknown diffusion type")
     
         # Observation params
         num_obs = len(self.times[::self.obs_every]) #T//obs_every + 1
-        C0 = torch.eye(self.state_dim).unsqueeze(0) * torch.ones((num_obs, 1, 1)) # (N, 3, 3)
+        C0 = torch.eye(self.state_dim).unsqueeze(0) * torch.ones((num_obs, 1, 1), device=self.device) # (N, 3, 3)
         C1 = torch.stack([(1 - theta['a_SD']) * k_S[::self.obs_every],
                           (1 - theta['a_DS']) * k_D[::self.obs_every],
                           (1 - theta['a_M']) * k_M[::self.obs_every]]).unsqueeze(0).permute((2, 0, 1)) # (N, 1, 3) 
