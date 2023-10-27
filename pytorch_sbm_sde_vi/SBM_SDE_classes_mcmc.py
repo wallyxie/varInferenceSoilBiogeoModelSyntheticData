@@ -43,7 +43,7 @@ class TruncatedNormal(TN.TruncatedNormal, TorchDistribution):
     pass
 
 class SCON(nn.Module):
-    def __init__(self, T, dt, state_dim, temp_ref, temp_rise, diffusion_type):
+    def __init__(self, deivce, T, dt, state_dim, temp_ref, temp_rise, diffusion_type):
         super().__init__()
         self.T = T
         self.dt = dt
@@ -54,10 +54,10 @@ class SCON(nn.Module):
         self.diffusion_type = diffusion_type
         
         self.N = int(T / dt) + 1
-        self.times = torch.linspace(0, T, self.N)
-        self.I_S = self.calc_i_S()
-        self.I_D = self.calc_i_D()
-        self.temp = self.calc_temps()
+        self.times = torch.linspace(0, T, self.N).to(device)
+        self.I_S = self.calc_i_S().to(device)
+        self.I_D = self.calc_i_D().to(device)
+        self.temp = self.calc_temps().to(device)
 
     def calc_temps(self):
         '''
