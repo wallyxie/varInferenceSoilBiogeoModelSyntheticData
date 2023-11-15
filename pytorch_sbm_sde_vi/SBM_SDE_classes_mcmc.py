@@ -92,8 +92,8 @@ class SCON(nn.Module):
         #assert y_dict[0].shape == (state_dim + 1, )
 
         # Load parameters of y
-        self.scale_y = obs_errors.to(self.device)
-        assert obs_errors.shape == (1, self.state_dim + 1)
+        self.scale_y = obs_errors.squeeze().to(self.device)
+        assert self.scale_y.shape == (self.obs_dim, )
         self.obs_every = int(obs_times[1] - obs_times[0])
         
         # Load hyperparameters of theta
@@ -133,22 +133,36 @@ class SCON(nn.Module):
             weight_alpha, bias_alpha, weight_beta, bias_beta, weight_obs = self.calc_params(theta_dict)
 
         # Draw x_0
+        x_all = []
         with pyro.plate('x_0_plate', self.state_dim):
             x = pyro.sample('x_0', self.p_x0)
+            x_all.append(x)
 
         # Draw x_t
         for t in pyro.markov(range(1, self.N)):
+            #if t == 1:
+            #    print(weight_alpha[t].shape, x.shape, bias_alpha[t].shape)
+            #    print(weight_beta.shape, x.shape, bias_beta.shape)
             alpha = self.calc_drift(x, weight_alpha[t], bias_alpha[t])
             beta = self.calc_diffusion(x, weight_beta, bias_beta)
             with pyro.plate('x_{}_plate'.format(t), self.state_dim):
-                x = pyro.sample('x_{}'.format(t), Normal(loc=x + alpha*self.dt, scale=torch.sqrt(beta*self.dt)))
+                loc = x + alpha*self.dt
+                scale = torch.sqrt(beta*self.dt)
+            #    if t == 1: print(loc.shape, scale.shape)
+                x = pyro.sample('x_{}'.format(t), Normal(loc=loc, scale=scale))
+                x_all.append(x)
+        x_all = torch.stack(x_all, dim=0)
+        assert x_all.shape == (self.N, self.state_dim)
         
         # Draw y
         num_obs = len(self.times[::self.obs_every])
-        loc_y = torch.matmul(weight_obs, x[::self.obs_every].unsqueeze(-1)).squeeze() # (num_obs, obs_dim)
+        # weight_obs.shape == (num_obs, self.obs_dim, self.state_dim)
+        # x_obs.shape == (num_obs, state_dim)
+        loc_y = torch.matmul(weight_obs, x_all[::self.obs_every].unsqueeze(-1)).squeeze() # (num_obs, obs_dim)
         y0_plate = pyro.plate('y_t_plate', num_obs, dim=-2)
         y1_plate = pyro.plate('y_d_plate', self.state_dim + 1, dim=-1)
         
+        assert loc_y.shape == (num_obs, self.obs_dim) and y.shape == (num_obs, self.obs_dim)
         with y0_plate, y1_plate:
             pyro.sample('y', Normal(loc_y, self.scale_y), obs=y) # (T_obs, obs_dim)
     
@@ -170,10 +184,10 @@ class SCON(nn.Module):
         # Diffusion params
         if self.diffusion_type == 'C':
             weight_beta = torch.zeros(self.state_dim, device=self.device)
-            bias_beta = torch.diag(torch.tensor([theta['c_SOC'],
-                                                 theta['c_DOC'],
-                                                 theta['c_MBC']])).to(self.device) # (3, 3)
-            assert bias_beta.shape == (self.state_dim, self.state_dim)
+            bias_beta = torch.tensor([theta['c_SOC'],
+                                      theta['c_DOC'],
+                                      theta['c_MBC']]).to(self.device) # (3, )
+            assert bias_beta.shape == (self.state_dim, )
         elif self.diffusion_type == 'SS':
             weight_beta = torch.diag(torch.tensor([theta['s_SOC'],
                                                    theta['s_DOC'],
