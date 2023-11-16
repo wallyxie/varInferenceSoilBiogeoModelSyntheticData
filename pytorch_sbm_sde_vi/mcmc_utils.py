@@ -66,7 +66,7 @@ def run(args, model_params, in_filenames, out_filenames):
     y = SBM_SDE.load_data(obs_error_scale, *in_filenames) #.to(device)
     print(y.get_device(), SBM_SDE.temp.get_device())
     print('Using model', SBM_SDE.__class__.__name__, SBM_SDE.diffusion_type)
-    mp_context = 'spawn' if device == 'cuda' and args.num_chains > 1 else None
+    mp_context = 'spawn' if device == torch.device('cuda') and args.num_chains > 1 else None
     print(mp_context, device, args.num_chains, device == 'cuda', args.num_chains > 1)
 
     # Instantiate MCMC object
