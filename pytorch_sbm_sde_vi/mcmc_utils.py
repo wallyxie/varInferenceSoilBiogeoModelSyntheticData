@@ -99,4 +99,4 @@ def run(args, model_params, in_filenames, out_filenames):
     torch.save(SBM_SDE, model_file)
 
     # Print MCMC diagnostics summary
-    #mcmc.summary()
+    mcmc.summary()
