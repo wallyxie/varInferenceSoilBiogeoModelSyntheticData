@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import torch
 from torch import nn
+from torch import distributions as D
 
 import pyro
 from pyro.distributions import Normal, TorchDistribution
@@ -183,19 +184,19 @@ class SCON(nn.Module):
 
         # Diffusion params
         if self.diffusion_type == 'C':
-            weight_beta = torch.zeros(self.state_dim, device=self.device)
+            weight_beta = torch.zeros((self.state_dim, self.state_dim), device=self.device)
             bias_beta = torch.tensor([theta['c_SOC'],
                                       theta['c_DOC'],
                                       theta['c_MBC']]).to(self.device) # (3, )
-            assert bias_beta.shape == (self.state_dim, )
         elif self.diffusion_type == 'SS':
             weight_beta = torch.diag(torch.tensor([theta['s_SOC'],
                                                    theta['s_DOC'],
                                                    theta['s_MBC']], dtype=torch.float64)).to(self.device) # (3, 3)
             bias_beta = torch.zeros(self.state_dim, device=self.device)
-            assert weight_beta.shape == (self.state_dim, self.state_dim)
         else:
             raise ValueError("Unknown diffusion type")
+        assert weight_beta.shape == (self.state_dim, self.state_dim)
+        assert bias_beta.shape == (self.state_dim, )
     
         # Observation params
         num_obs = len(self.times[::self.obs_every]) #T//obs_every + 1
@@ -209,8 +210,90 @@ class SCON(nn.Module):
         return weight_alpha, bias_alpha, weight_beta, bias_beta, weight_obs
     
     def calc_drift(self, x, weight_alpha, bias_alpha):
-        return weight_alpha @ x + bias_alpha
+        return torch.matmul(weight_alpha, x) + bias_alpha
     
     def calc_diffusion(self, x, weight_beta, bias_beta):
-        beta = weight_beta @ x + bias_beta
+        beta = torch.matmul(weight_beta, x) + bias_beta
         return torch.clamp(beta, min=1e-6, max=None)
+
+    def sde_log_prob(self, x, theta): # log p(x|theta)
+        # x.shape == (T, state_dim), theta.shape == (num_params, )
+        theta_dict = {self.param_names[i]: theta[i] for i in range(len(self.param_names))}
+        weight_alpha, bias_alpha, weight_beta, bias_beta, weight_obs = self.calc_params(theta_dict)
+        # weight_alpha.shape == (T, state_dim, state_dim)
+        # bias_alpha.shape == (T, state_dim)
+        # weight_beta.shape == (state_dim, state_dim)
+        # bias_beta.shape == (state_dim, )
+        # weight_obs.shape == (num_obs, obs_dim, state_dim)
+
+        #x = x.unsqueeze(-1)                              # (T, state_dim, 1)
+        bias_alpha = bias_alpha.unsqueeze(-1)            # (T, state_dim, 1)
+        weight_beta = weight_beta.unsqueeze(0)           # (1, state_dim, state_dim)
+        bias_beta = bias_beta.unsqueeze(0).unsqueeze(-1) # (1, state_dim, 1)
+
+        alpha = self.calc_drift(x[:-1].unsqueeze(-1), weight_alpha[1:], bias_alpha[1:]).squeeze()  # (T-1, state_dim)
+        beta = self.calc_diffusion(x[:-1].unsqueeze(-1), weight_beta, bias_beta).squeeze()         # (T-1, state_dim)
+        loc = x[:-1] + alpha*self.dt
+        scale = torch.sqrt(beta*self.dt)
+        p_x = D.normal.Normal(loc=loc, scale=scale)
+
+        # Compute log p(x|theta) = log p(x_1:T|x0, theta) + log p(x0|theta)
+        log_prob = p_x.log_prob(x[1:, :]).sum()     # log p(x_1:T|x0, theta)
+        log_prob += self.p_x0.log_prob(x[0]).sum()  # log p(x0|theta)
+
+        return log_prob, weight_obs # log_obs.shape == scalar
+
+    def obs_log_prob(self, x, y, theta, weight_obs): # log p(y|x, theta)
+        # weight_obs.shape == (num_obs, self.obs_dim, self.state_dim)
+        # x_obs.shape == (num_obs, state_dim)
+        loc_y = torch.matmul(weight_obs, x[::self.obs_every].unsqueeze(-1)).squeeze() # (num_obs, obs_dim)
+        num_obs = len(self.times[::self.obs_every])
+        assert loc_y.shape == (num_obs, self.obs_dim) and y.shape == (num_obs, self.obs_dim)
+        p_y = D.normal.Normal(loc=loc_y, scale=self.scale_y) # (num_obs, obs_dim)
+        return p_y.log_prob(y).sum()
+
+    def log_prob(self, x, y, logit_theta):
+        # log p(theta)
+        theta = self.p_theta.sigmoid(logit_theta)
+        assert torch.all(self.p_theta.a < theta) and torch.all(theta < self.p_theta.b)
+        param_log_prob = self.p_theta.log_prob(theta).sum()
+    
+        # log p(x|theta)
+        sde_log_prob, weight_obs = self.sde_log_prob(x, theta)
+    
+        # log p(y|x, theta)
+        obs_log_prob = self.obs_log_prob(x, y, theta, weight_obs)
+    
+        # log p(theta) + log p(x|theta) + log p(y|x, theta)
+        return param_log_prob + sde_log_prob + obs_log_prob
+
+    def sample(self, fix_theta_dict=None):
+        # Sample theta
+        theta = self.p_theta.sample()
+        theta_dict = {self.param_names[i]: theta[i] for i in range(len(self.param_names))}
+        if fix_theta_dict:
+            theta_dict = {**theta_dict, **fix_theta_dict}
+        weight_alpha, bias_alpha, weight_beta, bias_beta, weight_obs = self.calc_params(theta_dict)
+
+        # Sample x_0
+        x_all = []
+        x = self.p_x0.sample()
+        x_all.append(x)
+
+        # Sample x_t
+        for t in range(1, self.N):
+            alpha = self.calc_drift(x, weight_alpha[t], bias_alpha[t])
+            beta = self.calc_diffusion(x, weight_beta, bias_beta)
+            loc = x + alpha*self.dt
+            scale = torch.sqrt(beta*self.dt)
+            p_x = D.normal.Normal(loc=loc, scale=scale)
+            x = p_x.sample()
+            x_all.append(x)
+        x_all = torch.cat(x_all, dim=0)
+        assert x_all.shape == (self.N * self.state_dim, )
+
+        # Transform theta to real space
+        logit_theta = self.p_theta.logit(theta)
+            
+        return torch.cat((logit_theta, x_all)).to(self.device)
+        

@@ -8,6 +8,7 @@ torch.set_default_dtype(torch.float64)
 import pyro
 from pyro.infer import MCMC, NUTS, HMC
 from pyro.infer.autoguide.initialization import init_to_sample, init_to_uniform
+import hamiltorch
 
 class Logger:
     def __init__(self, log_dir, num_samples, save_every=10):
@@ -26,7 +27,7 @@ class Logger:
             self.total_time = self.times[-1]
             self.samples.append(samples)
 
-            if i % self.save_every == 0 or i == self.num_samples:
+            if i % self.save_every == 0 or i == self.num_samples - 1:
                 # Save log
                 progress_dict = {'kernel': kernel,
                                  'samples': self.samples,
@@ -54,7 +55,7 @@ def parse_args():
     args = parser.parse_args()
     return args
 
-def run(args, model_params, in_filenames, out_filenames):
+def run_pyro(args, model_params, in_filenames, out_filenames):
     T, dt, obs_CO2, state_dim, obs_error_scale, \
         temp_ref, temp_rise, model_type, diffusion_type, device = model_params
     out_dir, samples_file, diagnostics_file, model_file = out_filenames
@@ -100,3 +101,43 @@ def run(args, model_params, in_filenames, out_filenames):
 
     # Print MCMC diagnostics summary
     mcmc.summary()
+
+def run_hamiltorch(args, model_params, in_filenames, out_filenames):
+    T, dt, obs_CO2, state_dim, obs_error_scale, \
+        temp_ref, temp_rise, model_type, diffusion_type, device = model_params
+    out_dir, out_file = out_filenames
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
+
+    # Instantiate SCON object
+    model = model_type(T, dt, state_dim, temp_ref, temp_rise, diffusion_type) #.to(device)
+    y = model.load_data(obs_error_scale, *in_filenames) # (T_obs, obs_dim)
+    print(y.get_device(), model.temp.get_device())
+    print('Using model', model.__class__.__name__, model.diffusion_type)
+    #mp_context = 'spawn' if device == torch.device('cuda') and args.num_chains > 1 else None
+    print('Running MCMC on device', device)
+    sys.stdout.flush()
+
+    # Define log prob func
+    num_params = len(model.param_names)
+    def split_samples(samples, y):
+        theta = samples[:num_params]
+        x = samples[num_params:].reshape(model.N, model.state_dim)
+        return x, y, theta
+    log_prob_func = lambda samples: model.log_prob(*split_samples(samples, y))
+
+    # Run MCMC
+    hamiltorch.set_random_seed(args.seed)
+    params_init = model.sample()
+    samples = hamiltorch.sample(log_prob_func=log_prob_func,
+                                params_init=params_init,
+                                num_samples=args.warmup_steps + args.num_samples,
+                                step_size=args.step_size,
+                                sampler=hamiltorch.Sampler.HMC_NUTS,
+                                burn=args.warmup_steps,
+                                desired_accept_rate=0.8)
+    #print('Total time:', logger.total_time, 'seconds')
+    
+    # Save results
+    print('Saving MCMC samples to', out_file)
+    torch.save((samples, model), out_file)
