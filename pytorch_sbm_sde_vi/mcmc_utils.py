@@ -129,6 +129,7 @@ def run_hamiltorch(args, model_params, in_filenames, out_filenames):
     # Run MCMC
     hamiltorch.set_random_seed(args.seed)
     params_init = model.sample()
+    t0 = time.process_time()
     samples = hamiltorch.sample(log_prob_func=log_prob_func,
                                 params_init=params_init,
                                 num_samples=args.warmup_steps + args.num_samples,
@@ -136,8 +137,8 @@ def run_hamiltorch(args, model_params, in_filenames, out_filenames):
                                 sampler=hamiltorch.Sampler.HMC_NUTS,
                                 burn=args.warmup_steps,
                                 desired_accept_rate=0.8)
-    #print('Total time:', logger.total_time, 'seconds')
+    total_time = time.process_time() - t0
     
     # Save results
     print('Saving MCMC samples to', out_file)
-    torch.save((samples, model), out_file)
+    torch.save((samples, model, total_time), out_file)
