@@ -6,7 +6,7 @@ from mcmc_utils import parse_args, run_hamiltorch
 from SBM_SDE_classes_mcmc import *
                 
 def main(args):
-    T = 1000
+    T = 5000
     dt = 1.0
     obs_CO2 = True    # whether or not to use CO2 obs (True to use CO2, False o/w)
     state_dim = 3     # assumes that obs_dim = state_dim + 1, with the last dim being CO2
