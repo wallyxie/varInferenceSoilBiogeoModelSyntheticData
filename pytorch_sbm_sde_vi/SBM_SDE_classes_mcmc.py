@@ -4,6 +4,7 @@ import pandas as pd
 import torch
 from torch import nn
 from torch import distributions as D
+from scipy.interpolate import splrep, BSpline
 
 import pyro
 from pyro.distributions import Normal, TorchDistribution
@@ -85,7 +86,7 @@ class SCON(nn.Module):
         '''
         return 0.0001 + 0.00005 * torch.sin((2 * np.pi / (24 * 365)) * self.times)
 
-    def load_data(self, obs_error_scale, obs_file, p_theta_file, x0_file):
+    def load_data(self, obs_error_scale, obs_file, theta_file, x0_file, fix_theta=False):
         print('Loading data from', obs_file)
         obs_times, obs_vals, obs_errors = csv_to_obs_df(obs_file, self.obs_dim, self.T, obs_error_scale)
         obs_vals = obs_vals.T.to(self.device)
@@ -97,32 +98,26 @@ class SCON(nn.Module):
         assert self.scale_y.shape == (self.obs_dim, )
         self.obs_every = int(obs_times[1] - obs_times[0])
         
-        # Load hyperparameters of theta
-        # (loc_theta, scale_theta, a_theta, b_theta) should only include ones that aren't fixed
-        theta_hyperparams = torch.load(p_theta_file)
-        self.param_names = list(theta_hyperparams.keys())
-        theta_hyperparams_list = list(zip(*(theta_hyperparams[k] for k in self.param_names))) # unzip theta hyperparams from dictionary values into individual lists
-        loc_theta, scale_theta, a_theta, b_theta = torch.tensor(theta_hyperparams_list).to(self.device)
-        assert loc_theta.shape == scale_theta.shape == a_theta.shape == b_theta.shape == (len(self.param_names), )
-        self.p_theta = RescaledLogitNormal(loc_theta, scale_theta, a_theta, b_theta)
-    
+        # Load theta (if fix_theta is True) or p(theta) hyperparameters (otherwise)
+        if not fix_theta:
+            theta_hyperparams = torch.load(theta_file)
+            self.param_names = list(theta_hyperparams.keys())
+            theta_hyperparams_list = list(zip(*(theta_hyperparams[k] for k in self.param_names))) # unzip theta hyperparams from dictionary values into individual lists
+            loc_theta, scale_theta, a_theta, b_theta = torch.tensor(theta_hyperparams_list).to(self.device)
+            assert loc_theta.shape == scale_theta.shape == a_theta.shape == b_theta.shape == (len(self.param_names), )
+            self.p_theta = RescaledLogitNormal(loc_theta, scale_theta, a_theta, b_theta)
+            fix_theta_dict = None
+        else:
+            fix_theta_dict = torch.load(theta_file)
+            self.param_names = list(fix_theta_dict.keys())
+
         # Load parameters of x_0
         loc_x0 = torch.load(x0_file).to(self.device)
         scale_x0 = obs_error_scale * loc_x0
         assert loc_x0.shape == scale_x0.shape == (self.state_dim, )
         self.p_x0 = Normal(loc_x0, scale_x0)
     
-        #hyperparams = {
-        #    'loc_theta': loc_theta, 
-        #    'scale_theta': scale_theta, 
-        #    'a_theta': a_theta, 
-        #    'b_theta': b_theta, 
-        #    'loc_x0': loc_x0, 
-        #    'scale_x0': scale_x0, 
-        #    'scale_y': scale_y 
-        #}
-
-        return obs_vals
+        return (obs_vals, fix_theta_dict)
 
     def model(self, y=None, fix_theta_dict=None):
         # Draw theta
@@ -252,27 +247,49 @@ class SCON(nn.Module):
         p_y = D.normal.Normal(loc=loc_y, scale=self.scale_y) # (num_obs, obs_dim)
         return p_y.log_prob(y).sum()
 
-    def log_prob(self, x, y, logit_theta):
-        # log p(theta)
-        theta = self.p_theta.sigmoid(logit_theta)
-        assert torch.all(self.p_theta.a < theta) and torch.all(theta < self.p_theta.b)
-        param_log_prob = self.p_theta.log_prob(theta).sum()
-    
+    def log_prob(self, x, y, logit_theta, fix_theta=None):
         # log p(x|theta)
         sde_log_prob, weight_obs = self.sde_log_prob(x, theta)
     
         # log p(y|x, theta)
         obs_log_prob = self.obs_log_prob(x, y, theta, weight_obs)
+        
+        if not fix_theta:
+            # log p(theta)
+            theta = self.p_theta.sigmoid(logit_theta)
+            assert torch.all(self.p_theta.a < theta) and torch.all(theta < self.p_theta.b)
+            param_log_prob = self.p_theta.log_prob(theta).sum()
     
-        # log p(theta) + log p(x|theta) + log p(y|x, theta)
-        return param_log_prob + sde_log_prob + obs_log_prob
+            # log p(theta) + log p(x|theta) + log p(y|x, theta)
+            return param_log_prob + sde_log_prob + obs_log_prob
+        else:
+            return sde_log_prob + obs_log_prob
 
-    def sample(self, fix_theta_dict=None):
+    def add_CO2(self, x, theta):
+        # Apply temperature-dependent transformation to k_*_ref
+        k_S = arrhenius_temp_dep(theta['k_S_ref'], self.temp, theta['Ea_S'], self.temp_ref) # (N, )
+        k_D = arrhenius_temp_dep(theta['k_D_ref'], self.temp, theta['Ea_D'], self.temp_ref) # (N, )
+        k_M = arrhenius_temp_dep(theta['k_M_ref'], self.temp, theta['Ea_M'], self.temp_ref) # (N, )
+
+        # Observation params
+        C0 = torch.eye(self.state_dim, device=self.device).unsqueeze(0) * torch.ones((self.N, 1, 1), device=self.device) # (N, 3, 3)
+        C1 = torch.stack([(1 - theta['a_SD']) * k_S,
+                          (1 - theta['a_DS']) * k_D,
+                          (1 - theta['a_M']) * k_M]).unsqueeze(0).permute((2, 0, 1)) # (N, 1, 3) 
+        weight_obs = torch.cat((C0, C1), dim=1) # (N, 4, 3)
+        assert weight_obs.shape == (self.N, self.obs_dim, self.state_dim)
+
+        return torch.matmul(weight_obs, x.unsqueeze(-1)).squeeze() # (N, obs_dim)
+
+    def sample(self, y, fix_theta_dict=None):
         # Sample theta
-        theta = self.p_theta.sample()
-        theta_dict = {self.param_names[i]: theta[i] for i in range(len(self.param_names))}
         if fix_theta_dict:
-            theta_dict = {**theta_dict, **fix_theta_dict}
+            theta_dict = fix_theta_dict
+        else:
+            theta = self.p_theta.sample()
+            theta_dict = {self.param_names[i]: theta[i] for i in unfixed_param_indices}
+        #if fix_theta_dict:
+        #    theta_dict = {**theta_dict, **fix_theta_dict}
         weight_alpha, bias_alpha, weight_beta, bias_beta, weight_obs = self.calc_params(theta_dict)
 
         # Sample x_0
@@ -296,4 +313,13 @@ class SCON(nn.Module):
         logit_theta = self.p_theta.logit(theta)
             
         return torch.cat((logit_theta, x_all)).to(self.device)
+
+    def smooth_init(self, y, fix_theta_dict=None):
+        x_all = []
+        for i in range(self.state_dim):
+            tck = splrep(self.times[::self.obs_every], y[:, i], s=self.T)
+            xvals = np.arange(0, self.T + self.dt, self.dt)
+            x_all.apppend(BSpline(*tck)(xvals))
+
+        return torch.cat(x_all, dim=0).to(self.device)
         

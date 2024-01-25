@@ -8,6 +8,7 @@ torch.set_default_dtype(torch.float64)
 import pyro
 from pyro.infer import MCMC, NUTS, HMC
 from pyro.infer.autoguide.initialization import init_to_sample, init_to_uniform
+from scipy.interpolate import splrep, BSpline
 import hamiltorch
 
 class Logger:
@@ -102,33 +103,48 @@ def run_pyro(args, model_params, in_filenames, out_filenames):
     # Print MCMC diagnostics summary
     mcmc.summary()
 
-def run_hamiltorch(args, model_params, in_filenames, out_filenames):
+def run_hamiltorch(args, model_params, in_filenames, out_filenames,
+                   fix_theta=False, init='prior'):
     T, dt, obs_CO2, state_dim, obs_error_scale, \
         temp_ref, temp_rise, model_type, diffusion_type, device = model_params
+    obs_file, theta_file, x0_file = in_filenames
     out_dir, out_file = out_filenames
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
 
     # Instantiate SCON object
     model = model_type(T, dt, state_dim, temp_ref, temp_rise, diffusion_type) #.to(device)
-    y = model.load_data(obs_error_scale, *in_filenames) # (T_obs, obs_dim)
+
+    # Load data
+    y, fix_theta_dict = model.load_data(obs_error_scale, obs_file, theta_file, x0_file, fix_theta=fix_theta) # (T_obs, obs_dim)
     print(y.get_device(), model.temp.get_device())
     print('Using model', model.__class__.__name__, model.diffusion_type)
     #mp_context = 'spawn' if device == torch.device('cuda') and args.num_chains > 1 else None
     print('Running MCMC on device', device)
     sys.stdout.flush()
 
+    # Initialize samples
+    if init == 'prior':
+        params_init = model.sample(y, fix_theta_dict)
+    elif init =='smooth':
+        params_init = model.smooth_init(y, fix_theta_dict)
+    else:
+        raise ValueError, "Unknown initialization scheme"
+
     # Define log prob func
     num_params = len(model.param_names)
-    def split_samples(samples, y):
-        theta = samples[:num_params]
-        x = samples[num_params:].reshape(model.N, model.state_dim)
-        return x, y, theta
-    log_prob_func = lambda samples: model.log_prob(*split_samples(samples, y))
+    def split_samples(samples, y, fix_theta):
+        if not fix_theta:
+            theta = samples[:num_params]
+            x = samples[num_params:].reshape(model.N, model.state_dim)
+        else:
+            theta = None
+            x = samples.reshape(model.N, model.state_dim)
+        return x, y, theta, fix_theta
+    log_prob_func = lambda samples: model.log_prob(*split_samples(samples, y, fix_theta))
 
     # Run MCMC
     hamiltorch.set_random_seed(args.seed)
-    params_init = model.sample()
     t0 = time.process_time()
     samples = hamiltorch.sample(log_prob_func=log_prob_func,
                                 params_init=params_init,
