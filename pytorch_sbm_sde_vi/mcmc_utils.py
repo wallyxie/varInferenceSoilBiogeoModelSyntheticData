@@ -125,23 +125,26 @@ def run_hamiltorch(args, model_params, in_filenames, out_filenames,
 
     # Initialize samples
     if init == 'prior':
+        print('Using prior init')
         params_init = model.sample(y, fix_theta_dict)
-    elif init =='smooth':
+    elif init == 'smooth':
+        print('Using smoothed observations init')
         params_init = model.smooth_init(y, fix_theta_dict)
     else:
-        raise ValueError, "Unknown initialization scheme"
+        print('Unknown init scheme')
+        raise ValueError
 
     # Define log prob func
     num_params = len(model.param_names)
-    def split_samples(samples, y, fix_theta):
-        if not fix_theta:
+    def split_samples(samples, y, fix_theta_dict):
+        if fix_theta_dict is None:
             theta = samples[:num_params]
             x = samples[num_params:].reshape(model.N, model.state_dim)
         else:
             theta = None
             x = samples.reshape(model.N, model.state_dim)
-        return x, y, theta, fix_theta
-    log_prob_func = lambda samples: model.log_prob(*split_samples(samples, y, fix_theta))
+        return x, y, theta, fix_theta_dict
+    log_prob_func = lambda samples: model.log_prob(*split_samples(samples, y, fix_theta_dict))
 
     # Run MCMC
     hamiltorch.set_random_seed(args.seed)

@@ -108,7 +108,7 @@ class SCON(nn.Module):
             self.p_theta = RescaledLogitNormal(loc_theta, scale_theta, a_theta, b_theta)
             fix_theta_dict = None
         else:
-            fix_theta_dict = torch.load(theta_file)
+            fix_theta_dict = {k: torch.tensor(v) for k, v in torch.load(theta_file).items()}
             self.param_names = list(fix_theta_dict.keys())
 
         # Load parameters of x_0
@@ -211,9 +211,8 @@ class SCON(nn.Module):
         beta = torch.matmul(weight_beta, x) + bias_beta
         return torch.clamp(beta, min=1e-6, max=None)
 
-    def sde_log_prob(self, x, theta): # log p(x|theta)
+    def sde_log_prob(self, x, theta_dict): # log p(x|theta)
         # x.shape == (T, state_dim), theta.shape == (num_params, )
-        theta_dict = {self.param_names[i]: theta[i] for i in range(len(self.param_names))}
         weight_alpha, bias_alpha, weight_beta, bias_beta, weight_obs = self.calc_params(theta_dict)
         # weight_alpha.shape == (T, state_dim, state_dim)
         # bias_alpha.shape == (T, state_dim)
@@ -238,7 +237,7 @@ class SCON(nn.Module):
 
         return log_prob, weight_obs # log_obs.shape == scalar
 
-    def obs_log_prob(self, x, y, theta, weight_obs): # log p(y|x, theta)
+    def obs_log_prob(self, x, y, theta_dict, weight_obs): # log p(y|x, theta)
         # weight_obs.shape == (num_obs, self.obs_dim, self.state_dim)
         # x_obs.shape == (num_obs, state_dim)
         loc_y = torch.matmul(weight_obs, x[::self.obs_every].unsqueeze(-1)).squeeze() # (num_obs, obs_dim)
@@ -247,20 +246,24 @@ class SCON(nn.Module):
         p_y = D.normal.Normal(loc=loc_y, scale=self.scale_y) # (num_obs, obs_dim)
         return p_y.log_prob(y).sum()
 
-    def log_prob(self, x, y, logit_theta, fix_theta=None):
-        # log p(x|theta)
-        sde_log_prob, weight_obs = self.sde_log_prob(x, theta)
-    
-        # log p(y|x, theta)
-        obs_log_prob = self.obs_log_prob(x, y, theta, weight_obs)
-        
-        if not fix_theta:
+    def log_prob(self, x, y, logit_theta, fix_theta_dict=None):
+        if fix_theta_dict is None:
             # log p(theta)
             theta = self.p_theta.sigmoid(logit_theta)
             assert torch.all(self.p_theta.a < theta) and torch.all(theta < self.p_theta.b)
             param_log_prob = self.p_theta.log_prob(theta).sum()
+            theta_dict = {self.param_names[i]: theta[i] for i in range(len(self.param_names))}
+        else:
+            theta_dict = fix_theta_dict
+
+        # log p(x|theta)
+        sde_log_prob, weight_obs = self.sde_log_prob(x, theta_dict)
     
-            # log p(theta) + log p(x|theta) + log p(y|x, theta)
+        # log p(y|x, theta)
+        obs_log_prob = self.obs_log_prob(x, y, theta_dict, weight_obs)
+        
+        # log joint = log p(theta) + log p(x|theta) + log p(y|x, theta)
+        if fix_theta_dict is None:
             return param_log_prob + sde_log_prob + obs_log_prob
         else:
             return sde_log_prob + obs_log_prob
@@ -319,7 +322,7 @@ class SCON(nn.Module):
         for i in range(self.state_dim):
             tck = splrep(self.times[::self.obs_every], y[:, i], s=self.T)
             xvals = np.arange(0, self.T + self.dt, self.dt)
-            x_all.apppend(BSpline(*tck)(xvals))
+            x_all.append(torch.tensor(BSpline(*tck)(xvals)))
 
         return torch.cat(x_all, dim=0).to(self.device)
         
