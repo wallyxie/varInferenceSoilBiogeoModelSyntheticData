@@ -319,9 +319,10 @@ class SCON(nn.Module):
 
     def smooth_init(self, y, fix_theta_dict=None):
         obs_times = self.times[::self.obs_every].cpu()
+        obs_vals = y.cpu()
         x_all = []
         for i in range(self.state_dim):
-            tck = splrep(obs_times, y[:, i], s=self.T)
+            tck = splrep(obs_times, obs_vals[:, i], s=self.T)
             xvals = np.arange(0, self.T + self.dt, self.dt)
             x_all.append(torch.tensor(BSpline(*tck)(xvals)))
 
