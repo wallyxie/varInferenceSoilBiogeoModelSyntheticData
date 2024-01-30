@@ -50,11 +50,11 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-elbo_iter = 125000
+elbo_iter = 17 #125000
 elbo_lr = 5e-3
 elbo_lr_decay = 0.7
 elbo_lr_decay_step_size = 5000
-elbo_warmup_iter = 10000
+elbo_warmup_iter = 17 #10000
 elbo_warmup_lr = 1e-6
 ptrain_iter = 0
 ptrain_alg = 'L1'
@@ -164,7 +164,7 @@ with torch.no_grad():
     print(f'Net with {train_args} has test neg_ELBO = {neg_ELBO} and log p = {log_p}')
     test_elbo_and_log_p_save_string = os.path.join(outputs_folder, 'test_elbo_and_log_p' + f'_iter_{elbo_iter}_warmup_{elbo_warmup_iter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_lr_{elbo_lr}_decay_step_{elbo_lr_decay_step_size}_warmup_lr_{elbo_warmup_lr}_sd_scale_{prior_scale_factor}_{now_string}.txt')
     with open(test_elbo_and_log_p_save_string, 'w') as f:
-    print(f'Test ELBO: {neg_ELBO}\nlog p: {log_p}', file = f)
+        print(f'Test ELBO: {neg_ELBO}\nlog p: {log_p}', file = f)
 
 #Save net.eval() samples from trained net object for CPU plotting and processing.
 batch_multiples = 1
