@@ -21,7 +21,7 @@ from TruncatedNormal import *
 from LogitNormal import *
 
 '''
-This module containins the `calc_log_lik` and `train` functions for pre-training and ELBO training of the soil biogeochemical model SDE systems.
+This module contains the `calc_log_lik` and `train` functions for pre-training and ELBO training of the soil biogeochemical model SDE systems.
 '''
 
 #Declare typing combinations.
