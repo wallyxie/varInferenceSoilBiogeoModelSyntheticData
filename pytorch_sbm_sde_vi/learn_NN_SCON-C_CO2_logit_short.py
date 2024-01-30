@@ -35,7 +35,7 @@ torch.cuda.manual_seed(0)
 torch.cuda.manual_seed_all(0)
 np.random.seed(0)
 torch.backends.cudnn.deterministic = True
-torch.backends.cudnn.benchmark = False
+torch.backends.cudnn.benchmark = True
 
 #IAF SSM time parameters
 dt_flow = 1.0 #Increased from 0.1 to reduce memory.
