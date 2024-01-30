@@ -3,6 +3,7 @@ import math
 import sys
 from datetime import datetime
 import os.path
+import time
 
 #Torch imports
 import torch
@@ -57,7 +58,7 @@ elbo_warmup_iter = 17 #15000
 elbo_warmup_lr = 1e-6
 ptrain_iter = 0
 ptrain_alg = 'L1'
-batch_size = 38
+batch_size = 31
 eval_batch_size = 250
 obs_error_scale = 0.1
 prior_scale_factor = 0.25
@@ -91,6 +92,7 @@ i_d_tensor = i_d(t_span_tensor).to(active_device) #Exogenous DOC input function
 #Assign path to observations .csv file.
 csv_data_path = os.path.join('generated_data/', 'SCON-SS_CO2_logit_short_2021_11_17_20_16_sample_y_t_5000_dt_0-01_sd_scale_0-25.csv')
 
+start_time = time.process_time()
 #Call training loop function.
 net, obs_model, norm_hist, ELBO_hist, log_p_hist, times_per_iter_hist, SBM_SDE_instance = train_nn_log_p(active_device, elbo_lr, elbo_iter, batch_size,
         csv_data_path, obs_error_scale, t, dt_flow, n,
@@ -101,6 +103,8 @@ net, obs_model, norm_hist, ELBO_hist, log_p_hist, times_per_iter_hist, SBM_SDE_i
         PRINT_EVERY = 10, DEBUG_SAVE_DIR = None, PTRAIN_ITER = ptrain_iter, PTRAIN_ALG = ptrain_alg,
         NUM_LAYERS = num_layers, REVERSE = reverse, BASE_STATE = base_state)
 print('Training finished. Moving to saving of output files.')
+elapsed_time = time.process_time() - start_time
+print(f'Training finished after {elapsed_time} seconds. Moving to saving of output files.')
 
 #Save net and ELBO files.
 now = datetime.now()
