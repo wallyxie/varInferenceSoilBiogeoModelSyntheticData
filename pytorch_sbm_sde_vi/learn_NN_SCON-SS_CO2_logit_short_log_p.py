@@ -50,11 +50,11 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-elbo_iter = 17 #215000
+elbo_iter = 225000
 elbo_lr = 3.5e-4
 elbo_lr_decay = 0.7
 elbo_lr_decay_step_size = 10000
-elbo_warmup_iter = 17 #15000
+elbo_warmup_iter = 15000
 elbo_warmup_lr = 1e-6
 ptrain_iter = 0
 ptrain_alg = 'L1'
@@ -191,6 +191,6 @@ with torch.no_grad():
 plots_folder = 'training_plots/'
 plot_elbo(ELBO_hist, elbo_iter, elbo_warmup_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, elbo_lr_decay_step_size, elbo_warmup_lr, prior_scale_factor, plots_folder, now_string, xmin = elbo_warmup_iter + int(elbo_iter / 2))
 print('ELBO plotting finished.')
-params_dict_tensor = {k: torch.tensor(v).unsqueeze(0) for k, v in params_dict.items()}
+params_dict_tensor = {k: torch.tensor(v).unsqueeze(0).to(active_device) for k, v in params_dict.items()}
 plot_states_NN(x, params_dict_tensor, obs_model, SBM_SDE_instance, elbo_iter, elbo_warmup_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, elbo_lr_decay_step_size, elbo_warmup_lr, prior_scale_factor, plots_folder, now_string, learn_CO2, ymin_list = [0, 0, 0, 0], ymax_list = [70., 5., 8., 0.03])
 print('States fit plotting finished.')
