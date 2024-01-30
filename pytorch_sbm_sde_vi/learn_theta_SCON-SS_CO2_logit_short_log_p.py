@@ -50,7 +50,7 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-elbo_iter = 115000
+elbo_iter = 125000
 elbo_lr = 5e-3
 elbo_lr_decay = 0.7
 elbo_lr_decay_step_size = 5000
@@ -96,7 +96,7 @@ csv_data_path = os.path.join('generated_data/', 'SCON-SS_CO2_logit_short_2021_11
 
 start_time = time.process_time()
 #Call training loop function.
-net, q_theta, p_theta, obs_model, norm_hist, ELBO_hist, log_p_hist, times_per_iter, SBM_SDE_instance = train(
+net, q_theta, p_theta, obs_model, norm_hist, ELBO_hist, log_p_hist, times_per_iter_hist, SBM_SDE_instance = train(
         active_device, elbo_lr, elbo_iter, batch_size,
         csv_data_path, obs_error_scale, t, dt_flow, n,
         t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
@@ -111,7 +111,7 @@ print(f'Training finished after {elapsed_time} seconds. Moving to saving of outp
 
 #Save net and ELBO files.
 now = datetime.now()
-now_string = 'SCON-SS_CO2_logit_short' + now.strftime('_%Y_%m_%d_%H_%M_%S')
+now_string = 'SCON-SS_CO2_logit_short_log_p' + now.strftime('_%Y_%m_%d_%H_%M_%S')
 save_string = f'_iter_{elbo_iter}_warmup_{elbo_warmup_iter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_lr_{elbo_lr}_decay_step_{elbo_lr_decay_step_size}_warmup_lr_{elbo_warmup_lr}_sd_scale_{prior_scale_factor}_{now_string}.pt'
 outputs_folder = 'training_pt_outputs/'
 train_args_save_string = os.path.join(outputs_folder, 'train_args' + save_string)
@@ -135,13 +135,12 @@ torch.save(p_theta, p_theta_save_string)
 torch.save(obs_model, obs_model_save_string)
 torch.save(ELBO_hist, ELBO_save_string)
 torch.save(log_p_hist, log_p_save_string)
-torch.save(times_per_iter, times_per_iter_save_string)
+torch.save(times_per_iter_hist, times_per_iter_save_string)
 torch.save(SBM_SDE_instance, SBM_SDE_instance_save_string)
 with open(elapsed_time_save_string, 'w') as f:
     print(f'Elapsed time: {elapsed_time} seconds', file = f)
-print('Output files saving finished. Moving to plotting.')
 
-#Compute test ELBO.
+#Compute test ELBO and log p.
 net.eval()
 with torch.no_grad():
     x, log_prob = net(eval_batch_size)
@@ -156,11 +155,16 @@ with torch.no_grad():
     if learn_CO2:
         log_lik, drift, diffusion_sqrt, x_add_CO2 = calc_log_lik(x, theta_dict, dt_flow, SBM_SDE_instance, x0_prior_SCON, learn_CO2)
         neg_ELBO = -log_p_theta.mean() + log_q_theta.mean() + log_prob.mean() - log_lik.mean() - obs_model(x_add_CO2)
+        log_p = -log_p_theta.mean() - log_lik.mean() - obs_model(x_add_CO2)
     else:
         log_lik, drift, diffusion_sqrt = calc_log_lik(x, theta_dict, dt_flow, SBM_SDE_instance, x0_prior_SCON, learn_CO2)
         neg_ELBO = -log_p_theta.mean() + log_q_theta.mean() + log_prob.mean() - log_lik.mean() - obs_model(x)
+        log_p = -log_p_theta.mean() - log_lik.mean() - obs_model(x)
     print('x.size() =', x.size())
-    print(f'Net with {train_args} has test neg_ELBO = {neg_ELBO}')
+    print(f'Net with {train_args} has test neg_ELBO = {neg_ELBO} and log p = {log_p}')
+    test_elbo_and_log_p_save_string = os.path.join(outputs_folder, 'test_elbo_and_log_p' + f'_iter_{elbo_iter}_warmup_{elbo_warmup_iter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_lr_{elbo_lr}_decay_step_{elbo_lr_decay_step_size}_warmup_lr_{elbo_warmup_lr}_sd_scale_{prior_scale_factor}_{now_string}.txt')
+    with open(test_elbo_and_log_p_save_string, 'w') as f:
+    print(f'Test ELBO: {neg_ELBO}\nlog p: {log_p}', file = f)
 
 #Save net.eval() samples from trained net object for CPU plotting and processing.
 batch_multiples = 1
@@ -188,7 +192,10 @@ print(x_eval)
 x_eval_save_string = os.path.join(outputs_folder, 'x_eval' + save_string)
 torch.save(x_eval, x_eval_save_string)
 
+print('Output files saving finished. Moving to plotting.')
 #Plot training posterior results and ELBO history.
+with torch.no_grad():
+    x, _ = net(eval_batch_size)
 plots_folder = 'training_plots/'
 plot_elbo(ELBO_hist, elbo_iter, elbo_warmup_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, elbo_lr_decay_step_size, elbo_warmup_lr, prior_scale_factor, plots_folder, now_string, xmin = elbo_warmup_iter + int(elbo_iter / 2))
 print('ELBO plotting finished.')

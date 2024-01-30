@@ -35,11 +35,11 @@ BoolAndString = Union[bool, str]
 
 def calc_log_lik(C_PATH: torch.Tensor,
         PARAMS_DICT: DictOfTensors,
-        DT: float, 
+        DT: float,
         SBM_SDE_CLASS: type,
         INIT_PRIOR: torch.distributions.distribution.Distribution,
         LEARN_CO2: bool
-        ):
+        ) -> tuple:
     if LEARN_CO2:
         drift, diffusion_sqrt, x_add_CO2 = SBM_SDE_CLASS.drift_diffusion_add_CO2(C_PATH, PARAMS_DICT) #Appropriate indexing of tensors corresponding to data generating process now handled in `drift_diffusion` class method. Recall that drift diffusion will use C_PATH[:, :-1, :], I_S_TENSOR[:, 1:, :], I_D_TENSOR[:, 1:, :], TEMP_TENSOR[:, 1:, :]. 
         euler_maruyama_state_sample_object = D.multivariate_normal.MultivariateNormal(loc = C_PATH[:, :-1, :] + drift * DT, scale_tril = diffusion_sqrt * math.sqrt(DT)) #C_PATH[:, :-1, :] + drift * DT will diverge from C_PATH if C_PATH values not compatible with x0 and theta. Algorithm aims to minimize gap between computed drift and actual gradient between x_n and x_{n+1}. 
@@ -68,7 +68,7 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
         ELBO_WARMUP_ITER = 1000, ELBO_WARMUP_INIT_LR = 1e-6, ELBO_LR_DECAY: float = 0.8, ELBO_LR_DECAY_STEP_SIZE: int = 1000,
         PRINT_EVERY: int = 100, VERBOSE = False,
         DEBUG_SAVE_DIR: str = None, PTRAIN_ITER: int = 0, PTRAIN_LR: float = 1e-3, PTRAIN_ALG: BoolAndString = False,
-        NUM_LAYERS: int = 5, REVERSE: bool = False, BASE_STATE: bool = False):
+        NUM_LAYERS: int = 5, REVERSE: bool = False, BASE_STATE: bool = False) -> tuple:
 
     #Sum to get total training iterations.
     T_ITER = PTRAIN_ITER + ELBO_WARMUP_ITER + ELBO_ITER
@@ -118,7 +118,7 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
             }
     THETA_PRIOR_CLASS = dist_class_dict[THETA_DIST]
     THETA_POST_CLASS = dist_class_dict[THETA_POST_DIST] if THETA_POST_DIST else dist_class_dict[THETA_DIST]
-    
+
     #Define prior
     priors = THETA_PRIOR_CLASS(loc = prior_means_tensor.to(DEVICE), scale = prior_sds_tensor.to(DEVICE), a = prior_lowers_tensor.to(DEVICE), b = prior_uppers_tensor.to(DEVICE))
 
@@ -159,20 +159,20 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
             return min(1, elbo_decay_factor if elbo_decay_factor != 0 else 1)
 
     ELBO_sched = optim.lr_scheduler.LambdaLR(ELBO_opt, lr_lambda = calc_lr_factor)
-    
+
     #Training loop
-    print(f'\nStarting autoencoder training. {PTRAIN_ITER} pre-training iterations, {ELBO_WARMUP_ITER} ELBO warmup iterations, and {ELBO_ITER} ELBO training iterations for {T_ITER} total iterations specified.')        
-    net.train()        
+    print(f'\nStarting autoencoder training. {PTRAIN_ITER} pre-training iterations, {ELBO_WARMUP_ITER} ELBO warmup iterations, and {ELBO_ITER} ELBO training iterations for {T_ITER} total iterations specified.')
+    net.train()
     with tqdm(total = T_ITER, desc = f'Learning SDE and hidden parameters.', position = -1) as tq:
         for iteration in range(T_ITER):
             C_PATH, log_prob = net(BATCH_SIZE) #Obtain paths with solutions to times including t0.
-            
+
             #NaN handling            
             nan_count = 0
             #Check for NaNs in x.
             if torch.isnan(C_PATH).any():
                 raise ValueError(f'nan in x at niter: {iteration}. Check gradient clipping and learning rate to start.')
-            
+
             if PTRAIN_ALG and iteration < PTRAIN_ITER:
                 ptrain_opt.zero_grad()
 
@@ -194,12 +194,12 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                     print('\nC_PATH =', C_PATH)
 
                 norm.backward()
-                torch.nn.utils.clip_grad_norm_(net.parameters(), 3.0)                                
+                torch.nn.utils.clip_grad_norm_(net.parameters(), 3.0)
                 ptrain_opt.step()
 
             else:
-                ELBO_opt.zero_grad()                
-                
+                ELBO_opt.zero_grad()
+
                 # Sample (unknown) theta                
                 theta_dict, theta, log_q_theta, parent_loc_scale_dict = q_theta(BATCH_SIZE)
                 log_p_theta = priors.log_prob(theta).sum(-1)
@@ -223,8 +223,9 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                 ELBO_losses.append(ELBO.item())
 
                 if (iteration + 1) % PRINT_EVERY == 0:
+                    print(f'\nLast LR computed by scheduler was {ELBO_sched.get_last_lr()}.')
                     print(f'\nMoving average ELBO at {iteration + 1} iterations = {sum(ELBO_losses[-10:]) / len(ELBO_losses[-10:])}. Best ELBO value is: {best_loss_ELBO}.')
-                    print(f"\nLearning rate at {iteration + 1} iterations = {ELBO_opt.param_groups[0]['lr']}") 
+                    print(f"\nLearning rate at {iteration + 1} iterations = {ELBO_opt.param_groups[0]['lr']}")
                     if LEARN_CO2:
                         print(f'\nC_PATH with CO2 mean = \n{x_add_CO2.mean(-2)}')
                         print(f'\nC_PATH with CO2 = \n{x_add_CO2}')
@@ -237,7 +238,7 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                     print(f'\nparent_loc_scale_dict at {iteration + 1} iterations = \n{parent_loc_scale_dict}')
                     if VERBOSE:
                         print('\nlog_p_theta.mean()', log_p_theta.mean())
-                        print('\nlog_q_theta.mean()', log_q_theta.mean())                        
+                        print('\nlog_q_theta.mean()', log_q_theta.mean())
                         print('\nlog_prob.mean()', log_prob.mean())
                         print('\nlog_lik.mean()', log_lik.mean())
                         if LEARN_CO2:
@@ -258,8 +259,8 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
 
             tq.update()
 
-    print('\nAll finished! Now, we need to check outputs to see if things worked...')            
-    
+    print('\nAll finished! Now, we need to check outputs to see if things worked...')
+
     return net, q_theta, priors, obs_model, norm_losses, ELBO_losses, SBM_SDE
 
 def train_nn(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
@@ -270,7 +271,7 @@ def train_nn(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
         ELBO_WARMUP_ITER = 1000, ELBO_WARMUP_INIT_LR = 1e-6, ELBO_LR_DECAY: float = 0.8, ELBO_LR_DECAY_STEP_SIZE: int = 1000,
         PRINT_EVERY: int = 100, VERBOSE: bool = False,
         DEBUG_SAVE_DIR: str = None, PTRAIN_ITER: int = 0, PTRAIN_LR: float = 1e-3, PTRAIN_ALG: BoolAndString = False,
-        NUM_LAYERS: int = 5, REVERSE: bool = False, BASE_STATE: bool = False):
+        NUM_LAYERS: int = 5, REVERSE: bool = False, BASE_STATE: bool = False) -> tuple:
 
     #Sum to get total training iterations.
     T_ITER = PTRAIN_ITER + ELBO_WARMUP_ITER + ELBO_ITER
@@ -296,7 +297,7 @@ def train_nn(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
 
     #Establish neural network.
     net = SDEFlow(DEVICE, obs_model, SBM_SDE.state_dim, T, DT, N, NUM_LAYERS = NUM_LAYERS, REVERSE = REVERSE, BASE_STATE = BASE_STATE).to(DEVICE)
-    
+
     #Initiate model debugging saver.
     if DEBUG_SAVE_DIR:
         debug_saver = ModelSaver(save_dir = DEBUG_SAVE_DIR)
@@ -339,15 +340,15 @@ def train_nn(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
     #Convert dictionary of fixed parameter Numpy arrays to [1, num_params] tensor and dictionary of size [1] tensors.
     theta = torch.tensor([v.item() for v in list(PARAMS_DICT.values())])[None, :].to(DEVICE) # torch.Size([1, num_params])
     theta_dict = {k: torch.tensor(v).unsqueeze(0).to(DEVICE) for k, v in PARAMS_DICT.items()}
-    
+
     #Training loop
     print(f'\nStarting autoencoder training. {PTRAIN_ITER} pre-training iterations, {ELBO_WARMUP_ITER} ELBO warmup iterations, and {ELBO_ITER} ELBO training iterations for {T_ITER} total iterations specified.')
     net.train()
     with tqdm(total = T_ITER, desc = f'Learning SDE and hidden parameters.', position = -1) as tq:
         for iteration in range(T_ITER):
-            
+
             C_PATH, log_prob = net(BATCH_SIZE) #Obtain paths with solutions to times including t0.
-            
+
             #NaN handling            
             nan_count = 0
             #Check for NaNs in x.
@@ -375,7 +376,7 @@ def train_nn(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                     print('\nC_PATH =', C_PATH)
 
                 norm.backward()
-                torch.nn.utils.clip_grad_norm_(net.parameters(), 3.0)                                
+                torch.nn.utils.clip_grad_norm_(net.parameters(), 3.0)
                 ptrain_opt.step()
 
             else:
@@ -395,8 +396,9 @@ def train_nn(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
 
                 # Print info
                 if (iteration + 1) % PRINT_EVERY == 0:
+                    print(f'\nLast LR computed by scheduler was {ELBO_sched.get_last_lr()}.')
                     print(f'\nMoving average ELBO at {iteration + 1} iterations = {sum(ELBO_losses[-10:]) / len(ELBO_losses[-10:])}. Best ELBO value is: {best_loss_ELBO}.')
-                    print(f"\nLearning rate at {iteration + 1} iterations = {ELBO_opt.param_groups[0]['lr']}") 
+                    print(f"\nLearning rate at {iteration + 1} iterations = {ELBO_opt.param_groups[0]['lr']}")
                     if LEARN_CO2:
                         print(f'\nC_PATH with CO2 mean = \n{x_add_CO2.mean(-2)}')
                         print(f'\nC_PATH with CO2 = \n{x_add_CO2}')
@@ -418,15 +420,15 @@ def train_nn(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                 torch.nn.utils.clip_grad_norm_(ELBO_params, 5.0)
                 ELBO_opt.step()
 
-            ELBO_sched.step()                
+            ELBO_sched.step()
 
             if DEBUG_SAVE_DIR:
-                to_save = {'model': net, 'model_state_dict': net.state_dict(), 'ELBO_opt_state_dict': ELBO_opt.state_dict(), 
+                to_save = {'model': net, 'model_state_dict': net.state_dict(), 'ELBO_opt_state_dict': ELBO_opt.state_dict(),
                         'ptrain_opt_state_dict': ptrain_opt.state_dict()}
                 debug_saver.save(to_save, iteration + 1)
 
             tq.update()
 
     print('\nAll finished! Now, we need to check outputs to see if things worked...')
-    
+
     return net, obs_model, norm_losses, ELBO_losses, SBM_SDE
