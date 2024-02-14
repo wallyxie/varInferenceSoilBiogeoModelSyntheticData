@@ -27,6 +27,9 @@ def main(args):
     obs_file = os.path.join(input_dir, 'SCON-C_CO2_logit_short_2022_01_20_08_53_sample_y_t_5000_dt_0-01_sd_scale_0-25.csv')
     theta_file = os.path.join(input_dir, 'SCON-C_CO2_logit_short_2022_01_20_08_53_sample_y_t_5000_dt_0-01_sd_scale_0-25_rsample.pt')
     x0_file = os.path.join(input_dir, 'SCON-C_CO2_logit_short_2022_01_20_08_53_sample_y_t_5000_dt_0-01_sd_scale_0-25_x0_SCON_tensor.pt')
+    
+    init_dir = os.path.join('training_pt_outputs', args.init_dir)
+    init_file = os.path.join(out_dir, 'samples_init.pt')
 
     # Output file
     out_dir = os.path.join('training_pt_outputs', args.name)
@@ -38,7 +41,7 @@ def main(args):
     out_filenames = out_dir, out_file
 
     run_hamiltorch(args, model_params, in_filenames, out_filenames,
-                   fix_theta=fix_theta, init='smooth')
+                   fix_theta=fix_theta, init='file', init_file=init_file)
 
 if __name__ == "__main__":
     args = parse_args()

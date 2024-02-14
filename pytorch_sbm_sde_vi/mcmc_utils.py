@@ -53,6 +53,7 @@ def parse_args():
     parser.add_argument("--seed", nargs="?", default=1, type=int)
     parser.add_argument("--save-every", nargs="?", default=10, type=int)
     parser.add_argument("--name", nargs="?", default='mcmc', type=str)
+    parser.add_argument("--init-dir", nargs="?", default=None, type=str)
     args = parser.parse_args()
     return args
 
@@ -104,7 +105,7 @@ def run_pyro(args, model_params, in_filenames, out_filenames):
     mcmc.summary()
 
 def run_hamiltorch(args, model_params, in_filenames, out_filenames,
-                   fix_theta=False, init='prior'):
+                   fix_theta=False, init='prior', init_file=None):
     T, dt, obs_CO2, state_dim, obs_error_scale, \
         temp_ref, temp_rise, model_type, diffusion_type, device = model_params
     obs_file, theta_file, x0_file = in_filenames
@@ -130,6 +131,10 @@ def run_hamiltorch(args, model_params, in_filenames, out_filenames,
     elif init == 'smooth':
         print('Using smoothed observations init')
         params_init = model.smooth_init(y, fix_theta_dict)
+    elif init == 'file':
+        assert init_file is not None
+        print('Loading init samples from {}'.format(init_file))
+        params_init = torch.load(init_file, map_location=device)
     else:
         print('Unknown init scheme')
         raise ValueError
