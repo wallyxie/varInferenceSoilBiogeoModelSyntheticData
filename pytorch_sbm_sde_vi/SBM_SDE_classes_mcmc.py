@@ -326,5 +326,5 @@ class SCON(nn.Module):
             xvals = np.arange(0, self.T + self.dt, self.dt)
             x_all.append(torch.tensor(BSpline(*tck)(xvals)))
 
-        return torch.cat(x_all, dim=0).to(self.device)
+        return torch.stack(x_all, dim=-1).reshape(-1).to(self.device)
         

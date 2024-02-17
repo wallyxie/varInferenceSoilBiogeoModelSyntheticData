@@ -53,7 +53,7 @@ def parse_args():
     parser.add_argument("--seed", nargs="?", default=1, type=int)
     parser.add_argument("--save-every", nargs="?", default=10, type=int)
     parser.add_argument("--name", nargs="?", default='mcmc', type=str)
-    parser.add_argument("--init-dir", nargs="?", default=None, type=str)
+    parser.add_argument("--init-name", nargs="?", default=None, type=str)
     args = parser.parse_args()
     return args
 
