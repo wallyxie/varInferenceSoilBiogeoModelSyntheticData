@@ -50,11 +50,11 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-elbo_iter = 125000
-elbo_lr = 5e-3
-elbo_lr_decay = 0.7
-elbo_lr_decay_step_size = 5000
-elbo_warmup_iter = 10000
+elbo_iter = 225000
+elbo_lr = 3.5e-4
+elbo_lr_decay = 0.8
+elbo_lr_decay_step_size = 10000
+elbo_warmup_iter = 15000
 elbo_warmup_lr = 1e-6
 ptrain_iter = 0
 ptrain_alg = 'L1'
@@ -73,11 +73,9 @@ state_dim_SCON = 3
 SBM_SDE_class = 'SCON'
 diffusion_type = 'C'
 learn_CO2 = True
-theta_dist = 'RescaledLogitNormal' #String needs to be exact name of the distribution class. Options are 'TruncatedNormal' and 'RescaledLogitNormal'.
-fix_theta_dict = None
 
-#Load parameterization of priors.
-SCON_C_priors_details = {k: v.to(active_device) for k, v in torch.load(os.path.join('generated_data/', 'SCON-C_CO2_logit_short_2022_01_20_08_53_sample_y_t_5000_dt_0-01_sd_scale_0-25_hyperparams.pt')).items()}
+#Load sampled true theta.
+params_dict = torch.load(os.path.join('generated_data/', 'SCON-C_CO2_logit_short_2022_01_20_08_53_sample_y_t_5000_dt_0-01_sd_scale_0-25_rsample.pt'))
 
 #Initial condition prior means
 x0_SCON_tensor = torch.load(os.path.join('generated_data/', 'SCON-C_CO2_logit_short_2022_01_20_08_53_sample_y_t_5000_dt_0-01_sd_scale_0-25_x0_SCON_tensor.pt')).to(active_device)
@@ -96,51 +94,42 @@ csv_data_path = os.path.join('generated_data/', 'SCON-C_CO2_logit_short_2022_01_
 
 start_time = time.process_time()
 #Call training loop function.
-net, q_theta, p_theta, obs_model, norm_hist, ELBO_hist, log_p_hist, log_p_theta_hist, log_p_x_giv_theta_hist, log_p_y_giv_x_theta_hist, times_per_iter_hist, SBM_SDE_instance = train_log_p_decomposition(
-        active_device, elbo_lr, elbo_iter, batch_size,
+net, obs_model, norm_hist, ELBO_hist, log_p_hist, log_p_x_hist, log_p_y_giv_x_hist, times_per_iter_hist, SBM_SDE_instance = train_nn_log_p_decomposition(active_device, elbo_lr, elbo_iter, batch_size,
         csv_data_path, obs_error_scale, t, dt_flow, n,
         t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
         SBM_SDE_class, diffusion_type, x0_prior_SCON,
-        SCON_C_priors_details, fix_theta_dict, learn_CO2, theta_dist,
+        params_dict, learn_CO2,
         ELBO_WARMUP_ITER = elbo_warmup_iter, ELBO_WARMUP_INIT_LR = elbo_warmup_lr, ELBO_LR_DECAY = elbo_lr_decay, ELBO_LR_DECAY_STEP_SIZE = elbo_lr_decay_step_size,
-        PRINT_EVERY = 20, VERBOSE = True,
-        DEBUG_SAVE_DIR = None, PTRAIN_ITER = ptrain_iter, PTRAIN_ALG = ptrain_alg,
+        PRINT_EVERY = 10, DEBUG_SAVE_DIR = None, PTRAIN_ITER = ptrain_iter, PTRAIN_ALG = ptrain_alg,
         NUM_LAYERS = num_layers, REVERSE = reverse, BASE_STATE = base_state)
+print('Training finished. Moving to saving of output files.')
 elapsed_time = time.process_time() - start_time
 print(f'Training finished after {elapsed_time} seconds. Moving to saving of output files.')
 
 #Save net and ELBO files.
 now = datetime.now()
-now_string = 'SCON-C_CO2_logit_short_log_p_decomposition' + now.strftime('_%Y_%m_%d_%H_%M_%S')
-save_string = f'_iter_{elbo_iter}_warmup_{elbo_warmup_iter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_lr_{elbo_lr}_decay_step_{elbo_lr_decay_step_size}_warmup_lr_{elbo_warmup_lr}_sd_scale_{prior_scale_factor}_{now_string}.pt'
+now_string = 'SCON-C_CO2_NN_log_p_decomposition' + now.strftime('_%Y_%m_%d_%H_%M_%S')
+save_string = f'_iter_{elbo_iter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_lr_{elbo_lr}_decay_step_{elbo_lr_decay_step_size}_sd_scale_{prior_scale_factor}_{now_string}.pt'
 outputs_folder = 'training_pt_outputs/'
 train_args_save_string = os.path.join(outputs_folder, 'train_args' + save_string)
 net_save_string = os.path.join(outputs_folder, 'net' + save_string)
 net_state_dict_save_string = os.path.join(outputs_folder,'net_state_dict' + save_string)
-q_theta_save_string = os.path.join(outputs_folder, 'q_theta' + save_string)
-q_theta_state_dict_save_string = os.path.join(outputs_folder, 'q_theta_state_dict' + save_string)
-p_theta_save_string = os.path.join(outputs_folder, 'p_theta' + save_string)
 obs_model_save_string = os.path.join(outputs_folder, 'obs_model' + save_string)
 ELBO_save_string = os.path.join(outputs_folder, 'ELBO' + save_string)
 log_p_save_string = os.path.join(outputs_folder, 'log_p' + save_string)
-log_p_theta_save_string = os.path.join(outputs_folder, 'log_p_theta' + save_string)
-log_p_x_giv_theta_save_string = os.path.join(outputs_folder, 'log_p_x_giv_theta' + save_string)
-log_p_y_giv_x_theta_save_string = os.path.join(outputs_folder, 'log_p_y_giv_x_theta' + save_string)
+log_p_x_save_string = os.path.join(outputs_folder, 'log_p_x' + save_string)
+log_p_y_giv_x_save_string = os.path.join(outputs_folder, 'log_p_y_giv_x' + save_string)
 times_per_iter_save_string = os.path.join(outputs_folder, 'times_per_iter' + save_string)
 SBM_SDE_instance_save_string = os.path.join(outputs_folder, 'SBM_SDE_instance' + save_string)
 elapsed_time_save_string = os.path.join(outputs_folder, 'elapsed_time' + f'_iter_{elbo_iter}_warmup_{elbo_warmup_iter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_lr_{elbo_lr}_decay_step_{elbo_lr_decay_step_size}_warmup_lr_{elbo_warmup_lr}_sd_scale_{prior_scale_factor}_{now_string}.txt')
 torch.save(train_args, train_args_save_string)
 torch.save(net, net_save_string)
 torch.save(net.state_dict(), net_state_dict_save_string) #For loading net on CPU.
-torch.save(q_theta, q_theta_save_string)
-torch.save(q_theta.state_dict(), q_theta_state_dict_save_string)
-torch.save(p_theta, p_theta_save_string)
 torch.save(obs_model, obs_model_save_string)
 torch.save(ELBO_hist, ELBO_save_string)
 torch.save(log_p_hist, log_p_save_string)
-torch.save(log_p_theta_hist, log_p_theta_save_string)
-torch.save(log_p_x_giv_theta_hist, log_p_x_giv_theta_save_string)
-torch.save(log_p_y_giv_x_theta_hist, log_y_giv_x_theta_save_string)
+torch.save(log_p_x_hist, log_p_x_save_string)
+torch.save(log_p_y_giv_x_hist, log_p_y_giv_x_save_string)
 torch.save(times_per_iter_hist, times_per_iter_save_string)
 torch.save(SBM_SDE_instance, SBM_SDE_instance_save_string)
 with open(elapsed_time_save_string, 'w') as f:
@@ -151,21 +140,21 @@ net.eval()
 with torch.no_grad():
     x, log_prob = net(eval_batch_size)
     print('x = ', x)
-    theta_dict, theta, log_q_theta, parent_loc_scale_dict = q_theta(eval_batch_size)
-    log_p_theta = p_theta.log_prob(theta).sum(-1)
-    if fix_theta_dict:
-        if platform.python_version() >= '3.9.0':
-            theta_dict = theta_dict | fix_theta_dict
-        else:
-            theta_dict = {**theta_dict, **fix_theta_dict}
+    # theta_dict, theta, log_q_theta, parent_loc_scale_dict = q_theta(eval_batch_size)
+    # log_p_theta = p_theta.log_prob(theta).sum(-1)
+    # if fix_theta_dict:
+    #     if platform.python_version() >= '3.9.0':
+    #         theta_dict = theta_dict | fix_theta_dict
+    #     else:
+    #         theta_dict = {**theta_dict, **fix_theta_dict}
+    theta_dict = {k: torch.tensor(v).unsqueeze(0).to(active_device) for k, v in params_dict.items()}
     if learn_CO2:
         log_lik, drift, diffusion_sqrt, x_add_CO2 = calc_log_lik(x, theta_dict, dt_flow, SBM_SDE_instance, x0_prior_SCON, learn_CO2)
-        neg_ELBO = -log_p_theta.mean() + log_q_theta.mean() + log_prob.mean() - log_lik.mean() - obs_model(x_add_CO2)
-        log_p = -log_p_theta.mean() - log_lik.mean() - obs_model(x_add_CO2)
+        neg_ELBO = log_prob.mean() - log_lik.mean() - obs_model(x_add_CO2)
+        log_p = -log_lik.mean() - obs_model(x_add_CO2)
     else:
         log_lik, drift, diffusion_sqrt = calc_log_lik(x, theta_dict, dt_flow, SBM_SDE_instance, x0_prior_SCON, learn_CO2)
-        neg_ELBO = -log_p_theta.mean() + log_q_theta.mean() + log_prob.mean() - log_lik.mean() - obs_model(x)
-        log_p = -log_p_theta.mean() - log_lik.mean() - obs_model(x)
+        neg_ELBO = -log_lik.mean() - obs_model(x)
     print('x.size() =', x.size())
     print(f'Net with {train_args} has test neg_ELBO = {neg_ELBO} and log p = {log_p}')
     test_elbo_and_log_p_save_string = os.path.join(outputs_folder, 'test_elbo_and_log_p' + f'_iter_{elbo_iter}_warmup_{elbo_warmup_iter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_lr_{elbo_lr}_decay_step_{elbo_lr_decay_step_size}_warmup_lr_{elbo_warmup_lr}_sd_scale_{prior_scale_factor}_{now_string}.txt')
@@ -181,10 +170,11 @@ with torch.no_grad():
         _x, _ = net(eval_batch_size_save)
         _x.detach().cpu()
         if learn_CO2:
-            q_theta_sample_dict, _, _, _ = q_theta(_x.size(0))
-            if fix_theta_dict:
-                q_theta_sample_dict = {**q_theta_sample_dict, **fix_theta_dict}
-            _x = SBM_SDE_instance.add_CO2(_x, q_theta_sample_dict) #Add CO2 to x tensor if CO2 is being fit.
+            #q_theta_sample_dict, _, _, _ = q_theta(_x.size(0))
+            #if fix_theta_dict:
+            #    q_theta_sample_dict = {**q_theta_sample_dict, **fix_theta_dict}
+            theta_dict = {k: torch.tensor(v).unsqueeze(0).to(active_device) for k, v in params_dict.items()}
+            _x = SBM_SDE_instance.add_CO2(_x, theta_dict) #Add CO2 to x tensor if CO2 is being fit.
         if i == 0:
             x_eval = _x
         else:
@@ -198,15 +188,13 @@ print(x_eval)
 x_eval_save_string = os.path.join(outputs_folder, 'x_eval' + save_string)
 torch.save(x_eval, x_eval_save_string)
 
-#Plot training posterior results and ELBO history.
 print('Output files saving finished. Moving to plotting.')
+#Plot training posterior results and ELBO history.
 with torch.no_grad():
     x, _ = net(eval_batch_size)
 plots_folder = 'training_plots/'
 plot_elbo(ELBO_hist, elbo_iter, elbo_warmup_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, elbo_lr_decay_step_size, elbo_warmup_lr, prior_scale_factor, plots_folder, now_string, xmin = elbo_warmup_iter + int(elbo_iter / 2))
 print('ELBO plotting finished.')
-plot_states_post(x, q_theta, obs_model, SBM_SDE_instance, elbo_iter, elbo_warmup_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, elbo_lr_decay_step_size, elbo_warmup_lr, prior_scale_factor, plots_folder, now_string, fix_theta_dict, learn_CO2, ymin_list = [0, 0, 0, 0], ymax_list = [70., 5., 8., 0.03])
+params_dict_tensor = {k: torch.tensor(v).unsqueeze(0).to(active_device) for k, v in params_dict.items()}
+plot_states_NN(x, params_dict_tensor, obs_model, SBM_SDE_instance, elbo_iter, elbo_warmup_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, elbo_lr_decay_step_size, elbo_warmup_lr, prior_scale_factor, plots_folder, now_string, learn_CO2, ymin_list = [0, 0, 0, 0], ymax_list = [70., 5., 8., 0.03])
 print('States fit plotting finished.')
-true_theta = torch.load(os.path.join('generated_data/', 'SCON-C_CO2_logit_short_2022_01_20_08_53_sample_y_t_5000_dt_0-01_sd_scale_0-25_rsample.pt'), map_location = active_device)
-plot_theta(p_theta, q_theta, true_theta, elbo_iter, elbo_warmup_iter, t, dt_flow, batch_size, eval_batch_size, num_layers, elbo_lr, elbo_lr_decay_step_size, elbo_warmup_lr, prior_scale_factor, plots_folder, now_string)
-print('Prior-posterior pair plotting finished.')
