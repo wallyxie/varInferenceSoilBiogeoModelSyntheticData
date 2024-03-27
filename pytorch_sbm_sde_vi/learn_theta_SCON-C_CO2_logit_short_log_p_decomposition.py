@@ -50,11 +50,11 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-elbo_iter = 125000
+elbo_iter = 10 #125000
 elbo_lr = 5e-3
 elbo_lr_decay = 0.7
 elbo_lr_decay_step_size = 5000
-elbo_warmup_iter = 10000
+elbo_warmup_iter = 10 #10000
 elbo_warmup_lr = 1e-6
 ptrain_iter = 0
 ptrain_alg = 'L1'
@@ -140,7 +140,7 @@ torch.save(ELBO_hist, ELBO_save_string)
 torch.save(log_p_hist, log_p_save_string)
 torch.save(log_p_theta_hist, log_p_theta_save_string)
 torch.save(log_p_x_giv_theta_hist, log_p_x_giv_theta_save_string)
-torch.save(log_p_y_giv_x_theta_hist, log_y_giv_x_theta_save_string)
+torch.save(log_p_y_giv_x_theta_hist, log_p_y_giv_x_theta_save_string)
 torch.save(times_per_iter_hist, times_per_iter_save_string)
 torch.save(SBM_SDE_instance, SBM_SDE_instance_save_string)
 with open(elapsed_time_save_string, 'w') as f:
