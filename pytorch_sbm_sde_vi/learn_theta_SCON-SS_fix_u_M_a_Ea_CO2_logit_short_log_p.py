@@ -96,7 +96,7 @@ csv_data_path = os.path.join('generated_data/', 'SCON-SS_CO2_logit_short_fix_u_M
 
 start_time = time.process_time()
 #Call training loop function.
-net, q_theta, p_theta, obs_model, norm_hist, ELBO_hist, log_p_hist, times_per_iter_hist, SBM_SDE_instance = train(
+net, q_theta, p_theta, obs_model, norm_hist, ELBO_hist, log_p_hist, times_per_iter_hist, SBM_SDE_instance = train_log_p(
         active_device, elbo_lr, elbo_iter, batch_size,
         csv_data_path, obs_error_scale, t, dt_flow, n,
         t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,

@@ -60,7 +60,7 @@ def calc_log_lik(C_PATH: torch.Tensor,
 
         return ll, drift, diffusion_sqrt
 
-def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
+def train_log_p(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
         OBS_CSV_STR: str, OBS_ERROR_SCALE: float, T: float, DT: float, N: int,
         T_SPAN_TENSOR: torch.Tensor, I_S_TENSOR: torch.Tensor, I_D_TENSOR: torch.Tensor, TEMP_TENSOR: torch.Tensor, TEMP_REF: float,
         SBM_SDE_CLASS: str, DIFFUSION_TYPE: str, INIT_PRIOR : torch.distributions.distribution.Distribution,
