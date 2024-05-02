@@ -152,17 +152,41 @@ def run_hamiltorch(args, model_params, in_filenames, out_filenames,
     log_prob_func = lambda samples: model.log_prob(*split_samples(samples, y, fix_theta_dict))
 
     # Run MCMC
-    hamiltorch.set_random_seed(args.seed)
+    # num_samples 150000, warmup_steps 10000, save_every 10000 => outer_iters = num_samples/save_every
+    outer_iters = num_samples // save_every + (num_samples % save_every != 0)
+    step_size = args.step_size
+    warmup_steps = args.warmup_steps
+    num_samples = save_every
+
     t0 = time.process_time()
-    samples = hamiltorch.sample(log_prob_func=log_prob_func,
-                                params_init=params_init,
-                                num_samples=args.warmup_steps + args.num_samples,
-                                step_size=args.step_size,
-                                sampler=hamiltorch.Sampler.HMC_NUTS,
-                                burn=args.warmup_steps,
-                                desired_accept_rate=0.8)
-    total_time = time.process_time() - t0
-    
-    # Save results
-    print('Saving MCMC samples to', out_file)
-    torch.save((samples, model, total_time), out_file)
+    for i in range(outer_iters):
+        hamiltorch.set_random_seed(args.seed + i)
+        if i > 0:
+            warmup_steps = 0
+            params_init = samples[-1]
+        if (i == outer_iters - 1) and (num_samples % save_every != 0):
+            num_samples = (num_samples % save_every)
+        
+        print('Iteration {}: warmup steps = {}, num samples = {}, step size = {}'\
+              .format(i, warmup_steps, num_samples, step_size))
+        samples, step_size = hamiltorch.sample(log_prob_func=log_prob_func,
+                                    params_init=params_init,
+                                    num_samples=warmup_steps + num_samples,
+                                    step_size=step_size,
+                                    sampler=hamiltorch.Sampler.HMC_NUTS,
+                                    burn=warmup_steps,
+                                    desired_accept_rate=0.8,
+                                    debug=True)
+
+        # Save results from iter i
+        t1 = time.process_time() - t0
+        log_prob = model.log_prob(*split_samples(samples[-1], y, fix_theta_dict))
+        print('Log prob = {}, time elapsed = {}'.format(log_prob, t1))
+
+        out_file = os.path.join(out_dir, 'out{}.pt'.format(i))
+        print('Saving MCMC samples to', out_file)
+        torch.save((samples, model, t1), out_file)
+
+        print()
+
+    print('Finished!')

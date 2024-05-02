@@ -232,10 +232,11 @@ class SCON(nn.Module):
         p_x = D.normal.Normal(loc=loc, scale=scale)
 
         # Compute log p(x|theta) = log p(x_1:T|x0, theta) + log p(x0|theta)
-        log_prob = p_x.log_prob(x[1:, :]).sum()     # log p(x_1:T|x0, theta)
-        log_prob += self.p_x0.log_prob(x[0]).sum()  # log p(x0|theta)
+        log_prob = p_x.log_prob(x[1:, :]).sum(0)     # log p(x_1:T|x0, theta)
+        log_prob += self.p_x0.log_prob(x[0])         # log p(x0|theta)
+        #print('Shapes', log_prob.shape, weight_obs.shape) # (state_dim, )
 
-        return log_prob, weight_obs # log_obs.shape == scalar
+        return log_prob.sum(), weight_obs # log_obs.shape == scalar
 
     def obs_log_prob(self, x, y, theta_dict, weight_obs): # log p(y|x, theta)
         # weight_obs.shape == (num_obs, self.obs_dim, self.state_dim)
@@ -243,8 +244,11 @@ class SCON(nn.Module):
         loc_y = torch.matmul(weight_obs, x[::self.obs_every].unsqueeze(-1)).squeeze() # (num_obs, obs_dim)
         num_obs = len(self.times[::self.obs_every])
         assert loc_y.shape == (num_obs, self.obs_dim) and y.shape == (num_obs, self.obs_dim)
-        p_y = D.normal.Normal(loc=loc_y, scale=self.scale_y) # (num_obs, obs_dim)
-        return p_y.log_prob(y).sum()
+        p_y = D.normal.Normal(loc=loc_y, scale=self.scale_y)
+        log_p_y = p_y.log_prob(y) # (num_obs, obs_dim)
+        #print(log_p_y.shape)
+
+        return log_p_y.sum()
 
     def log_prob(self, x, y, logit_theta, fix_theta_dict=None):
         if fix_theta_dict is None:
@@ -288,6 +292,7 @@ class SCON(nn.Module):
         # Sample theta
         if fix_theta_dict:
             theta_dict = fix_theta_dict
+            theta = torch.stack([theta_dict[k] for k in self.param_names])
         else:
             theta = self.p_theta.sample()
             theta_dict = {self.param_names[i]: theta[i] for i in unfixed_param_indices}
