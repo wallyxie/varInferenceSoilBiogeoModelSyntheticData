@@ -60,7 +60,7 @@ def calc_log_lik(C_PATH: torch.Tensor,
 
         return ll, drift, diffusion_sqrt
 
-def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
+def train_log_p(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
         OBS_CSV_STR: str, OBS_ERROR_SCALE: float, T: float, DT: float, N: int,
         T_SPAN_TENSOR: torch.Tensor, I_S_TENSOR: torch.Tensor, I_D_TENSOR: torch.Tensor, TEMP_TENSOR: torch.Tensor, TEMP_REF: float,
         SBM_SDE_CLASS: str, DIFFUSION_TYPE: str, INIT_PRIOR : torch.distributions.distribution.Distribution,
@@ -165,7 +165,7 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
     ELBO_sched = optim.lr_scheduler.LambdaLR(ELBO_opt, lr_lambda = calc_lr_factor)
 
     #Training loop
-    print(f'\nStarting autoencoder training. {PTRAIN_ITER} pre-training iterations, {ELBO_WARMUP_ITER} ELBO warmup iterations, and {ELBO_ITER} ELBO training iterations for {T_ITER} total iterations specified.')
+    print(f'\nStarting flow training. {PTRAIN_ITER} pre-training iterations, {ELBO_WARMUP_ITER} ELBO warmup iterations, and {ELBO_ITER} ELBO training iterations for {T_ITER} total iterations specified.')
     net.train()
     with tqdm(total = T_ITER, desc = f'Learning SDE and hidden parameters.', position = -1) as tq:
         for iteration in range(T_ITER):
@@ -257,14 +257,11 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                     print('\ntheta_dict means = \n', {key: theta_dict[key].mean() for key in param_names})
                     print(f'\nparent_loc_scale_dict at {iteration + 1} iterations = \n{parent_loc_scale_dict}')
                     if VERBOSE:
-                        print('\nlog_p_theta.mean()', log_p_theta.mean())
-                        print('\nlog_q_theta.mean()', log_q_theta.mean())
-                        print('\nlog_prob.mean()', log_prob.mean())
-                        print('\nlog_lik.mean()', log_lik.mean())
-                        if LEARN_CO2:
-                            print('\nobs_model', obs_model(x_add_CO2))
-                        else:
-                            print('\nobs_model', obs_model(C_PATH))
+                        print('\nlog_p_theta.mean()', log_p_theta)
+                        print('\nlog_q_theta.mean()', log_q_theta)
+                        print('\nlog_prob.mean()', log_q_x_theta)
+                        print('\nlog_lik.mean()', log_p_x_giv_theta)
+                        print('\nobs_model mean with or without CO2', log_p_y_giv_x_theta)
 
                 ELBO.backward()
                 torch.nn.utils.clip_grad_norm_(ELBO_params, 5.0)
@@ -489,14 +486,11 @@ def train_log_p_decomposition(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE
                     print('\ntheta_dict means = \n', {key: theta_dict[key].mean() for key in param_names})
                     print(f'\nparent_loc_scale_dict at {iteration + 1} iterations = \n{parent_loc_scale_dict}')
                     if VERBOSE:
-                        print('\nlog_p_theta.mean()', log_p_theta.mean())
-                        print('\nlog_q_theta.mean()', log_q_theta.mean())
-                        print('\nlog_prob.mean()', log_prob.mean())
-                        print('\nlog_lik.mean()', log_lik.mean())
-                        if LEARN_CO2:
-                            print('\nobs_model', obs_model(x_add_CO2))
-                        else:
-                            print('\nobs_model', obs_model(C_PATH))
+                        print('\nlog_p_theta.mean()', log_p_theta)
+                        print('\nlog_q_theta.mean()', log_q_theta)
+                        print('\nlog_prob.mean()', log_q_x_theta)
+                        print('\nlog_lik.mean()', log_p_x_giv_theta)
+                        print('\nobs_model mean with or without CO2', log_p_y_giv_x_theta)
 
                 ELBO.backward()
                 torch.nn.utils.clip_grad_norm_(ELBO_params, 5.0)
@@ -673,12 +667,9 @@ def train_nn_log_p(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                     print(f'\ndrift at {iteration + 1} iterations = \n{drift}')
                     print(f'\ndiffusion_sqrt at {iteration + 1} iterations = \n{diffusion_sqrt}')
                     if VERBOSE:
-                        print('\nlog_prob.mean()', log_prob.mean())
-                        print('\nlog_lik.mean()', log_lik.mean())
-                        if LEARN_CO2:
-                            print('\nobs_model', obs_model(x_add_CO2))
-                        else:
-                            print('\nobs_model', obs_model(C_PATH))
+                        print('\nlog_prob.mean()', log_q_x)
+                        print('\nlog_lik.mean()', log_p_x)
+                        print('\nobs_model mean with or without CO2', log_p_y_giv_x)
 
                 # Take gradient step
                 ELBO.backward()
@@ -860,12 +851,9 @@ def train_nn_log_p_decomposition(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_S
                     print(f'\ndrift at {iteration + 1} iterations = \n{drift}')
                     print(f'\ndiffusion_sqrt at {iteration + 1} iterations = \n{diffusion_sqrt}')
                     if VERBOSE:
-                        print('\nlog_prob.mean()', log_prob.mean())
-                        print('\nlog_lik.mean()', log_lik.mean())
-                        if LEARN_CO2:
-                            print('\nobs_model', obs_model(x_add_CO2))
-                        else:
-                            print('\nobs_model', obs_model(C_PATH))
+                        print('\nlog_prob.mean()', log_q_x)
+                        print('\nlog_lik.mean()', log_p_x)
+                        print('\nobs_model mean with or without CO2', log_p_y_giv_x)
 
                 # Take gradient step
                 ELBO.backward()
