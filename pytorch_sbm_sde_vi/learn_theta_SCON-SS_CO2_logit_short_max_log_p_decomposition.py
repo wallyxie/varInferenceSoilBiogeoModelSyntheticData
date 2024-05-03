@@ -96,7 +96,7 @@ csv_data_path = os.path.join('generated_data/', 'SCON-SS_CO2_logit_short_2021_11
 
 start_time = time.process_time()
 #Call training loop function.
-net, q_theta, p_theta, obs_model, norm_hist, ELBO_hist, log_p_hist, log_p_theta_hist, log_p_x_giv_theta_hist, log_p_y_giv_x_theta_hist, samples_log_p_hist, samples_log_p_theta_hist, samples_log_p_x_giv_theta_hist, samples_log_p_y_giv_x_theta_hist, max_log_p_hist, times_per_iter_hist, SBM_SDE_instance, best_train_ELBO = train_max_log_p_decomposition(
+net, q_theta, p_theta, obs_model, norm_hist, ELBO_hist, log_p_hist, log_p_theta_hist, log_p_x_giv_theta_hist, log_p_y_giv_x_theta_hist, samples_log_p_hist, samples_log_p_theta_hist, samples_log_p_x_giv_theta_hist, samples_log_p_y_giv_x_theta_hist, max_log_p_hist, times_per_iter_hist, SBM_SDE_instance, best_train_ELBO = train_max_log_p_decomposition_save_fewer(
         active_device, elbo_lr, elbo_iter, batch_size,
         csv_data_path, obs_error_scale, t, dt_flow, n,
         t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
