@@ -242,7 +242,7 @@ def train(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                 if (iteration + 1) % PRINT_EVERY == 0:
                     print(f'\nLast LR computed by scheduler was {ELBO_sched.get_last_lr()}.')
                     print(f'\nMoving average ELBO at {iteration + 1} iterations = {sum(ELBO_losses[-10:]) / len(ELBO_losses[-10:])}. Best training ELBO value is: {best_loss_ELBO}.')
-                    print(f'\nLearning rate at {iteration + 1} iterations = {ELBO_opt.param_groups[0]['lr']}") 
+                    print(f"\nLearning rate at {iteration + 1} iterations = {ELBO_opt.param_groups[0]['lr']}") 
                     if LEARN_CO2:
                         print(f'\nC_PATH with CO2 mean = \n{x_add_CO2.mean(-2)}')
                         print(f'\nC_PATH with CO2 = \n{x_add_CO2}')
@@ -463,7 +463,7 @@ def train_log_p(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                 if (iteration + 1) % PRINT_EVERY == 0:
                     print(f'\nLast LR computed by scheduler was {ELBO_sched.get_last_lr()}.')
                     print(f'\nMoving average ELBO at {iteration + 1} iterations = {sum(ELBO_losses[-10:]) / len(ELBO_losses[-10:])}. Best training ELBO value is: {best_loss_ELBO}.')
-                    print(f'\nLearning rate at {iteration + 1} iterations = {ELBO_opt.param_groups[0]['lr']}") 
+                    print(f"\nLearning rate at {iteration + 1} iterations = {ELBO_opt.param_groups[0]['lr']}") 
                     if LEARN_CO2:
                         print(f'\nC_PATH with CO2 mean = \n{x_add_CO2.mean(-2)}')
                         print(f'\nC_PATH with CO2 = \n{x_add_CO2}')
@@ -690,7 +690,7 @@ def train_log_p_decomposition(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE
                 if (iteration + 1) % PRINT_EVERY == 0:
                     print(f'\nLast LR computed by scheduler was {ELBO_sched.get_last_lr()}.')
                     print(f'\nMoving average ELBO at {iteration + 1} iterations = {sum(ELBO_losses[-10:]) / len(ELBO_losses[-10:])}. Best training ELBO value is: {best_loss_ELBO}.')
-                    print(f'\nLearning rate at {iteration + 1} iterations = {ELBO_opt.param_groups[0]['lr']}") 
+                    print(f"\nLearning rate at {iteration + 1} iterations = {ELBO_opt.param_groups[0]['lr']}") 
                     if LEARN_CO2:
                         print(f'\nC_PATH with CO2 mean = \n{x_add_CO2.mean(-2)}')
                         print(f'\nC_PATH with CO2 = \n{x_add_CO2}')
@@ -930,7 +930,7 @@ def train_max_log_p_decomposition(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_
                 if (iteration + 1) % PRINT_EVERY == 0:
                     print(f'\nLast LR computed by scheduler was {ELBO_sched.get_last_lr()}.')
                     print(f'\nMoving average ELBO at {iteration + 1} iterations = {sum(ELBO_losses[-10:]) / len(ELBO_losses[-10:])}. Best training ELBO value is: {best_loss_ELBO}.')
-                    print(f'\nLearning rate at {iteration + 1} iterations = {ELBO_opt.param_groups[0]['lr']}") 
+                    print(f"\nLearning rate at {iteration + 1} iterations = {ELBO_opt.param_groups[0]['lr']}") 
                     if LEARN_CO2:
                         print(f'\nC_PATH with CO2 mean = \n{x_add_CO2.mean(-2)}')
                         print(f'\nC_PATH with CO2 = \n{x_add_CO2}')
@@ -1171,7 +1171,7 @@ def train_max_log_p_decomposition_save_fewer(DEVICE, ELBO_LR: float, ELBO_ITER: 
                 if (iteration + 1) % PRINT_EVERY == 0:
                     print(f'\nLast LR computed by scheduler was {ELBO_sched.get_last_lr()}.')
                     print(f'Best training ELBO value is: {best_loss_ELBO}.')
-                    print(f'\nLearning rate at {iteration + 1} iterations = {ELBO_opt.param_groups[0]['lr']}") 
+                    print(f"\nLearning rate at {iteration + 1} iterations = {ELBO_opt.param_groups[0]['lr']}") 
                     if LEARN_CO2:
                         print(f'\nC_PATH with CO2 mean = \n{x_add_CO2.mean(-2)}')
                         print(f'\nC_PATH with CO2 = \n{x_add_CO2}')
@@ -1352,7 +1352,7 @@ def train_nn(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                 if (iteration + 1) % PRINT_EVERY == 0:
                     print(f'\nLast LR computed by scheduler was {ELBO_sched.get_last_lr()}.')
                     print(f'\nMoving average ELBO at {iteration + 1} iterations = {sum(ELBO_losses[-10:]) / len(ELBO_losses[-10:])}. Best training ELBO value is: {best_loss_ELBO}.')
-                    print(f'\nLearning rate at {iteration + 1} iterations = {ELBO_opt.param_groups[0]['lr']}")
+                    print(f"\nLearning rate at {iteration + 1} iterations = {ELBO_opt.param_groups[0]['lr']}")
                     if LEARN_CO2:
                         print(f'\nC_PATH with CO2 mean = \n{x_add_CO2.mean(-2)}')
                         print(f'\nC_PATH with CO2 = \n{x_add_CO2}')
@@ -1532,7 +1532,7 @@ def train_nn_log_p(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int,
                 if (iteration + 1) % PRINT_EVERY == 0:
                     print(f'\nLast LR computed by scheduler was {ELBO_sched.get_last_lr()}.')
                     print(f'\nMoving average ELBO at {iteration + 1} iterations = {sum(ELBO_losses[-10:]) / len(ELBO_losses[-10:])}. Best training ELBO value is: {best_loss_ELBO}.')
-                    print(f'\nLearning rate at {iteration + 1} iterations = {ELBO_opt.param_groups[0]['lr']}")
+                    print(f"\nLearning rate at {iteration + 1} iterations = {ELBO_opt.param_groups[0]['lr']}")
                     if LEARN_CO2:
                         print(f'\nC_PATH with CO2 mean = \n{x_add_CO2.mean(-2)}')
                         print(f'\nC_PATH with CO2 = \n{x_add_CO2}')
@@ -1716,7 +1716,7 @@ def train_nn_log_p_decomposition(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_S
                 if (iteration + 1) % PRINT_EVERY == 0:
                     print(f'\nLast LR computed by scheduler was {ELBO_sched.get_last_lr()}.')
                     print(f'\nMoving average ELBO at {iteration + 1} iterations = {sum(ELBO_losses[-10:]) / len(ELBO_losses[-10:])}. Best training ELBO value is: {best_loss_ELBO}.')
-                    print(f'\nLearning rate at {iteration + 1} iterations = {ELBO_opt.param_groups[0]['lr']}")
+                    print(f"\nLearning rate at {iteration + 1} iterations = {ELBO_opt.param_groups[0]['lr']}")
                     if LEARN_CO2:
                         print(f'\nC_PATH with CO2 mean = \n{x_add_CO2.mean(-2)}')
                         print(f'\nC_PATH with CO2 = \n{x_add_CO2}')
@@ -1912,7 +1912,7 @@ def train_nn_max_log_p_decomposition_save_fewer(DEVICE, ELBO_LR: float, ELBO_ITE
                 if (iteration + 1) % PRINT_EVERY == 0:
                     print(f'\nLast LR computed by scheduler was {ELBO_sched.get_last_lr()}.')
                     print(f'\nBest training ELBO value is: {best_loss_ELBO}.')
-                    print(f'\nLearning rate at {iteration + 1} iterations = {ELBO_opt.param_groups[0]['lr']}")
+                    print(f"\nLearning rate at {iteration + 1} iterations = {ELBO_opt.param_groups[0]['lr']}")
                     if LEARN_CO2:
                         print(f'\nC_PATH with CO2 mean = \n{x_add_CO2.mean(-2)}')
                         print(f'\nC_PATH with CO2 = \n{x_add_CO2}')
