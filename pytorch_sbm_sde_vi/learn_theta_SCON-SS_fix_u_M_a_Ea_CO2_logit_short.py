@@ -111,7 +111,7 @@ print(f'Training finished after {elapsed_time} seconds. Moving to saving of outp
 
 #Save net and ELBO files.
 now = datetime.now()
-now_string = 'SCON-SS_fix_u_M_a_Ea_CO2_logit_short_log_p' + now.strftime('_%Y_%m_%d_%H_%M_%S')
+now_string = 'SCON-SS_fix_u_M_a_Ea_CO2_logit_short' + now.strftime('_%Y_%m_%d_%H_%M_%S')
 save_string = f'_iter_{elbo_iter}_warmup_{elbo_warmup_iter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_lr_{elbo_lr}_decay_step_{elbo_lr_decay_step_size}_warmup_lr_{elbo_warmup_lr}_sd_scale_{prior_scale_factor}_{now_string}.pt'
 outputs_folder = 'training_pt_outputs/'
 train_args_save_string = os.path.join(outputs_folder, 'train_args' + save_string)
