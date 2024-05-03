@@ -191,8 +191,8 @@ print(x_eval)
 x_eval_save_string = os.path.join(outputs_folder, 'x_eval' + save_string)
 torch.save(x_eval, x_eval_save_string)
 
-print('Output files saving finished. Moving to plotting.')
 #Plot training posterior results and ELBO history.
+print('Output files saving finished. Moving to plotting.')
 with torch.no_grad():
     x, _ = net(eval_batch_size)
 plots_folder = 'training_plots/'
