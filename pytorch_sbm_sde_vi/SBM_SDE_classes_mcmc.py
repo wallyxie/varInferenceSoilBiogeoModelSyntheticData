@@ -9,7 +9,7 @@ from scipy.interpolate import splrep, BSpline
 import pyro
 from pyro.distributions import Normal, TorchDistribution
 import LogitNormal
-import TruncatedNormal as TN
+#import TruncatedNormal as TN
 
 def csv_to_obs_df(df_csv_string, dim, T, obs_error_scale):
     '''
@@ -41,8 +41,8 @@ def arrhenius_temp_dep(parameter, temp, Ea, TEMP_REF) -> torch.Tensor:
 class RescaledLogitNormal(LogitNormal.RescaledLogitNormal, TorchDistribution):
     pass
 
-class TruncatedNormal(TN.TruncatedNormal, TorchDistribution):
-    pass
+#class TruncatedNormal(TN.TruncatedNormal, TorchDistribution):
+#    pass
 
 class SCON(nn.Module):
     def __init__(self, T, dt, state_dim, temp_ref, temp_rise, diffusion_type):
