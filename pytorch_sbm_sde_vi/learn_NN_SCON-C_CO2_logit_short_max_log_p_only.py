@@ -50,11 +50,11 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-elbo_iter = 1 #240000
+elbo_iter = 230000
 elbo_lr = 3.8e-4
-elbo_lr_decay = 0.7
+elbo_lr_decay = 0.75
 elbo_lr_decay_step_size = 10000
-elbo_warmup_iter = 1 #20000
+elbo_warmup_iter = 20000
 elbo_warmup_lr = 1e-6
 ptrain_iter = 0
 ptrain_alg = 'L1'
@@ -94,7 +94,7 @@ csv_data_path = os.path.join('generated_data/', 'SCON-C_CO2_logit_short_2022_01_
 
 start_time = time.process_time()
 #Call training loop function.
-net, obs_model, norm_hist, ELBO_hist, log_p_hist, max_log_p_hist, times_per_iter_hist, SBM_SDE_instance, best_train_ELBO = train_nn_max_log_p_decomposition_only(active_device, elbo_lr, elbo_iter, batch_size,
+net, obs_model, norm_hist, ELBO_hist, log_p_hist, max_log_p_hist, times_per_iter_hist, SBM_SDE_instance, best_train_ELBO = train_nn_max_log_p_only(active_device, elbo_lr, elbo_iter, batch_size,
         csv_data_path, obs_error_scale, t, dt_flow, n,
         t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
         SBM_SDE_class, diffusion_type, x0_prior_SCON,
