@@ -19,4 +19,4 @@ pytorch_sbm_sde_vi/training_old_arch_SBM_SDE_minibatch.py
 pytorch_sbm_sde_vi/SCON_no_CO2_flow_GPU_sample.py
 pytorch_sbm_sde_vi/SCON_flow_GPU_sample_no_bn.py
 pytorch_sbm_sde_vi/python_notebooks/training_pt_outputs/archived_results/
-pytorch_sbm_sde_vi/python_notebooks/training_plots/archived_results
+pytorch_sbm_sde_vi/python_notebooks/training_plots/archived_results/
