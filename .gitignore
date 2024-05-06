@@ -1,6 +1,3 @@
-archive/
-results/
-notes/
 .ipynb_checkpoints
 *.swp
 .DS_Store
@@ -8,13 +5,14 @@ notes/
 *.sh
 *checkpoint
 *.sub
-pytorch_sbm_sde_vi/python_notebooks/Plots.ipynb
 *plot_on_GPU*
 *test*
 *y_dict*
-pytorch_sbm_sde_vi/python_notebooks/Plots_fix_u_M_a_Ea.ipynb
 *_CPU*
-pytorch_sbm_sde_vi/training_old_arch_SBM_SDE_minibatch.py
 *_print*
 pytorch_sbm_sde_vi/SCON_no_CO2_flow_GPU_sample.py
 pytorch_sbm_sde_vi/SCON_flow_GPU_sample_no_bn.py
+/pytorch_sbm_sde_vi/training_pt_outputs/archived_results
+/pytorch_sbm_sde_vi/training_plots/archived_results
+/pytorch_sbm_sde_vi/training_plots/test_and_obsolete_notebooks_and_scripts
+/pytorch_sbm_sde_vi/training_plots/__pycache__

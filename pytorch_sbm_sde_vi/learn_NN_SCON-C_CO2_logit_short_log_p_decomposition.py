@@ -50,7 +50,7 @@ temp_ref = 283
 temp_rise = 5 #High estimate of 5 celsius temperature rise by 2100.
 
 #Training parameters
-elbo_iter = 235000
+elbo_iter = 230000
 elbo_lr = 4e-4
 elbo_lr_decay = 0.7
 elbo_lr_decay_step_size = 10000
@@ -94,7 +94,7 @@ csv_data_path = os.path.join('generated_data/', 'SCON-C_CO2_logit_short_2022_01_
 
 start_time = time.process_time()
 #Call training loop function.
-net, obs_model, norm_hist, ELBO_hist, log_p_hist, log_p_x_hist, log_p_y_giv_x_hist, times_per_iter_hist, SBM_SDE_instance = train_nn_log_p_decomposition(active_device, elbo_lr, elbo_iter, batch_size,
+net, obs_model, norm_hist, ELBO_hist, log_p_hist, log_p_x_hist, log_p_y_giv_x_hist, times_per_iter_hist, SBM_SDE_instance, best_train_ELBO = train_nn_log_p_decomposition(active_device, elbo_lr, elbo_iter, batch_size,
         csv_data_path, obs_error_scale, t, dt_flow, n,
         t_span_tensor, i_s_tensor, i_d_tensor, temp_tensor, temp_ref,
         SBM_SDE_class, diffusion_type, x0_prior_SCON,
@@ -121,6 +121,7 @@ log_p_x_save_string = os.path.join(outputs_folder, 'log_p_x' + save_string)
 log_p_y_giv_x_save_string = os.path.join(outputs_folder, 'log_p_y_giv_x' + save_string)
 times_per_iter_save_string = os.path.join(outputs_folder, 'times_per_iter' + save_string)
 SBM_SDE_instance_save_string = os.path.join(outputs_folder, 'SBM_SDE_instance' + save_string)
+best_train_ELBO_save_string = os.path.join(outputs_folder, 'best_train_ELBO' + f'_iter_{elbo_iter}_warmup_{elbo_warmup_iter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_lr_{elbo_lr}_decay_step_{elbo_lr_decay_step_size}_warmup_lr_{elbo_warmup_lr}_sd_scale_{prior_scale_factor}_{now_string}.txt')
 elapsed_time_save_string = os.path.join(outputs_folder, 'elapsed_time' + f'_iter_{elbo_iter}_warmup_{elbo_warmup_iter}_t_{t}_dt_{dt_flow}_batch_{batch_size}_layers_{num_layers}_lr_{elbo_lr}_decay_step_{elbo_lr_decay_step_size}_warmup_lr_{elbo_warmup_lr}_sd_scale_{prior_scale_factor}_{now_string}.txt')
 torch.save(train_args, train_args_save_string)
 torch.save(net, net_save_string)
@@ -132,6 +133,8 @@ torch.save(log_p_x_hist, log_p_x_save_string)
 torch.save(log_p_y_giv_x_hist, log_p_y_giv_x_save_string)
 torch.save(times_per_iter_hist, times_per_iter_save_string)
 torch.save(SBM_SDE_instance, SBM_SDE_instance_save_string)
+with open(best_train_ELBO_save_string, 'w') as f:
+    print(f'Best train ELBO: {best_train_ELBO}', file = f)
 with open(elapsed_time_save_string, 'w') as f:
     print(f'Elapsed time: {elapsed_time} seconds', file = f)
 
@@ -188,8 +191,8 @@ print(x_eval)
 x_eval_save_string = os.path.join(outputs_folder, 'x_eval' + save_string)
 torch.save(x_eval, x_eval_save_string)
 
-print('Output files saving finished. Moving to plotting.')
 #Plot training posterior results and ELBO history.
+print('Output files saving finished. Moving to plotting.')
 with torch.no_grad():
     x, _ = net(eval_batch_size)
 plots_folder = 'training_plots/'

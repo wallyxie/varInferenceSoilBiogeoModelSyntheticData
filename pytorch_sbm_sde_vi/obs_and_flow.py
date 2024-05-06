@@ -270,7 +270,7 @@ class SDEFlow(nn.Module):
             base_scale_SOC, base_scale_DOC, base_scale_MBC = torch.split(nn.Parameter(torch.ones(1, self.state_dim)), 1, -1)
             base_loc = torch.cat((base_loc_SOC.expand([1, self.n]), base_loc_DOC.expand([1, self.n]), base_loc_MBC.expand([1, self.n])), 1)
             base_scale = torch.cat((base_scale_SOC.expand([1, self.n]), base_scale_DOC.expand([1, self.n]), base_scale_MBC.expand([1, self.n])), 1)
-            self.base_dist = D.normal.Normal(loc = base_loc, scale = base_scale)                
+            self.base_dist = D.normal.Normal(loc = base_loc, scale = base_scale)
         else:
             self.base_dist = D.normal.Normal(loc = 0., scale = 1.)
 
@@ -348,6 +348,27 @@ class ObsModel(nn.Module):
     def forward(self, x):
         obs_ll = D.normal.Normal(self.mu.permute(1, 0), self.scale).log_prob(x[:, self.idx, :]) #(batch_size, n_obs, obs_dim)
         return torch.sum(obs_ll, [-1, -2]).mean()
+
+    def get_idx(self, TIMES, DT):
+        return list((TIMES / DT).astype(int))
+    
+    def plt_dat(self):
+        return self.mu, self.times
+
+class ObsModelNoFwdMean(nn.Module):
+
+    def __init__(self, DEVICE, TIMES, DT, MU, SCALE):
+        super().__init__()
+        self.times = TIMES # (n_obs, )
+        self.dt = DT
+        self.idx = self.get_idx(TIMES, DT)        
+        self.mu = torch.Tensor(MU).to(DEVICE) # (obs_dim, n_obs)
+        self.scale = torch.Tensor(SCALE).to(DEVICE) # (1, obs_dim)
+        self.obs_dim = self.mu.shape[0]
+        
+    def forward(self, x):
+        obs_ll = D.normal.Normal(self.mu.permute(1, 0), self.scale).log_prob(x[:, self.idx, :])
+        return torch.sum(obs_ll, [-1, -2]) # (batch_size)
 
     def get_idx(self, TIMES, DT):
         return list((TIMES / DT).astype(int))
