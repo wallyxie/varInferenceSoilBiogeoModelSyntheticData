@@ -1,0 +1,1 @@
+Best train ELBO: -1642.669921875
