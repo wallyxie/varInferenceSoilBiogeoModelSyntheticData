@@ -925,7 +925,7 @@ def train_max_log_p_decomposition(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_
                 samples_log_p_y_giv_x_theta_losses.append(log_p_y_giv_x_theta_samples)
                 samples_log_p = log_p_theta_samples + log_lik + log_p_y_giv_x_theta_samples
                 samples_log_p_losses.append(samples_log_p)
-                max_log_p_losses = samples_log_p.max().item()
+                max_log_p_losses.append(samples_log_p.max().item())
 
                 if (iteration + 1) % PRINT_EVERY == 0:
                     print(f'\nLast LR computed by scheduler was {ELBO_sched.get_last_lr()}.')
@@ -1166,7 +1166,7 @@ def train_max_log_p_decomposition_save_fewer(DEVICE, ELBO_LR: float, ELBO_ITER: 
                     samples_log_p_y_giv_x_theta_losses.append(log_p_y_giv_x_theta_samples)
                     samples_log_p = log_p_theta_samples + log_lik + log_p_y_giv_x_theta_samples
                     samples_log_p_losses.append(samples_log_p)
-                    max_log_p_losses = samples_log_p.max().item()
+                    max_log_p_losses.append(samples_log_p.max().item())
 
                 if (iteration + 1) % PRINT_EVERY == 0:
                     print(f'\nLast LR computed by scheduler was {ELBO_sched.get_last_lr()}.')
@@ -1392,7 +1392,7 @@ def train_max_log_p_only(DEVICE, ELBO_LR: float, ELBO_ITER: int, BATCH_SIZE: int
                 ELBO_losses.append(ELBO.item())
                 log_p_losses.append(log_p_subset.item())
                 samples_log_p = log_p_theta_samples + log_lik + log_p_y_giv_x_theta_samples
-                max_log_p_losses = samples_log_p.max().item()
+                max_log_p_losses.append(samples_log_p.max().item())
 
                 if (iteration + 1) % PRINT_EVERY == 0:
                     print(f'\nLast LR computed by scheduler was {ELBO_sched.get_last_lr()}.')
