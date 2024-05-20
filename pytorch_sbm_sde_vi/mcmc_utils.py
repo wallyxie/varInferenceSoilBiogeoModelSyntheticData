@@ -105,10 +105,10 @@ def run_pyro(args, model_params, in_filenames, out_filenames):
     mcmc.summary()
 
 def run_hamiltorch(args, model_params, in_filenames, out_filenames,
-                   fix_theta=False, init='prior', init_file=None):
+                   fix_theta_file=None, init='prior', init_file=None):
     T, dt, obs_CO2, state_dim, obs_error_scale, \
         temp_ref, temp_rise, model_type, diffusion_type, device = model_params
-    obs_file, theta_file, x0_file = in_filenames
+    obs_file, p_theta_file, x0_file = in_filenames
     out_dir, out_file = out_filenames
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
@@ -117,7 +117,7 @@ def run_hamiltorch(args, model_params, in_filenames, out_filenames,
     model = model_type(T, dt, state_dim, temp_ref, temp_rise, diffusion_type) #.to(device)
 
     # Load data
-    y, fix_theta_dict = model.load_data(obs_error_scale, obs_file, theta_file, x0_file, fix_theta=fix_theta) # (T_obs, obs_dim)
+    y, fix_theta_dict = model.load_data(obs_error_scale, obs_file, p_theta_file, x0_file, fix_theta_file=fix_theta_file) # (T_obs, obs_dim)
     print(y.get_device(), model.temp.get_device())
     print('Using model', model.__class__.__name__, model.diffusion_type)
     #mp_context = 'spawn' if device == torch.device('cuda') and args.num_chains > 1 else None

@@ -41,6 +41,7 @@ def main(args):
     # Output files
     out_dir = os.path.join('training_pt_outputs', args.out_dir)
     outer_iters = int(args.num_out_files)
+    split_terms = int(args.split_terms)
 
     # SCON-C
     input_dir = 'generated_data/'
@@ -55,19 +56,50 @@ def main(args):
 
     # Load MCMC samples
     log_probs = []
+    if split_terms:
+        log_p_theta = []
+        log_p_x = []
+        log_p_y = []
+
     for i in range(outer_iters):
+        # Compute joint log prob
         out_file = os.path.join(out_dir, 'out{}.pt'.format(i))
         x, logit_theta, model, time = load_samples(out_file, fix_theta=False)
         log_probs.append(calc_log_probs(model, x, logit_theta, y, None))
-    log_probs = torch.cat(log_probs)
+        
+        if split_terms:
+            # Compute log p(theta)
+            theta = model.p_theta.sigmoid(logit_theta)
+            log_p_theta.append(model.p_theta.log_prob(theta)).sum(-1)
+    
+            # Compute log p(x|theta) and log p(y|x, theta)
+            weight_obs_nuts = []
+            for x_j, theta_j in zip(x, theta):
+                theta_dict = {name: theta_j[name] for name in model.param_names}
+                log_p_x_j, weight_obs = model.sde_log_prob(x_j, theta_dict)
+                log_p_x.append(log_p_x_j)
+                log_p_y.append(model.obs_log_prob(x_j, y, theta_dict, weight_obs))
 
     log_probs_file = os.path.join(out_dir, 'log_probs.pt')
-    torch.save(log_probs, log_probs_file)
+    log_probs = torch.cat(log_probs)
+    
+    if split_terms:
+        log_p_theta = torch.cat(log_p_theta)
+        log_p_x = torch.cat(log_p_x)
+        log_p_y = torch.cat(log_p_y)
+        
+        print('Output shapes:', log_probs.shape, log_p_theta.shape, log_p_x.shape, log_p_y.shape)
+        torch.save((log_probs, log_p_theta, log_p_x, log_p_y), log_probs_file)
+    
+    else:
+        print('Output shape:', log_probs.shape)
+        torch.save(log_probs, log_probs_file)
 
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--num-out-files", nargs="?", default=1, type=int)
     parser.add_argument("--out-dir", nargs="?", default=None, type=str)
+    parser.add_argument("--split-terms", nargs="?", default=0, type=int)
     args = parser.parse_args()
     return args
 

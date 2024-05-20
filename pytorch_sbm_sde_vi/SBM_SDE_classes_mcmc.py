@@ -86,7 +86,7 @@ class SCON(nn.Module):
         '''
         return 0.0001 + 0.00005 * torch.sin((2 * np.pi / (24 * 365)) * self.times)
 
-    def load_data(self, obs_error_scale, obs_file, theta_file, x0_file, fix_theta=False):
+    def load_data(self, obs_error_scale, obs_file, p_theta_file, x0_file, fix_theta_file=None):
         print('Loading data from', obs_file)
         obs_times, obs_vals, obs_errors = csv_to_obs_df(obs_file, self.obs_dim, self.T, obs_error_scale)
         obs_vals = obs_vals.T.to(self.device)
@@ -98,18 +98,20 @@ class SCON(nn.Module):
         assert self.scale_y.shape == (self.obs_dim, )
         self.obs_every = int(obs_times[1] - obs_times[0])
         
-        # Load theta (if fix_theta is True) or p(theta) hyperparameters (otherwise)
-        if not fix_theta:
-            theta_hyperparams = torch.load(theta_file)
-            self.param_names = list(theta_hyperparams.keys())
-            theta_hyperparams_list = list(zip(*(theta_hyperparams[k] for k in self.param_names))) # unzip theta hyperparams from dictionary values into individual lists
-            loc_theta, scale_theta, a_theta, b_theta = torch.tensor(theta_hyperparams_list).to(self.device)
-            assert loc_theta.shape == scale_theta.shape == a_theta.shape == b_theta.shape == (len(self.param_names), )
-            self.p_theta = RescaledLogitNormal(loc_theta, scale_theta, a_theta, b_theta)
-            fix_theta_dict = None
-        else:
-            fix_theta_dict = {k: torch.tensor(v) for k, v in torch.load(theta_file).items()}
+        # Load p(theta)
+        theta_hyperparams = torch.load(p_theta_file)
+        self.param_names = list(theta_hyperparams.keys())
+        theta_hyperparams_list = list(zip(*(theta_hyperparams[k] for k in self.param_names))) # unzip theta hyperparams from dictionary values into individual lists
+        loc_theta, scale_theta, a_theta, b_theta = torch.tensor(theta_hyperparams_list).to(self.device)
+        assert loc_theta.shape == scale_theta.shape == a_theta.shape == b_theta.shape == (len(self.param_names), )
+        self.p_theta = RescaledLogitNormal(loc_theta, scale_theta, a_theta, b_theta)
+        
+        # Load fix_theta_dict (if provided)
+        if fix_theta_file:
+            fix_theta_dict = {k: torch.tensor(v) for k, v in torch.load(fix_theta_file).items()}
             self.param_names = list(fix_theta_dict.keys())
+        else:
+            fix_theta_dict = None
 
         # Load parameters of x_0
         loc_x0 = torch.load(x0_file).to(self.device)

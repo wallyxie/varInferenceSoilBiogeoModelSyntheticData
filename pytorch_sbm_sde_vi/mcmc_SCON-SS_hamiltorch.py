@@ -37,7 +37,7 @@ def main(args):
     out_filenames = out_dir, out_file
 
     run_hamiltorch(args, model_params, in_filenames, out_filenames,
-                   fix_theta=False, init='file', init_file=init_file)
+                   fix_theta_file=False, init='file', init_file=init_file)
 
 if __name__ == "__main__":
     args = parse_args()

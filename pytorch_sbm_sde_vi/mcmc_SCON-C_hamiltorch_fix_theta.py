@@ -15,7 +15,6 @@ def main(args):
     obs_error_scale = 0.1
     temp_ref = 283
     temp_rise = 5     # High estimate of 5 celsius temperature rise by 2100. 
-    fix_theta = True
 
     # Inference parameters
     model_type = SCON
@@ -25,11 +24,12 @@ def main(args):
     # Input files
     input_dir = 'generated_data'
     obs_file = os.path.join(input_dir, 'SCON-C_CO2_logit_short_2022_01_20_08_53_sample_y_t_5000_dt_0-01_sd_scale_0-25.csv')
-    theta_file = os.path.join(input_dir, 'SCON-C_CO2_logit_short_2022_01_20_08_53_sample_y_t_5000_dt_0-01_sd_scale_0-25_rsample.pt')
+    p_theta_file = os.path.join(input_dir, 'SCON-C_CO2_logit_short_2022_01_20_08_53_sample_y_t_5000_dt_0-01_sd_scale_0-25_hyperparams.pt')
+    fix_theta_file = os.path.join(input_dir, 'SCON-C_CO2_logit_short_2022_01_20_08_53_sample_y_t_5000_dt_0-01_sd_scale_0-25_rsample.pt')
     x0_file = os.path.join(input_dir, 'SCON-C_CO2_logit_short_2022_01_20_08_53_sample_y_t_5000_dt_0-01_sd_scale_0-25_x0_SCON_tensor.pt')
     
-    init_dir = os.path.join('training_pt_outputs', args.init_dir)
-    init_file = os.path.join(out_dir, 'samples_init.pt')
+    init_dir = os.path.join(input_dir, 'init_files')
+    init_file = os.path.join(init_dir, '{}.pt'.format(args.init_name))
 
     # Output file
     out_dir = os.path.join('training_pt_outputs', args.name)
@@ -37,11 +37,11 @@ def main(args):
 
     model_params = T, dt, obs_CO2, state_dim, obs_error_scale, \
         temp_ref, temp_rise, model_type, diffusion_type, device
-    in_filenames = obs_file, theta_file, x0_file
+    in_filenames = obs_file, p_theta_file, x0_file
     out_filenames = out_dir, out_file
 
     run_hamiltorch(args, model_params, in_filenames, out_filenames,
-                   fix_theta=fix_theta, init='file', init_file=init_file)
+                   fix_theta_file=fix_theta_file, init='file', init_file=init_file)
 
 if __name__ == "__main__":
     args = parse_args()
