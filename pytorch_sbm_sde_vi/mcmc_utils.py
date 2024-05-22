@@ -135,6 +135,13 @@ def run_hamiltorch(args, model_params, in_filenames, out_filenames,
         assert init_file is not None
         print('Loading init samples from {}'.format(init_file))
         params_init = torch.load(init_file, map_location=device)
+    elif init == 'last_iter':
+        assert init_file is not None
+        print('Loading last iter samples from {}'.format(init_file))
+        samples, _, _ = torch.load(init_file, map_location=device)
+        step_size = args.step_size
+        print('Using step size: ', step_size)
+        #params_init = samples[-1] (already done below, line 182)
     else:
         print('Unknown init scheme')
         raise ValueError
@@ -158,7 +165,7 @@ def run_hamiltorch(args, model_params, in_filenames, out_filenames,
     step_size = args.step_size
     num_samples = args.save_every
     sampler = hamiltorch.Sampler.HMC_NUTS
-    warmup_steps = args.warmup_steps
+    warmup_steps = args.warmup_steps    
 
     """
     Hack to run NUTS many more iterations:
@@ -168,12 +175,14 @@ def run_hamiltorch(args, model_params, in_filenames, out_filenames,
        initialized at last sample from previous outer_iter
     """
     t0 = time.process_time()
+    log_probs_all = []
     for i in range(outer_iters):
         hamiltorch.set_random_seed(args.seed + i)
-        if i > 0:
+        if i > 0 or init == 'last_iter':
             params_init = samples[-1]
             sampler = hamiltorch.Sampler.HMC
             warmup_steps = 0
+
         if (i == outer_iters - 1) and (num_samples_last != 0):
             num_samples = num_samples_last
         
@@ -192,15 +201,29 @@ def run_hamiltorch(args, model_params, in_filenames, out_filenames,
             step_size = out1
             print('Adapted step size:', step_size)
 
-        # Save results from iter i
-        t1 = time.process_time() - t0
-        log_prob = model.log_prob(*split_samples(samples[-1], y, fix_theta_dict))
-        print('Log prob = {}, time elapsed = {}'.format(log_prob, t1))
+        # Compute log probs across outer iter i
+        log_probs = torch.tensor([model.log_prob(*split_samples(s, y, fix_theta_dict)) for s in samples])
+        log_probs_all.append(log_probs)
+        print('Log prob = {}, time elapsed = {}'.format(log_probs[-1], t1))
 
+        # Save results from outer iter i
+        t1 = time.process_time() - t0
         out_file = os.path.join(out_dir, 'out{}.pt'.format(i))
         print('Saving MCMC samples to', out_file)
-        torch.save((samples, model, t1), out_file)
+        thin = 1 if (i == outer_iters - 1) else 10
+        torch.save((samples[::thin], step_size, model, t1), out_file)
 
         print()
 
-    print('Finished!')
+    print('Finished! Saving log probs...')
+
+    # Saving log probs
+    log_probs_file = os.path.join(out_dir, 'log_probs.pt')
+    log_probs_all = torch.cat(log_probs_all)
+    torch.save(log_probs_all, log_probs_file)
+
+def calc_log_probs(model, x, logit_theta, y, fix_theta_dict=None):
+    if fix_theta_dict is not None:
+        logit_theta = [None] * len(x)
+    model.device = torch.device('cpu')
+    return torch.tensor([model.log_prob(x_i, y, logit_theta_i, fix_theta_dict) for x_i, logit_theta_i in zip(x, logit_theta)])
