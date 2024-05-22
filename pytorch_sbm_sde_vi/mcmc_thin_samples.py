@@ -10,16 +10,16 @@ Adapted step sizes:
 """
 
 def main(args):
-	start = int(args.start) # 0
-	end = int(args.end)     # 14
-	step_size = float(args.step_size)
-	out_dir = os.path.join('training_pt_outputs', args.out_dir)
+    start = int(args.start) # 0
+    end = int(args.end)     # 14
+    step_size = float(args.step_size)
+    out_dir = os.path.join('training_pt_outputs', args.out_dir)
 
-	for i in range(start, end + 1):
+    for i in range(start, end + 1):
         out_file = os.path.join(out_dir, 'out{}.pt'.format(i))
         samples, model, time = torch.load(out_file, map_location='cpu')
         thin = 1 if (i == end) else 10
-		torch.save((samples[::thin], step_size, model, time), out_file)
+        torch.save((samples[::thin], step_size, model, time), out_file)
 
 def parse_args():
     parser = argparse.ArgumentParser()
