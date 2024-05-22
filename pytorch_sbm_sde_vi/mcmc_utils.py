@@ -205,10 +205,12 @@ def run_hamiltorch(args, model_params, in_filenames, out_filenames,
         # Compute log probs across outer iter i
         log_probs = torch.tensor([model.log_prob(*split_samples(s, y, fix_theta_dict)) for s in samples])
         log_probs_all.append(log_probs)
+        
+        # Print info
+        t1 = time.process_time() - t0
         print('Log prob = {}, time elapsed = {}'.format(log_probs[-1], t1))
 
         # Save results from outer iter i
-        t1 = time.process_time() - t0
         out_file = os.path.join(out_dir, 'out{}.pt'.format(i + offset))
         print('Saving MCMC samples to', out_file)
         thin = 1 if (i == outer_iters - 1) else 10
