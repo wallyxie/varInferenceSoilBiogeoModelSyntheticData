@@ -11,18 +11,19 @@ def calc_log_probs(model, x, logit_theta, y, fix_theta_dict=None):
     model.device = torch.device('cpu')
     return torch.tensor([model.log_prob(x_i, y, logit_theta_i, fix_theta_dict) for x_i, logit_theta_i in zip(x, logit_theta)])
 
-def load_samples(filename, fix_theta=False):
+def load_samples(filename, fix_theta_dict=None):
     samples, model, time = torch.load(filename, map_location='cpu')
     samples = torch.stack(samples)
-    if fix_theta:
-        
+    
+    if fix_theta_dict is not None:
+        logit_theta = None
         x = samples.reshape(-1, model.N, model.state_dim)
-        theta = None
     else:
         num_params = len(model.param_names)
-        theta = samples[:, :num_params]
+        logit_theta = samples[:, :num_params]
         x = samples[:, num_params:].reshape(-1, model.N, model.state_dim)
-    return x, theta, model, time
+
+    return x, logit_theta, model, time
 
 def load_data(model, obs_error_scale, in_filenames):
     model.device = torch.device('cpu')
@@ -50,9 +51,19 @@ def main(args):
     x0_file = os.path.join(input_dir, 'SCON-C_CO2_logit_short_2022_01_20_08_53_sample_y_t_5000_dt_0-01_sd_scale_0-25_x0_SCON_tensor.pt')
     in_filenames = obs_file, p_theta_file, x0_file
     obs_error_scale = 0.1
+    if args.fix_theta_file is not None and args.fix_theta_file != "None":
+        fix_theta_file = os.path.join(input_dir, '{}.pt'.format(args.fix_theta_file))
+    else:
+        fix_theta_file = None
     
     # Load data
     y, _ = load_data(model, obs_error_scale, in_filenames)
+    
+    # Load fix theta dict (if provided)
+    if fix_theta_file:
+        fix_theta_dict = {k: torch.tensor(v) for k, v in torch.load(fix_theta_file).items()}
+    else:
+        fix_theta_dict = None
 
     # Load MCMC samples
     log_probs = []
@@ -64,8 +75,8 @@ def main(args):
     for i in range(outer_iters):
         # Compute joint log prob
         out_file = os.path.join(out_dir, 'out{}.pt'.format(i))
-        x, logit_theta, model, time = load_samples(out_file, fix_theta=False)
-        log_probs.append(calc_log_probs(model, x, logit_theta, y, None))
+        x, logit_theta, model, time = load_samples(out_file, fix_theta_dict)
+        log_probs.append(calc_log_probs(model, x, logit_theta, y, fix_theta_dict))
         
         if split_terms:
             # Compute log p(theta)
@@ -100,6 +111,7 @@ def parse_args():
     parser.add_argument("--num-out-files", nargs="?", default=1, type=int)
     parser.add_argument("--out-dir", nargs="?", default=None, type=str)
     parser.add_argument("--split-terms", nargs="?", default=0, type=int)
+    parser.add_argument("--fix-theta-file", nargs="?", default=None, type=str)
     args = parser.parse_args()
     return args
 
