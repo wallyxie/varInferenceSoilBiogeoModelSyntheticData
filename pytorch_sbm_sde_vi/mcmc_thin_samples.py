@@ -11,7 +11,7 @@ Adapted step sizes:
 
 def main(args):
 	start = int(args.start) # 0
-	end = int(args.end).    # 14
+	end = int(args.end)     # 14
 	step_size = float(args.step_size)
 	out_dir = os.path.join('training_pt_outputs', args.out_dir)
 
