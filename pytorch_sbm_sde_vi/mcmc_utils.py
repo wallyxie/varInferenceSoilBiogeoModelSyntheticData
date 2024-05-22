@@ -54,6 +54,7 @@ def parse_args():
     parser.add_argument("--save-every", nargs="?", default=10, type=int)
     parser.add_argument("--name", nargs="?", default='mcmc', type=str)
     parser.add_argument("--init-name", nargs="?", default=None, type=str)
+    parser.add_argument("--out-offset", nargs="?", default=0, type=int)
     args = parser.parse_args()
     return args
 
@@ -105,7 +106,7 @@ def run_pyro(args, model_params, in_filenames, out_filenames):
     mcmc.summary()
 
 def run_hamiltorch(args, model_params, in_filenames, out_filenames,
-                   fix_theta_file=None, init='prior', init_file=None):
+                   fix_theta_file=None, init='prior', init_file=None, offset=0):
     T, dt, obs_CO2, state_dim, obs_error_scale, \
         temp_ref, temp_rise, model_type, diffusion_type, device = model_params
     obs_file, p_theta_file, x0_file = in_filenames
@@ -138,8 +139,8 @@ def run_hamiltorch(args, model_params, in_filenames, out_filenames,
     elif init == 'last_iter':
         assert init_file is not None
         print('Loading last iter samples from {}'.format(init_file))
-        samples, _, _ = torch.load(init_file, map_location=device)
-        step_size = args.step_size
+        samples, _, _, step_size = torch.load(init_file, map_location=device)
+        #step_size = args.step_size
         print('Using step size: ', step_size)
         #params_init = samples[-1] (already done below, line 182)
     else:
@@ -208,7 +209,7 @@ def run_hamiltorch(args, model_params, in_filenames, out_filenames,
 
         # Save results from outer iter i
         t1 = time.process_time() - t0
-        out_file = os.path.join(out_dir, 'out{}.pt'.format(i))
+        out_file = os.path.join(out_dir, 'out{}.pt'.format(i + offset))
         print('Saving MCMC samples to', out_file)
         thin = 1 if (i == outer_iters - 1) else 10
         torch.save((samples[::thin], step_size, model, t1), out_file)
