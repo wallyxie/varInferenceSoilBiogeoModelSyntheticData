@@ -198,7 +198,7 @@ def run_hamiltorch(args, model_params, in_filenames, out_filenames,
                                     desired_accept_rate=0.8,
                                     debug=2)
 
-        if i == 0:
+        if i == 0 and init != 'last_iter':
             step_size = out1
             print('Adapted step size:', step_size)
 
