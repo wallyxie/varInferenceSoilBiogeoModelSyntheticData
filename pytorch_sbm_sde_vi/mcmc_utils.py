@@ -55,6 +55,7 @@ def parse_args():
     parser.add_argument("--name", nargs="?", default='mcmc', type=str)
     parser.add_argument("--init-name", nargs="?", default=None, type=str)
     parser.add_argument("--out-offset", nargs="?", default=0, type=int)
+    parser.add_argument("--save-intermediate-samples-every", nargs="?", default=10, type=int)
     args = parser.parse_args()
     return args
 
@@ -163,7 +164,8 @@ def run_hamiltorch(args, model_params, in_filenames, out_filenames,
     # num_samples 150000, warmup_steps 10000, save_every 10000 => outer_iters = num_samples/save_every
     num_samples_last = args.num_samples % args.save_every
     outer_iters = args.num_samples // args.save_every + (num_samples_last != 0)
-    step_size = args.step_size
+    if init != 'last_iter':
+        step_size = args.step_size
     num_samples = args.save_every
     sampler = hamiltorch.Sampler.HMC_NUTS
     warmup_steps = args.warmup_steps    
@@ -211,10 +213,11 @@ def run_hamiltorch(args, model_params, in_filenames, out_filenames,
         print('Log prob = {}, time elapsed = {}'.format(log_probs[-1], t1))
 
         # Save results from outer iter i
-        out_file = os.path.join(out_dir, 'out{}.pt'.format(i + offset))
-        print('Saving MCMC samples to', out_file)
-        thin = 1 if (i == outer_iters - 1) else 10
-        torch.save((samples[::thin], step_size, model, t1), out_file)
+        if save_intermediate_samples_every > 0 or i == outer_iters - 1:
+            out_file = os.path.join(out_dir, 'out{}.pt'.format(i + offset))
+            print('Saving MCMC samples to', out_file)
+            thin = 1 if (i == outer_iters - 1) else save_intermediate_samples_every
+            torch.save((samples[::thin], step_size, model, t1), out_file)      
 
         print()
 
