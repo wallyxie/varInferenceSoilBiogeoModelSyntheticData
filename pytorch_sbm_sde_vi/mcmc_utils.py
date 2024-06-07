@@ -164,8 +164,7 @@ def run_hamiltorch(args, model_params, in_filenames, out_filenames,
     # num_samples 150000, warmup_steps 10000, save_every 10000 => outer_iters = num_samples/save_every
     num_samples_last = args.num_samples % args.save_every
     outer_iters = args.num_samples // args.save_every + (num_samples_last != 0)
-    if init != 'last_iter':
-        step_size = args.step_size
+    step_size = args.step_size
     num_samples = args.save_every
     sampler = hamiltorch.Sampler.HMC_NUTS
     warmup_steps = args.warmup_steps    
