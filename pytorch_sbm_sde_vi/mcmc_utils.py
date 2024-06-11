@@ -167,7 +167,8 @@ def run_hamiltorch(args, model_params, in_filenames, out_filenames,
     step_size = args.step_size
     num_samples = args.save_every
     sampler = hamiltorch.Sampler.HMC_NUTS
-    warmup_steps = args.warmup_steps    
+    warmup_steps = args.warmup_steps   
+    save_intermediate_samples_every = args.save_intermediate_samples_every 
 
     """
     Hack to run NUTS many more iterations:
