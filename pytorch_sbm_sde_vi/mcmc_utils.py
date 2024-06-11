@@ -141,7 +141,7 @@ def run_hamiltorch(args, model_params, in_filenames, out_filenames,
         assert init_file is not None
         print('Loading last iter samples from {}'.format(init_file))
         samples, _, _, step_size = torch.load(init_file, map_location=device)
-        #step_size = args.step_size
+        step_size = float(step_size)
         print('Using step size: ', step_size)
         #params_init = samples[-1] (already done below, line 182)
     else:
@@ -164,7 +164,9 @@ def run_hamiltorch(args, model_params, in_filenames, out_filenames,
     # num_samples 150000, warmup_steps 10000, save_every 10000 => outer_iters = num_samples/save_every
     num_samples_last = args.num_samples % args.save_every
     outer_iters = args.num_samples // args.save_every + (num_samples_last != 0)
-    step_size = args.step_size
+    if init != last_iter:
+        step_size = args.step_size
+        assert 0 < step_size < 1, "Invalid step size"
     num_samples = args.save_every
     sampler = hamiltorch.Sampler.HMC_NUTS
     warmup_steps = args.warmup_steps   
